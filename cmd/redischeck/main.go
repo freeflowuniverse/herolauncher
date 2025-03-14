@@ -11,29 +11,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// scanKeys emulates the KEYS command using SCAN for better compatibility
-// with older Redis versions that have limited pattern matching in KEYS
-func scanKeys(ctx context.Context, client *redis.Client, pattern string) ([]string, error) {
-	var cursor uint64
-	var keys []string
-	var allKeys []string
-	var err error
-
-	for {
-		keys, cursor, err = client.Scan(ctx, cursor, pattern, 10).Result()
-		if err != nil {
-			return nil, err
-		}
-
-		allKeys = append(allKeys, keys...)
-		if cursor == 0 {
-			break
-		}
-	}
-
-	return allKeys, nil
-}
-
 func main() {
 	// Parse command line flags
 	redisAddr := flag.String("redis-addr", "localhost:6378", "Redis server address")
