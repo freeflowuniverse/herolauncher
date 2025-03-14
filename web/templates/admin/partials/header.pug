@@ -1,17 +1,20 @@
-//- header.pug - Header component
+//- header.pug - Header component for documentation-style site
 header
   nav.top-nav
     .brand
-      img.brand-icon(src="/img/flower.svg", alt="HeroLauncher Logo", width="24", height="24")
-      span HeroLauncher
-    button.menu-toggle(aria-label="Toggle menu")
-      span Menu
-    ul
-      li
-        a(href="/admin") Dashboard
-      li
-        a(href="/admin/settings") Settings
-      li
-        a(href="/admin/users") Users
-      li
-        a(href="/") Back to App
+      a(href="/admin")
+        img.brand-icon(src="/img/flower.svg", alt="HeroLauncher Logo", width="24", height="24")
+        span HeroLauncher
+    
+    .nav-links
+      a.nav-link(href="/admin") Home
+      a.nav-link(href="/admin/services") Services
+      a.nav-link(href="/admin/packages") Packages
+      a.nav-link(href="/admin/system/info") System
+    
+    .nav-right
+      .search-box
+        input(type="text", placeholder="Search...")
+      button.menu-toggle(aria-label="Toggle menu")
+        span Menu
+      a.app-link(href="/") Back to App

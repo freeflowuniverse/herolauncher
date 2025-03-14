@@ -1,38 +1,57 @@
-//- sidebar.pug - Sidebar navigation component
-.sidebar-section
-  h3 Dashboard
-  ul
-    li
-      a(href="/admin") Overview
-    li
-      a(href="/admin/stats") Statistics
+//- sidebar.pug - Documentation-style sidebar navigation component
+.sidebar-content
+  .sidebar-section
+    .section-title Getting Started
+    ul.doc-nav
+      li
+        a.doc-link(href="/admin") Overview
+      li
+        a.doc-link(href="/admin/stats") Statistics
+      li
+        a.doc-link(href="/admin/quickstart") Quick Start Guide
 
-.sidebar-section
-  h3 Services
-  ul
-    li
-      a(href="/admin/services") All Services
-    li
-      a(href="/admin/services/running") Running
-    li
-      a(href="/admin/services/stopped") Stopped
+  .sidebar-section
+    .section-title Services
+    ul.doc-nav
+      li
+        a.doc-link(href="/admin/services") All Services
+      li
+        a.doc-link(href="/admin/services/running") Running Services
+      li
+        a.doc-link(href="/admin/services/stopped") Stopped Services
+      li
+        a.doc-link(href="/admin/services/config") Configuration
 
-.sidebar-section
-  h3 Package Manager
-  ul
-    li
-      a(href="/admin/packages") Installed Packages
-    li
-      a(href="/admin/packages/install") Install New
-    li
-      a(href="/admin/packages/update") Updates
+  .sidebar-section
+    .section-title Package Manager
+    ul.doc-nav
+      li
+        a.doc-link(href="/admin/packages") Installed Packages
+      li
+        a.doc-link(href="/admin/packages/install") Install New
+      li
+        a.doc-link(href="/admin/packages/update") Updates
+      li
+        a.doc-link(href="/admin/packages/repository") Package Repository
 
-.sidebar-section
-  h3 System
-  ul
-    li
-      a(href="/admin/system/info") System Info
-    li
-      a(href="/admin/system/logs") Logs
-    li
-      a(href="/admin/system/settings") Settings
+  .sidebar-section
+    .section-title System
+    ul.doc-nav
+      li
+        a.doc-link(href="/admin/system/info") System Info
+      li
+        a.doc-link(href="/admin/system/logs") Logs
+      li
+        a.doc-link(href="/admin/system/settings") Settings
+      li
+        a.doc-link(href="/admin/system/backup") Backup & Restore
+
+  .sidebar-section
+    .section-title API Reference
+    ul.doc-nav
+      li
+        a.doc-link(href="/admin/api/overview") API Overview
+      li
+        a.doc-link(href="/admin/api/authentication") Authentication
+      li
+        a.doc-link(href="/admin/api/endpoints") Endpoints
