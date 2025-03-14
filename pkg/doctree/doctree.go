@@ -1,12 +1,15 @@
 package doctree
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/tools"
 	"github.com/redis/go-redis/v9"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 // Redis client for the doctree package
@@ -255,39 +258,25 @@ func (dt *DocTree) Scan() error {
 	return collection.Scan()
 }
 
-// Simple markdown to HTML converter
-// In a real application, you would use a proper library
+// markdownToHtml converts markdown content to HTML using the goldmark library
 func markdownToHtml(markdown string) string {
-	// This is a very basic implementation
-	// Replace headers
-	html := markdown
-	html = strings.ReplaceAll(html, "# ", "<h1>")
-	html = strings.ReplaceAll(html, "\n# ", "\n<h1>")
-	html = strings.ReplaceAll(html, "## ", "<h2>")
-	html = strings.ReplaceAll(html, "\n## ", "\n<h2>")
-	html = strings.ReplaceAll(html, "### ", "<h3>")
-	html = strings.ReplaceAll(html, "\n### ", "\n<h3>")
+	var buf bytes.Buffer
+	// Create a new goldmark instance with default extensions
+	converter := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Table,
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
+		),
+	)
 
-	// Add closing tags for headers
-	lines := strings.Split(html, "\n")
-	for i, line := range lines {
-		if strings.HasPrefix(line, "<h1>") {
-			lines[i] = line + "</h1>"
-		} else if strings.HasPrefix(line, "<h2>") {
-			lines[i] = line + "</h2>"
-		} else if strings.HasPrefix(line, "<h3>") {
-			lines[i] = line + "</h3>"
-		}
+	// Convert markdown to HTML
+	if err := converter.Convert([]byte(markdown), &buf); err != nil {
+		// If conversion fails, return the original markdown
+		return markdown
 	}
 
-	// Convert paragraphs
-	html = strings.Join(lines, "\n")
-	paragraphs := strings.Split(html, "\n\n")
-	for i, p := range paragraphs {
-		if !strings.HasPrefix(p, "<h") && p != "" {
-			paragraphs[i] = "<p>" + p + "</p>"
-		}
-	}
-
-	return strings.Join(paragraphs, "\n\n")
+	return buf.String()
 }

@@ -21,29 +21,29 @@ var currentDocTree *DocTree
 // !!include collectionname:pagename.md
 // !!include name:'pagename'
 // !!include pagename
-func processIncludeLine(line string) (string, string, bool, error) {
+func parseIncludeLine(line string) (string, string, error) {
 	// Check if the line contains an include directive
 	if !strings.Contains(line, "!!include") {
-		return "", "", false, nil
+		return "", "", nil
 	}
 
 	// Extract the part after !!include
 	parts := strings.SplitN(line, "!!include", 2)
 	if len(parts) != 2 {
-		return "", "", false, fmt.Errorf("malformed include directive: %s", line)
+		return "", "", fmt.Errorf("malformed include directive: %s", line)
 	}
 
 	// Trim spaces and check if the include part is empty
 	includeText := tools.TrimSpacesAndQuotes(parts[1])
 	if includeText == "" {
-		return "", "", false, fmt.Errorf("empty include directive: %s", line)
+		return "", "", fmt.Errorf("empty include directive: %s", line)
 	}
 
 	// Remove name: prefix if present
 	if strings.HasPrefix(includeText, "name:") {
 		includeText = strings.TrimSpace(strings.TrimPrefix(includeText, "name:"))
 		if includeText == "" {
-			return "", "", false, fmt.Errorf("empty page name after 'name:' prefix: %s", line)
+			return "", "", fmt.Errorf("empty page name after 'name:' prefix: %s", line)
 		}
 	}
 
@@ -51,57 +51,45 @@ func processIncludeLine(line string) (string, string, bool, error) {
 	if strings.Contains(includeText, ":") {
 		parts := strings.SplitN(includeText, ":", 2)
 		if len(parts) != 2 {
-			return "", "", false, fmt.Errorf("malformed collection reference: %s", includeText)
+			return "", "", fmt.Errorf("malformed collection reference: %s", includeText)
 		}
 
-		collectionName := strings.TrimSpace(parts[0])
-		pageName := strings.TrimSpace(parts[1])
+		collectionName := tools.NameFix(parts[0])
+		pageName := tools.NameFix(parts[1])
 
 		if collectionName == "" {
-			return "", "", false, fmt.Errorf("empty collection name in include directive: %s", line)
+			return "", "", fmt.Errorf("empty collection name in include directive: %s", line)
 		}
 
 		if pageName == "" {
-			return "", "", false, fmt.Errorf("empty page name in include directive: %s", line)
+			return "", "", fmt.Errorf("empty page name in include directive: %s", line)
 		}
 
-		// Remove quotes from pageName if present
-		if strings.HasPrefix(pageName, "'") && strings.HasSuffix(pageName, "'") {
-			pageName = pageName[1 : len(pageName)-1]
-			if pageName == "" {
-				return "", "", false, fmt.Errorf("empty quoted page name in include directive: %s", line)
-			}
-		}
-
-		return collectionName, pageName, true, nil
+		return collectionName, pageName, nil
 	}
 
-	// No collection specified, just return the page name
-	if includeText == "" {
-		return "", "", false, fmt.Errorf("empty page name in include directive: %s", line)
-	}
-
-	return "", includeText, true, nil
+	return "", includeText, nil
 }
 
 // processIncludes handles all the different include directive formats in markdown
 func processIncludes(content string, currentCollectionName string, dt *DocTree) string {
-	// Set the global currentDocTree variable to ensure it's available for includes
-	currentDocTree = dt
 
 	// Find all include directives
 	lines := strings.Split(content, "\n")
 	result := make([]string, 0, len(lines))
 
 	for _, line := range lines {
-		collectionName, pageName, found, err := processIncludeLine(line)
+		collectionName, pageName, err := parseIncludeLine(line)
 		if err != nil {
 			errorMsg := fmt.Sprintf(">>ERROR: Failed to process include directive: %v", err)
 			result = append(result, errorMsg)
 			continue
 		}
 
-		if found {
+		if collectionName == "" && pageName == "" {
+			// Not an include directive, keep the line
+			result = append(result, line)
+		} else {
 			includeContent := ""
 			var includeErr error
 
@@ -121,9 +109,6 @@ func processIncludes(content string, currentCollectionName string, dt *DocTree) 
 				processedIncludeContent := processIncludes(includeContent, collectionName, dt)
 				result = append(result, processedIncludeContent)
 			}
-		} else {
-			// Not an include directive, keep the line
-			result = append(result, line)
 		}
 	}
 
@@ -133,7 +118,7 @@ func processIncludes(content string, currentCollectionName string, dt *DocTree) 
 // handleInclude processes the include directive with the given page name and optional collection name
 func handleInclude(pageName, collectionName string, dt *DocTree) (string, error) {
 	// Get the current collection from the DocTree
-	currentCollection, err := dt.GetCollection(dt.defaultCollection)
+	currentCollection, err := dt.GetCollection(collectionName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get current collection: %w", err)
 	}

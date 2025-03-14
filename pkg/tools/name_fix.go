@@ -23,6 +23,8 @@ func NameFix(input string) string {
 	// Convert to lowercase
 	lowered := strings.ToLower(asciiOnly.String())
 
+	lowered = TrimSpacesAndQuotes(lowered)
+
 	// Process each character
 	var result strings.Builder
 	lastWasUnderscore := false

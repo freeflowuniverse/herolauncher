@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -125,23 +126,77 @@ func (s *Server) keys(pattern string) []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var result []string
-	// Simple pattern matching: if pattern is "*", return all nonexpired keys.
+	
+	// Get current time once for all expiration checks
+	now := time.Now()
+	
+	// If pattern is "*", return all non-expired keys
 	if pattern == "*" {
 		for k, ent := range s.data {
-			if !ent.expiration.IsZero() && time.Now().After(ent.expiration) {
+			if !ent.expiration.IsZero() && now.After(ent.expiration) {
 				continue
 			}
 			result = append(result, k)
 		}
-	} else {
-		// For any other pattern, do a simple substring match.
-		for k, ent := range s.data {
-			if !ent.expiration.IsZero() && time.Now().After(ent.expiration) {
-				continue
-			}
-			if strings.Contains(k, pattern) {
-				result = append(result, k)
-			}
+		return result
+	}
+	
+	// Convert Redis glob pattern to Go regex pattern
+	regexPattern := ""
+	escaping := false
+	
+	for i := 0; i < len(pattern); i++ {
+		c := pattern[i]
+		if escaping {
+			regexPattern += string(c)
+			escaping = false
+			continue
+		}
+		
+		switch c {
+		case '\\':
+			escaping = true
+			regexPattern += "\\"
+		case '*':
+			regexPattern += ".*"
+		case '?':
+			regexPattern += "."
+		case '[':
+			regexPattern += "["
+		case ']':
+			regexPattern += "]"
+		case '.':
+			regexPattern += "\\."
+		case '+':
+			regexPattern += "\\+"
+		case '(':
+			regexPattern += "\\("
+		case ')':
+			regexPattern += "\\)"
+		case '^':
+			regexPattern += "\\^"
+		case '$':
+			regexPattern += "\\$"
+		default:
+			regexPattern += string(c)
+		}
+	}
+	
+	// Compile the regex pattern
+	regex, err := regexp.Compile("^" + regexPattern + "$")
+	if err != nil {
+		// If pattern is invalid, return empty result
+		return result
+	}
+	
+	// Match keys against the regex pattern
+	for k, ent := range s.data {
+		if !ent.expiration.IsZero() && now.After(ent.expiration) {
+			continue
+		}
+		
+		if regex.MatchString(k) {
+			result = append(result, k)
 		}
 	}
 	return result
@@ -706,7 +761,7 @@ func (s *Server) getInfo() string {
 
 	// Build the info string in Redis format
 	info := "# Server\r\n"
-	info += "redis_version:1.0.0\r\n"
+	info += "redis_version:6.2.0\r\n"
 	info += "redis_mode:standalone\r\n"
 	info += "os:" + runtime.GOOS + "\r\n"
 	info += "arch_bits:" + strconv.Itoa(32<<(^uint(0)>>63)) + "\r\n"
@@ -757,6 +812,25 @@ func humanizeBytes(bytes uint64) string {
 	}
 
 	return fmt.Sprintf("%.2f%s", value, unit)
+}
+
+// exists checks if a key exists in the database
+func (s *Server) exists(keys []string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	count := 0
+	for _, key := range keys {
+		ent, ok := s.data[key]
+		if ok {
+			// Check if the key has expired
+			if !ent.expiration.IsZero() && time.Now().After(ent.expiration) {
+				continue
+			}
+			count++
+		}
+	}
+	return count
 }
 
 func (s *Server) startRedisServer() {
@@ -927,6 +1001,18 @@ func (s *Server) startRedisServer() {
 				key := string(cmd.Args[1])
 				ttl := s.getTTL(key)
 				conn.WriteInt64(ttl)
+			case "exists":
+				// Usage: EXISTS key [key ...]
+				if len(cmd.Args) < 2 {
+					conn.WriteError("ERR wrong number of arguments for 'exists' command")
+					return
+				}
+				keys := make([]string, 0, len(cmd.Args)-1)
+				for i := 1; i < len(cmd.Args); i++ {
+					keys = append(keys, string(cmd.Args[i]))
+				}
+				count := s.exists(keys)
+				conn.WriteInt(count)
 			case "expire":
 				// Usage: EXPIRE key seconds
 				if len(cmd.Args) < 3 {
