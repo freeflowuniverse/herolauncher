@@ -3,6 +3,7 @@ package processmanager
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -135,80 +136,94 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 	historyPos := 0
 	interactiveMode := false
 
-	// Process client input
-	for scanner.Scan() {
-		line := scanner.Text()
+	// Use raw mode for better control character handling
+	var buffer [1]byte
+	var escapeBuffer [3]byte
+	var currentLine strings.Builder
+
+	for {
+		// Read a single byte
+		_, err := conn.Read(buffer[:])
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error reading from connection: %v\n", err)
+			}
+			break
+		}
 
 		// Check for Ctrl+C (ASCII value 3)
-		if line == "\x03" {
+		if buffer[0] == 3 { // Ctrl+C
 			conn.Write([]byte("Goodbye!\n"))
 			return
 		}
 
-		// Check for arrow up (ANSI escape sequence for up arrow: "\x1b[A")
-		if line == "\x1b[A" && len(commandHistory) > 0 {
-			if historyPos > 0 {
-				historyPos--
-			}
-			if historyPos < len(commandHistory) {
-				conn.Write([]byte(commandHistory[historyPos]))
-				line = commandHistory[historyPos]
-			}
-		}
+		// Check for Enter key (carriage return or line feed)
+		if buffer[0] == '\r' || buffer[0] == '\n' {
+			line := currentLine.String()
+			conn.Write([]byte("\r\n")) // Echo newline
+			currentLine.Reset()
 
-		// Handle authentication
-		if !authenticated {
-			if line == ts.processManager.GetSecret() {
-				authenticated = true
-				ts.clientsMutex.Lock()
-				ts.clients[conn] = true // Mark as authenticated
-				ts.clientsMutex.Unlock()
-				conn.Write([]byte(" ** Welcome: you are authenticated.\n"))
-			} else {
-				conn.Write([]byte("Invalid secret. Try again or disconnect.\n"))
+			// Process the complete line
+			if line != "" {
+				// Add to command history if not empty and not a duplicate of the last command
+				if len(commandHistory) == 0 || commandHistory[len(commandHistory)-1] != line {
+					commandHistory = append(commandHistory, line)
+				}
+				historyPos = len(commandHistory) // Reset history position to the end
+
+			// Handle authentication
+			if !authenticated {
+				if line == ts.processManager.GetSecret() {
+					authenticated = true
+					ts.clientsMutex.Lock()
+					ts.clients[conn] = true // Mark as authenticated
+					ts.clientsMutex.Unlock()
+					conn.Write([]byte(" ** Welcome: you are authenticated.\n"))
+				} else {
+					conn.Write([]byte("Invalid secret. Try again or disconnect.\n"))
+				}
+				continue
 			}
-			continue
-		}
 
-		// Handle quit/exit commands
-		if line == "!!quit" || line == "!!exit" || line == "q" {
-			conn.Write([]byte("Goodbye!\n"))
-			return
-		}
-
-		// Handle help command
-		if line == "!!help" || line == "h" || line == "?" {
-			helpText := ts.generateHelpText(interactiveMode)
-			conn.Write([]byte(helpText))
-			continue
-		}
-
-		// Handle interactive mode toggle
-		if line == "!!interactive" || line == "!!i" || line == "i" {
-			interactiveMode = !interactiveMode
-			if interactiveMode {
-				conn.Write([]byte(ColorGreen + "Interactive mode enabled. Using colors for output." + ColorReset + "\n"))
-			} else {
-				conn.Write([]byte("Interactive mode disabled. Plain text output.\n"))
+			// Handle quit/exit commands
+			if line == "!!quit" || line == "!!exit" || line == "q" {
+				conn.Write([]byte("Goodbye!\n"))
+				return
 			}
-			continue
-		}
 
-		// Empty line executes previous command if there's no pending command
-		if line == "" {
-			if heroscriptBuffer.Len() > 0 {
-				// Execute pending command
-				result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
-				lastCommand = heroscriptBuffer.String()
-				conn.Write([]byte(result))
-				heroscriptBuffer.Reset()
-			} else if lastCommand != "" {
-				// Execute last command
-				result := ts.executeHeroscript(lastCommand, interactiveMode)
-				conn.Write([]byte(result))
+			// Handle help command
+			if line == "!!help" || line == "h" || line == "?" {
+				helpText := ts.generateHelpText(interactiveMode)
+				conn.Write([]byte(helpText))
+				continue
 			}
-			continue
-		}
+
+			// Handle interactive mode toggle
+			if line == "!!interactive" || line == "!!i" || line == "i" {
+				interactiveMode = !interactiveMode
+				if interactiveMode {
+					conn.Write([]byte(ColorGreen + "Interactive mode enabled. Using colors for output." + ColorReset + "\n"))
+				} else {
+					conn.Write([]byte("Interactive mode disabled. Plain text output.\n"))
+				}
+				continue
+			}
+
+			// Empty line executes previous command if there's no pending command
+			if line == "" {
+				if heroscriptBuffer.Len() > 0 {
+					// Execute pending command
+					result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
+					lastCommand = heroscriptBuffer.String()
+					conn.Write([]byte(result))
+					heroscriptBuffer.Reset()
+				} else if lastCommand != "" {
+					// Execute last command
+					result := ts.executeHeroscript(lastCommand, interactiveMode)
+					conn.Write([]byte(result))
+				}
+				continue
+			}
 
 		// Process heroscript commands
 		if (strings.HasPrefix(line, "!!") || strings.HasPrefix(line, "#")) && heroscriptBuffer.Len() > 0 {
