@@ -369,7 +369,7 @@ func (s *Server) getTTL(key string) int64 {
 func (s *Server) scan(cursor int, pattern string, count int) (int, []string) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// Get all keys
 	allKeys := make([]string, 0, len(s.data))
 	for k, item := range s.data {
@@ -377,36 +377,36 @@ func (s *Server) scan(cursor int, pattern string, count int) (int, []string) {
 		if !item.expiration.IsZero() && time.Now().After(item.expiration) {
 			continue
 		}
-		
+
 		// Check if key matches pattern
 		if matched, _ := filepath.Match(pattern, k); matched {
 			allKeys = append(allKeys, k)
 		}
 	}
-	
+
 	// Sort keys for consistent results
 	sort.Strings(allKeys)
-	
+
 	// If cursor is beyond the end or there are no keys, return empty list
 	if cursor >= len(allKeys) || len(allKeys) == 0 {
 		return 0, []string{}
 	}
-	
+
 	// Calculate end index
 	end := cursor + count
 	if end > len(allKeys) {
 		end = len(allKeys)
 	}
-	
+
 	// Get keys for this iteration
 	keys := allKeys[cursor:end]
-	
+
 	// Calculate next cursor
 	nextCursor := 0
 	if end < len(allKeys) {
 		nextCursor = end
 	}
-	
+
 	return nextCursor, keys
 }
 
@@ -711,23 +711,23 @@ func (s *Server) getInfo() string {
 	info += "os:" + runtime.GOOS + "\r\n"
 	info += "arch_bits:" + strconv.Itoa(32<<(^uint(0)>>63)) + "\r\n"
 	info += "process_id:" + strconv.Itoa(os.Getpid()) + "\r\n"
-	
+
 	info += "\r\n# Clients\r\n"
 	info += "connected_clients:1\r\n"
-	
+
 	info += "\r\n# Memory\r\n"
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	info += "used_memory:" + strconv.FormatUint(m.Alloc, 10) + "\r\n"
 	info += "used_memory_human:" + humanizeBytes(m.Alloc) + "\r\n"
-	
+
 	info += "\r\n# Stats\r\n"
 	info += "keyspace_hits:0\r\n"
 	info += "keyspace_misses:0\r\n"
-	
+
 	info += "\r\n# Keyspace\r\n"
 	info += "db0:keys=" + strconv.Itoa(keyCount) + ",expires=0,avg_ttl=0\r\n"
-	
+
 	return info
 }
 
@@ -738,10 +738,10 @@ func humanizeBytes(bytes uint64) string {
 		MB = 1024 * KB
 		GB = 1024 * MB
 	)
-	
+
 	var value float64
 	var unit string
-	
+
 	switch {
 	case bytes >= GB:
 		value = float64(bytes) / GB
@@ -755,7 +755,7 @@ func humanizeBytes(bytes uint64) string {
 	default:
 		return strconv.FormatUint(bytes, 10) + "B"
 	}
-	
+
 	return fmt.Sprintf("%.2f%s", value, unit)
 }
 
@@ -951,18 +951,18 @@ func (s *Server) startRedisServer() {
 					conn.WriteError("ERR wrong number of arguments for 'scan' command")
 					return
 				}
-				
+
 				cursor := string(cmd.Args[1])
 				cursorInt, err := strconv.Atoi(cursor)
 				if err != nil {
 					conn.WriteError("ERR invalid cursor")
 					return
 				}
-				
+
 				// Default values
 				pattern := "*"
 				count := 10
-				
+
 				// Parse optional arguments
 				for i := 2; i < len(cmd.Args); i++ {
 					arg := strings.ToLower(string(cmd.Args[i]))
@@ -978,10 +978,10 @@ func (s *Server) startRedisServer() {
 						i++
 					}
 				}
-				
+
 				// Get matching keys
 				nextCursor, keys := s.scan(cursorInt, pattern, count)
-				
+
 				// Write response
 				conn.WriteArray(2)
 				conn.WriteBulkString(strconv.Itoa(nextCursor))
@@ -995,7 +995,7 @@ func (s *Server) startRedisServer() {
 					conn.WriteError("ERR wrong number of arguments for 'hscan' command")
 					return
 				}
-				
+
 				key := string(cmd.Args[1])
 				cursor := string(cmd.Args[2])
 				cursorInt, err := strconv.Atoi(cursor)
@@ -1003,11 +1003,11 @@ func (s *Server) startRedisServer() {
 					conn.WriteError("ERR invalid cursor")
 					return
 				}
-				
+
 				// Default values
 				pattern := "*"
 				count := 10
-				
+
 				// Parse optional arguments
 				for i := 3; i < len(cmd.Args); i++ {
 					arg := strings.ToLower(string(cmd.Args[i]))
@@ -1023,21 +1023,21 @@ func (s *Server) startRedisServer() {
 						i++
 					}
 				}
-				
+
 				// Get matching fields and values
 				nextCursor, fields, values := s.hscan(key, cursorInt, pattern, count)
-				
+
 				// Write response
 				conn.WriteArray(2)
 				conn.WriteBulkString(strconv.Itoa(nextCursor))
-				
+
 				// Write field-value pairs
 				conn.WriteArray(len(fields) * 2) // Each field has a corresponding value
 				for i := 0; i < len(fields); i++ {
 					conn.WriteBulkString(fields[i])
 					conn.WriteBulkString(values[i])
 				}
-				case "lpush":
+			case "lpush":
 				// Usage: LPUSH key value [value ...]
 				if len(cmd.Args) < 3 {
 					conn.WriteError("ERR wrong number of arguments for 'lpush' command")
@@ -1050,7 +1050,7 @@ func (s *Server) startRedisServer() {
 				}
 				length := s.lpush(key, values)
 				conn.WriteInt(length)
-			
+
 			case "rpush":
 				// Usage: RPUSH key value [value ...]
 				if len(cmd.Args) < 3 {
@@ -1064,7 +1064,7 @@ func (s *Server) startRedisServer() {
 				}
 				length := s.rpush(key, values)
 				conn.WriteInt(length)
-			
+
 			case "lpop":
 				// Usage: LPOP key
 				if len(cmd.Args) < 2 {
@@ -1078,7 +1078,7 @@ func (s *Server) startRedisServer() {
 					return
 				}
 				conn.WriteBulkString(val)
-			
+
 			case "rpop":
 				// Usage: RPOP key
 				if len(cmd.Args) < 2 {
@@ -1092,7 +1092,7 @@ func (s *Server) startRedisServer() {
 					return
 				}
 				conn.WriteBulkString(val)
-			
+
 			case "llen":
 				// Usage: LLEN key
 				if len(cmd.Args) < 2 {
@@ -1102,7 +1102,7 @@ func (s *Server) startRedisServer() {
 				key := string(cmd.Args[1])
 				length := s.llen(key)
 				conn.WriteInt(length)
-			
+
 			case "lrange":
 				// Usage: LRANGE key start stop
 				if len(cmd.Args) < 4 {
@@ -1125,7 +1125,7 @@ func (s *Server) startRedisServer() {
 				for _, val := range values {
 					conn.WriteBulkString(val)
 				}
-			
+
 			default:
 				conn.WriteError("ERR unknown command '" + command + "'")
 			}

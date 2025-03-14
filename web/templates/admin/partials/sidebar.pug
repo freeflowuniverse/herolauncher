@@ -1,57 +1,38 @@
-//- sidebar.pug - Documentation-style sidebar navigation component
-.sidebar-content
-  .sidebar-section
-    .section-title Getting Started
-    ul.doc-nav
-      li
-        a.doc-link(href="/admin") Overview
-      li
-        a.doc-link(href="/admin/stats") Statistics
-      li
-        a.doc-link(href="/admin/quickstart") Quick Start Guide
-
-  .sidebar-section
-    .section-title Services
-    ul.doc-nav
-      li
-        a.doc-link(href="/admin/services") All Services
-      li
-        a.doc-link(href="/admin/services/running") Running Services
-      li
-        a.doc-link(href="/admin/services/stopped") Stopped Services
-      li
-        a.doc-link(href="/admin/services/config") Configuration
-
-  .sidebar-section
-    .section-title Package Manager
-    ul.doc-nav
-      li
-        a.doc-link(href="/admin/packages") Installed Packages
-      li
-        a.doc-link(href="/admin/packages/install") Install New
-      li
-        a.doc-link(href="/admin/packages/update") Updates
-      li
-        a.doc-link(href="/admin/packages/repository") Package Repository
-
-  .sidebar-section
-    .section-title System
-    ul.doc-nav
-      li
-        a.doc-link(href="/admin/system/info") System Info
-      li
-        a.doc-link(href="/admin/system/logs") Logs
-      li
-        a.doc-link(href="/admin/system/settings") Settings
-      li
-        a.doc-link(href="/admin/system/backup") Backup & Restore
-
-  .sidebar-section
-    .section-title API Reference
-    ul.doc-nav
-      li
-        a.doc-link(href="/admin/api/overview") API Overview
-      li
-        a.doc-link(href="/admin/api/authentication") Authentication
-      li
-        a.doc-link(href="/admin/api/endpoints") Endpoints
+//- sidebar.pug - Simple vertical treeview with collapsible sections
+div.sidebar-wrapper
+  nav.sidebar-nav
+    div.sidebar-section
+      div.sidebar-heading Introduction
+      a.sidebar-link(href="/admin") Dashboard
+    
+    div.sidebar-section
+      div.sidebar-heading Statistics
+      a.sidebar-link(href="/admin/stats") Overview
+    
+    div.sidebar-section.collapsible
+      div.sidebar-heading.toggle Services
+      div.sidebar-content-section
+        a.sidebar-link(href="/admin/services") All Services
+        a.sidebar-link.child(href="/admin/services/running") Running Services
+        a.sidebar-link.child(href="/admin/services/stopped") Stopped Services
+    
+    div.sidebar-section.collapsible
+      div.sidebar-heading.toggle Package Manager
+      div.sidebar-content-section
+        a.sidebar-link(href="/admin/packages") All Packages
+        a.sidebar-link.child(href="/admin/packages/install") Install Packages
+        a.sidebar-link.child(href="/admin/packages/update") Update Packages
+    
+    div.sidebar-section.collapsible
+      div.sidebar-heading.toggle System
+      div.sidebar-content-section
+        a.sidebar-link(href="/admin/system/info") System Info
+        a.sidebar-link(href="/admin/system/logs") Logs
+        a.sidebar-link(href="/admin/system/settings") Settings
+    
+    div.sidebar-section.collapsible
+      div.sidebar-heading.toggle API Reference
+      div.sidebar-content-section
+        a.sidebar-link(href="/admin/api/overview") Overview
+        a.sidebar-link.child(href="/admin/api/authentication") Authentication
+        a.sidebar-link.child(href="/admin/api/endpoints") Endpoints

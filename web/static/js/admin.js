@@ -69,6 +69,80 @@ function setupUIToggles() {
       logPanel.classList.toggle('open');
     });
   }
+  
+  // Setup Docusaurus-style collapsible menu
+  setupTreeviewMenu();
+}
+
+// Setup sidebar navigation
+function setupTreeviewMenu() {
+  // Set active sidebar links based on current URL
+  setActiveSidebarLinks();
+  
+  // Setup collapsible sections
+  setupCollapsibleSections();
+}
+
+// Set active sidebar links based on current URL
+function setActiveSidebarLinks() {
+  const currentPath = window.location.pathname;
+  
+  // Find all sidebar links
+  const sidebarLinks = document.querySelectorAll('.sidebar-link');
+  
+  // Remove any existing active classes
+  sidebarLinks.forEach(link => {
+    link.classList.remove('active');
+  });
+  
+  // Find and mark active links
+  let activeFound = false;
+  sidebarLinks.forEach(link => {
+    const linkPath = link.getAttribute('href');
+    
+    // Check if the current path matches or starts with the link path
+    // For exact matches or if it's a parent path
+    if (currentPath === linkPath || 
+        (linkPath !== '/admin' && currentPath.startsWith(linkPath))) {
+      // Mark this link as active
+      link.classList.add('active');
+      activeFound = true;
+      
+      // Expand the parent section if this link is inside a collapsible section
+      const parentSection = link.closest('.sidebar-content-section')?.parentElement;
+      if (parentSection && parentSection.classList.contains('collapsible')) {
+        parentSection.classList.remove('collapsed');
+      }
+    }
+  });
+}
+
+// Setup collapsible sections
+function setupCollapsibleSections() {
+  // Find all toggle headings
+  const toggleHeadings = document.querySelectorAll('.sidebar-heading.toggle');
+  
+  // Set all sections as collapsed by default
+  document.querySelectorAll('.sidebar-section.collapsible').forEach(section => {
+    section.classList.add('collapsed');
+  });
+  
+  toggleHeadings.forEach(heading => {
+    // Add click event to toggle section
+    heading.addEventListener('click', function() {
+      const section = this.parentElement;
+      section.classList.toggle('collapsed');
+    });
+  });
+  
+  // Open the section that contains the active link
+  const activeLink = document.querySelector('.sidebar-link.active');
+  if (activeLink) {
+    const parentSection = activeLink.closest('.sidebar-section.collapsible');
+    if (parentSection) {
+      parentSection.classList.remove('collapsed');
+    }
+  }
 }
 
 // Setup logging functionality

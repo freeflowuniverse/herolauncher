@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120px" height="30px" viewBox="0 0 120 30" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+    <!-- Hero Icon -->
+    <g transform="translate(5, 3)" fill="#00A8FF">
+      <circle cx="12" cy="12" r="11" stroke="#00A8FF" stroke-width="2" fill="none"/>
+      <rect x="11" y="4" width="2" height="6" rx="1"/>
+      <rect x="6" y="8" width="2" height="6" rx="1"/>
+      <rect x="16" y="8" width="2" height="6" rx="1"/>
+      <rect x="11" y="14" width="2" height="6" rx="1"/>
+      <rect x="8" y="11" width="8" height="2" rx="1"/>
+    </g>
+    
+    <!-- Text -->
+    <text font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF">
+      <tspan x="30" y="19">HeroLauncher</tspan>
+    </text>
+  </g>
+</svg>

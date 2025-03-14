@@ -1,59 +1,54 @@
 extends layout
 
 block content
-  article
-    header
-      h2 Services
-      p Manage all your running services
-    
-    .grid
-      div
-        article
-          header
-            h3 Active Services
-          
-          table
-            thead
-              tr
-                th Name
-                th Status
-                th Uptime
-                th Actions
-            tbody
-              tr
-                td Redis
-                td 
-                  span.badge.success Running
-                td 2 days, 4 hours
-                td
-                  div(role="group")
-                    button.outline Restart
-                    button.outline.secondary Stop
-              tr
-                td Web Server
-                td 
-                  span.badge.success Running
-                td 1 day, 7 hours
-                td
-                  div(role="group")
-                    button.outline Restart
-                    button.outline.secondary Stop
-              tr
-                td Package Manager
-                td 
-                  span.badge.success Running
-                td 2 days, 4 hours
-                td
-                  div(role="group")
-                    button.outline Restart
-                    button.outline.secondary Stop
+  div.services-page
+    h2.section-title Services
+    p.section-description Manage all your running services
+    div.two-column-layout
+      div.card
+        div.card-title Active Services
+        
+        table
+          thead
+            tr
+              th Name
+              th Status
+              th Uptime
+              th Actions
+          tbody
+            tr
+              td Redis
+              td 
+                span.badge.success Running
+              td 2 days, 4 hours
+              td
+                div.button-group
+                  button.button Restart
+                  button.button.secondary Stop
+            tr
+              td Web Server
+              td 
+                span.badge.success Running
+              td 1 day, 7 hours
+              td
+                div.button-group
+                  button.button Restart
+                  button.button.secondary Stop
+            tr
+              td Package Manager
+              td 
+                span.badge.success Running
+              td 2 days, 4 hours
+              td
+                div.button-group
+                  button.button Restart
+                  button.button.secondary Stop
       
-      div
-        article
-          header
-            h3 Service Controls
-          
-          form
+      div.card
+        div.card-title Service Controls
+        
+        form
+          div.form-group
             label(for="service-select") Select Service
             select#service-select
               option(value="") Choose a service...
@@ -61,10 +56,10 @@ block content
               option(value="web") Web Server
               option(value="package-manager") Package Manager
               option(value="executor") Executor
-            
-            fieldset
-              legend Actions
-              div(role="group")
-                button.outline Start
-                button.outline.secondary Restart
-                button.outline.contrast Stop
+          
+          fieldset
+            legend Actions
+            div.button-group
+              button.button Start
+              button.button Restart
+              button.button.secondary Stop
