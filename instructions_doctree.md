@@ -1,4 +1,4 @@
-create a package in this module called doctree
+there is a module called doctree
 
 the metadata info of doctree is stored in a redis server
 
@@ -39,3 +39,40 @@ create following methods on doctree
 
 in PageGet implement a simple include function which is done as !!include name:'pagename' this needs to include page as mentioned in this collection
    if !!include name:'othercollection:pagename' then pagename comes from other collection do namefix to find
+
+
+## Objects
+
+#### DocTree
+
+- has add, get, delete, list functions in relation to underlying Collection
+
+### Collection
+
+- has get/set/delete/list for pages
+- has get/set/delete/list for files
+
+namefix used everywhere to make sure
+
+- in get for page we do the include which an get other pages
+
+## special functions
+
+### Include
+
+```
+!!include collectionname:'pagename'
+!!include collectionname:'pagename.md'
+!!include 'pagename'
+!!include collectionname:pagename
+!!include collectionname:pagename.md
+
+```
+
+the include needs to parse the following
+
+note:
+
+- pages can have .md or not, check if given if not add
+- all is namefixed on collection and page level 
+- there can be '' around the name but this is optional

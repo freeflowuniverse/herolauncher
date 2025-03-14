@@ -1,0 +1,185 @@
+package doctree
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/tools"
+)
+
+// Global variable to track the current DocTree instance
+var currentDocTree *DocTree
+
+// processIncludeLine processes a single line for include directives
+// Returns collectionName and pageName if found, or empty strings if not an include directive
+//
+// Supports:
+// !!include collectionname:'pagename'
+// !!include collectionname:'pagename.md'
+// !!include 'pagename'
+// !!include collectionname:pagename
+// !!include collectionname:pagename.md
+// !!include name:'pagename'
+// !!include pagename
+func processIncludeLine(line string) (string, string, bool, error) {
+	// Check if the line contains an include directive
+	if !strings.Contains(line, "!!include") {
+		return "", "", false, nil
+	}
+
+	// Extract the part after !!include
+	parts := strings.SplitN(line, "!!include", 2)
+	if len(parts) != 2 {
+		return "", "", false, fmt.Errorf("malformed include directive: %s", line)
+	}
+
+	// Trim spaces and check if the include part is empty
+	includeText := tools.TrimSpacesAndQuotes(parts[1])
+	if includeText == "" {
+		return "", "", false, fmt.Errorf("empty include directive: %s", line)
+	}
+
+	// Remove name: prefix if present
+	if strings.HasPrefix(includeText, "name:") {
+		includeText = strings.TrimSpace(strings.TrimPrefix(includeText, "name:"))
+		if includeText == "" {
+			return "", "", false, fmt.Errorf("empty page name after 'name:' prefix: %s", line)
+		}
+	}
+
+	// Check if it contains a collection reference (has a colon)
+	if strings.Contains(includeText, ":") {
+		parts := strings.SplitN(includeText, ":", 2)
+		if len(parts) != 2 {
+			return "", "", false, fmt.Errorf("malformed collection reference: %s", includeText)
+		}
+
+		collectionName := strings.TrimSpace(parts[0])
+		pageName := strings.TrimSpace(parts[1])
+
+		if collectionName == "" {
+			return "", "", false, fmt.Errorf("empty collection name in include directive: %s", line)
+		}
+
+		if pageName == "" {
+			return "", "", false, fmt.Errorf("empty page name in include directive: %s", line)
+		}
+
+		// Remove quotes from pageName if present
+		if strings.HasPrefix(pageName, "'") && strings.HasSuffix(pageName, "'") {
+			pageName = pageName[1 : len(pageName)-1]
+			if pageName == "" {
+				return "", "", false, fmt.Errorf("empty quoted page name in include directive: %s", line)
+			}
+		}
+
+		return collectionName, pageName, true, nil
+	}
+
+	// No collection specified, just return the page name
+	if includeText == "" {
+		return "", "", false, fmt.Errorf("empty page name in include directive: %s", line)
+	}
+
+	return "", includeText, true, nil
+}
+
+// processIncludes handles all the different include directive formats in markdown
+func processIncludes(content string, currentCollectionName string, dt *DocTree) string {
+	// Set the global currentDocTree variable to ensure it's available for includes
+	currentDocTree = dt
+
+	// Find all include directives
+	lines := strings.Split(content, "\n")
+	result := make([]string, 0, len(lines))
+
+	for _, line := range lines {
+		collectionName, pageName, found, err := processIncludeLine(line)
+		if err != nil {
+			errorMsg := fmt.Sprintf(">>ERROR: Failed to process include directive: %v", err)
+			result = append(result, errorMsg)
+			continue
+		}
+
+		if found {
+			includeContent := ""
+			var includeErr error
+
+			// If no collection specified, use the current collection
+			if collectionName == "" {
+				collectionName = currentCollectionName
+			}
+
+			// Process the include
+			includeContent, includeErr = handleInclude(pageName, collectionName, dt)
+
+			if includeErr != nil {
+				errorMsg := fmt.Sprintf(">>ERROR: %v", includeErr)
+				result = append(result, errorMsg)
+			} else {
+				// Process any nested includes in the included content
+				processedIncludeContent := processIncludes(includeContent, collectionName, dt)
+				result = append(result, processedIncludeContent)
+			}
+		} else {
+			// Not an include directive, keep the line
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// handleInclude processes the include directive with the given page name and optional collection name
+func handleInclude(pageName, collectionName string, dt *DocTree) (string, error) {
+	// Get the current collection from the DocTree
+	currentCollection, err := dt.GetCollection(dt.defaultCollection)
+	if err != nil {
+		return "", fmt.Errorf("failed to get current collection: %w", err)
+	}
+	// Check if it's from another collection
+	if collectionName != "" {
+		// Format: othercollection:pagename
+		namefixedCollectionName := tools.NameFix(collectionName)
+
+		// Remove .md extension if present for the API call
+		namefixedPageName := tools.NameFix(pageName)
+		namefixedPageName = strings.TrimSuffix(namefixedPageName, ".md")
+
+		// Try to get the collection from the DocTree
+		// First check if the collection exists in the current DocTree
+		otherCollection, err := dt.GetCollection(namefixedCollectionName)
+		if err != nil {
+			// If not found in the current DocTree, check the global currentDocTree
+			if currentDocTree != nil && currentDocTree != dt {
+				otherCollection, err = currentDocTree.GetCollection(namefixedCollectionName)
+				if err != nil {
+					return "", fmt.Errorf("cannot include from non-existent collection: %s", collectionName)
+				}
+			} else {
+				return "", fmt.Errorf("cannot include from non-existent collection: %s", collectionName)
+			}
+		}
+
+		// Get the page content using the collection's PageGet method
+		content, err := otherCollection.PageGet(namefixedPageName)
+		if err != nil {
+			return "", fmt.Errorf("cannot include non-existent page: %s from collection: %s", pageName, collectionName)
+		}
+
+		return content, nil
+	} else {
+		// Include from the same collection
+		// Remove .md extension if present for the API call
+		namefixedPageName := tools.NameFix(pageName)
+		namefixedPageName = strings.TrimSuffix(namefixedPageName, ".md")
+
+		// Use the current collection to get the page content
+		content, err := currentCollection.PageGet(namefixedPageName)
+		if err != nil {
+			return "", fmt.Errorf("cannot include non-existent page: %s", pageName)
+		}
+
+		return content, nil
+	}
+}

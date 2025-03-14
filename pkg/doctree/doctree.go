@@ -1,189 +1,258 @@
 package doctree
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/freeflowuniverse/herolauncher/internal/tools"
+	"github.com/freeflowuniverse/herolauncher/pkg/tools"
+	"github.com/redis/go-redis/v9"
 )
 
-// DocTree represents a collection of markdown pages and files
-type DocTree struct {
-	Path string // Base path of the collection
-	Name string // Name of the collection (namefixed)
+// Redis client for the doctree package
+var redisClient *redis.Client
+var ctx = context.Background()
+var currentCollection *Collection
+
+// Initialize the Redis client
+func init() {
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
 }
 
-// New creates a new DocTree instance and initializes it
-func New(path string, name string) (*DocTree, error) {
-	// Apply namefix to the collection name
-	namefixed := tools.NameFix(name)
+// DocTree represents a manager for multiple collections
+type DocTree struct {
+	Collections map[string]*Collection
+	defaultCollection string
+	// For backward compatibility
+	Name string
+	Path string
+}
 
+// New creates a new DocTree instance
+// For backward compatibility, it also accepts path and name parameters
+// to create a DocTree with a single collection
+func New(args ...string) (*DocTree, error) {
 	dt := &DocTree{
-		Path: path,
-		Name: namefixed,
+		Collections: make(map[string]*Collection),
 	}
+	
+	// Set the global currentDocTree variable
+	currentDocTree = dt
 
-	// Initialize the collection by scanning the path
-	err := dt.Scan()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize DocTree: %w", err)
+	// For backward compatibility with existing code
+	if len(args) == 2 {
+		path, name := args[0], args[1]
+		// Apply namefix for compatibility with tests
+		nameFixed := tools.NameFix(name)
+		
+		// Use the fixed name for the collection
+		_, err := dt.AddCollection(path, nameFixed)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize DocTree: %w", err)
+		}
+		
+		// For backward compatibility
+		dt.defaultCollection = nameFixed
+		dt.Path = path
+		dt.Name = nameFixed
 	}
 
 	return dt, nil
 }
 
-// Scan walks over the path and finds all files and .md files
-// It stores the relative positions in Redis
-func (dt *DocTree) Scan() error {
-	// Key for the collection in Redis
-	collectionKey := fmt.Sprintf("collections:%s", dt.Name)
-
-	// Delete existing collection data if any
-	redisClient.Del(collectionKey)
-
-	// Walk through the directory
-	err := filepath.Walk(dt.Path, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Get the relative path from the base path
-		relPath, err := filepath.Rel(dt.Path, path)
-		if err != nil {
-			return err
-		}
-
-		// Get the filename
-		filename := filepath.Base(path)
-
-		// Apply namefix to the filename
-		namefixedFilename := tools.NameFix(filename)
-
-		// Store in Redis
-		redisClient.HSet(collectionKey, namefixedFilename, relPath)
-
-		return nil
-	})
-
+// AddCollection adds a new collection to the DocTree
+func (dt *DocTree) AddCollection(path string, name string) (*Collection, error) {
+	// Create a new collection
+	collection := NewCollection(path, name)
+	
+	// Scan the collection
+	err := collection.Scan()
 	if err != nil {
-		return fmt.Errorf("failed to scan directory: %w", err)
+		return nil, fmt.Errorf("failed to scan collection: %w", err)
 	}
+	
+	// Add to the collections map
+	dt.Collections[collection.Name] = collection
+	
+	return collection, nil
+}
 
+// GetCollection retrieves a collection by name
+func (dt *DocTree) GetCollection(name string) (*Collection, error) {
+	// For compatibility with tests, apply namefix
+	namefixed := tools.NameFix(name)
+	
+	// Check if the collection exists
+	collection, exists := dt.Collections[namefixed]
+	if !exists {
+		return nil, fmt.Errorf("collection not found: %s", name)
+	}
+	
+	return collection, nil
+}
+
+// DeleteCollection removes a collection from the DocTree
+func (dt *DocTree) DeleteCollection(name string) error {
+	// For compatibility with tests, apply namefix
+	namefixed := tools.NameFix(name)
+	
+	// Check if the collection exists
+	_, exists := dt.Collections[namefixed]
+	if !exists {
+		return fmt.Errorf("collection not found: %s", name)
+	}
+	
+	// Delete from Redis
+	collectionKey := fmt.Sprintf("collections:%s", namefixed)
+	redisClient.Del(ctx, collectionKey)
+	
+	// Remove from the collections map
+	delete(dt.Collections, namefixed)
+	
 	return nil
 }
 
-// PageGet gets a page by name and returns its markdown content
-func (dt *DocTree) PageGet(pageName string) (string, error) {
-	// Apply namefix to the page name
-	namefixedPageName := tools.NameFix(pageName)
-
-	// Ensure it has .md extension
-	if !strings.HasSuffix(namefixedPageName, ".md") {
-		namefixedPageName += ".md"
+// ListCollections returns a list of all collections
+func (dt *DocTree) ListCollections() []string {
+	collections := make([]string, 0, len(dt.Collections))
+	for name := range dt.Collections {
+		collections = append(collections, name)
 	}
-
-	// Get the relative path from Redis
-	collectionKey := fmt.Sprintf("collections:%s", dt.Name)
-	relPath, ok := redisClient.HGet(collectionKey, namefixedPageName)
-	if !ok {
-		return "", fmt.Errorf("page not found: %s", pageName)
-	}
-
-	// Read the file
-	fullPath := filepath.Join(dt.Path, relPath)
-	content, err := ioutil.ReadFile(fullPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read page: %w", err)
-	}
-
-	// Process includes
-	markdown := string(content)
-	markdown = dt.processIncludes(markdown)
-
-	return markdown, nil
+	return collections
 }
 
-// processIncludes handles the !!include directives in markdown
-func (dt *DocTree) processIncludes(content string) string {
-	// Find all !!include directives
-	lines := strings.Split(content, "\n")
-	result := make([]string, 0, len(lines))
-
-	for _, line := range lines {
-		if strings.Contains(line, "!!include name:") {
-			// Extract the page name
-			startIdx := strings.Index(line, "!!include name:'") + len("!!include name:'")
-			endIdx := strings.LastIndex(line, "'")
-			if startIdx > 0 && endIdx > startIdx {
-				includeName := line[startIdx:endIdx]
-
-				// Check if it's from another collection
-				var includeContent string
-				var err error
-
-				if strings.Contains(includeName, ":") {
-					// Format: othercollection:pagename
-					parts := strings.SplitN(includeName, ":", 2)
-					if len(parts) == 2 {
-						collectionName := parts[0]
-						pageName := parts[1]
-
-						// Create a temporary DocTree for the other collection
-						otherDT := &DocTree{
-							Path: dt.Path, // Assuming same base path
-							Name: tools.NameFix(collectionName),
-						}
-						includeContent, err = otherDT.PageGet(pageName)
-					} else {
-						err = fmt.Errorf("invalid include format: %s", includeName)
-					}
-				} else {
-					// Include from the same collection
-					includeContent, err = dt.PageGet(includeName)
-				}
-
-				if err == nil {
-					// Add the included content
-					result = append(result, includeContent)
-				} else {
-					// Keep the original line if there was an error
-					result = append(result, line)
-				}
-			} else {
-				// Invalid format, keep the original line
-				result = append(result, line)
-			}
-		} else {
-			// Not an include directive, keep the line
-			result = append(result, line)
+// PageGet gets a page by name from a specific collection
+// For backward compatibility, if only one argument is provided, it uses the default collection
+func (dt *DocTree) PageGet(args ...string) (string, error) {
+	var collectionName, pageName string
+	
+	if len(args) == 1 {
+		// Backward compatibility mode
+		if dt.defaultCollection == "" {
+			return "", fmt.Errorf("no default collection set")
 		}
+		collectionName = dt.defaultCollection
+		pageName = args[0]
+	} else if len(args) == 2 {
+		collectionName = args[0]
+		pageName = args[1]
+	} else {
+		return "", fmt.Errorf("invalid number of arguments")
 	}
-
-	return strings.Join(result, "\n")
+	
+	// Get the collection
+	collection, err := dt.GetCollection(collectionName)
+	if err != nil {
+		return "", err
+	}
+	
+	// Set the current collection for include processing
+	currentCollection = collection
+	
+	// Get the page
+	return collection.PageGet(pageName)
 }
 
-// PageGetHtml gets a page by name and returns its HTML content
-func (dt *DocTree) PageGetHtml(pageName string) (string, error) {
-	// Get the markdown content
-	markdown, err := dt.PageGet(pageName)
+// PageGetHtml gets a page by name from a specific collection and returns its HTML content
+// For backward compatibility, if only one argument is provided, it uses the default collection
+func (dt *DocTree) PageGetHtml(args ...string) (string, error) {
+	var collectionName, pageName string
+	
+	if len(args) == 1 {
+		// Backward compatibility mode
+		if dt.defaultCollection == "" {
+			return "", fmt.Errorf("no default collection set")
+		}
+		collectionName = dt.defaultCollection
+		pageName = args[0]
+	} else if len(args) == 2 {
+		collectionName = args[0]
+		pageName = args[1]
+	} else {
+		return "", fmt.Errorf("invalid number of arguments")
+	}
+	
+	// Get the collection
+	collection, err := dt.GetCollection(collectionName)
+	if err != nil {
+		return "", err
+	}
+	
+	// Get the HTML
+	return collection.PageGetHtml(pageName)
+}
+
+// FileGetUrl returns the URL for a file in a specific collection
+// For backward compatibility, if only one argument is provided, it uses the default collection
+func (dt *DocTree) FileGetUrl(args ...string) (string, error) {
+	var collectionName, fileName string
+	
+	if len(args) == 1 {
+		// Backward compatibility mode
+		if dt.defaultCollection == "" {
+			return "", fmt.Errorf("no default collection set")
+		}
+		collectionName = dt.defaultCollection
+		fileName = args[0]
+	} else if len(args) == 2 {
+		collectionName = args[0]
+		fileName = args[1]
+	} else {
+		return "", fmt.Errorf("invalid number of arguments")
+	}
+	
+	// Get the collection
+	collection, err := dt.GetCollection(collectionName)
+	if err != nil {
+		return "", err
+	}
+	
+	// Get the URL
+	return collection.FileGetUrl(fileName)
+}
+
+// PageGetPath returns the path to a page in the default collection
+// For backward compatibility
+func (dt *DocTree) PageGetPath(pageName string) (string, error) {
+	if dt.defaultCollection == "" {
+		return "", fmt.Errorf("no default collection set")
+	}
+
+	collection, err := dt.GetCollection(dt.defaultCollection)
 	if err != nil {
 		return "", err
 	}
 
-	// Convert markdown to HTML
-	// This is a simple implementation - in a real application,
-	// you would use a proper markdown to HTML converter
-	html := markdownToHtml(markdown)
+	return collection.PageGetPath(pageName)
+}
 
-	return html, nil
+// Info returns information about the DocTree
+// For backward compatibility
+func (dt *DocTree) Info() map[string]string {
+	return map[string]string{
+		"name": dt.Name,
+		"path": dt.Path,
+		"collections": fmt.Sprintf("%d", len(dt.Collections)),
+	}
+}
+
+// Scan scans the default collection
+// For backward compatibility
+func (dt *DocTree) Scan() error {
+	if dt.defaultCollection == "" {
+		return fmt.Errorf("no default collection set")
+	}
+
+	collection, err := dt.GetCollection(dt.defaultCollection)
+	if err != nil {
+		return err
+	}
+
+	return collection.Scan()
 }
 
 // Simple markdown to HTML converter
@@ -221,52 +290,4 @@ func markdownToHtml(markdown string) string {
 	}
 
 	return strings.Join(paragraphs, "\n\n")
-}
-
-// FileGetUrl returns the URL for a file
-func (dt *DocTree) FileGetUrl(fileName string) (string, error) {
-	// Apply namefix to the file name
-	namefixedFileName := tools.NameFix(fileName)
-
-	// Get the relative path from Redis
-	collectionKey := fmt.Sprintf("collections:%s", dt.Name)
-	relPath, ok := redisClient.HGet(collectionKey, namefixedFileName)
-	if !ok {
-		return "", fmt.Errorf("file not found: %s", fileName)
-	}
-
-	// Construct a URL for the file
-	// This is a simple implementation - in a real application,
-	// you would use a proper URL construction based on your web server
-	url := fmt.Sprintf("/collections/%s/files/%s", dt.Name, relPath)
-
-	return url, nil
-}
-
-// PageGetPath returns the relative path of a page in the collection
-func (dt *DocTree) PageGetPath(pageName string) (string, error) {
-	// Apply namefix to the page name
-	namefixedPageName := tools.NameFix(pageName)
-
-	// Ensure it has .md extension
-	if !strings.HasSuffix(namefixedPageName, ".md") {
-		namefixedPageName += ".md"
-	}
-
-	// Get the relative path from Redis
-	collectionKey := fmt.Sprintf("collections:%s", dt.Name)
-	relPath, ok := redisClient.HGet(collectionKey, namefixedPageName)
-	if !ok {
-		return "", fmt.Errorf("page not found: %s", pageName)
-	}
-
-	return relPath, nil
-}
-
-// Info returns information about the DocTree
-func (dt *DocTree) Info() map[string]string {
-	return map[string]string{
-		"name": dt.Name,
-		"path": dt.Path,
-	}
 }
