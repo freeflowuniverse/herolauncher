@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -26,7 +25,7 @@ func New() *ParamsParser {
 }
 
 // Parse parses a string containing key-value pairs in the format:
-// key: 'value' anotherKey: 'another value'
+// key:value or key:'value'
 // It supports multiline string values.
 func (p *ParamsParser) Parse(input string) error {
 	// Normalize line endings
@@ -74,49 +73,96 @@ func (p *ParamsParser) Parse(input string) error {
 		// Process the line to extract key-value pairs
 		var processedPos int
 		for processedPos < len(line) {
-			// Find the next key
-			keyMatch := regexp.MustCompile(`([a-zA-Z0-9_]+):\s*`).FindStringSubmatchIndex(line[processedPos:])
-			if keyMatch == nil {
+			// Skip leading whitespace
+			for processedPos < len(line) && (line[processedPos] == ' ' || line[processedPos] == '\t') {
+				processedPos++
+			}
+			
+			if processedPos >= len(line) {
 				break
 			}
 			
-			// Extract key
-			keyStart, keyEnd := keyMatch[2]+processedPos, keyMatch[3]+processedPos
-			key := line[keyStart:keyEnd]
+			// Find the next key by looking for a colon
+			keyStart := processedPos
+			colonPos := -1
 			
-			// Move position past the key and colon
-			processedPos = keyMatch[1] + processedPos
+			for j := processedPos; j < len(line); j++ {
+				if line[j] == ':' {
+					colonPos = j
+					break
+				}
+			}
+			
+			if colonPos == -1 {
+				// No colon found, skip this part
+				break
+			}
+			
+			// Extract key (only alphanumeric and underscore characters)
+			key := ""
+			for j := keyStart; j < colonPos; j++ {
+				ch := line[j]
+				if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
+					key += string(ch)
+				}
+			}
+			
+			if key == "" {
+				// Invalid key, move past the colon and continue
+				processedPos = colonPos + 1
+				continue
+			}
+			
+			// Move position past the colon
+			processedPos = colonPos + 1
+			
+			if processedPos >= len(line) {
+				// End of line reached, store empty value
+				p.params[key] = ""
+				break
+			}
 			
 			// Check if the value is quoted
-			remaining := line[processedPos:]
-			if strings.HasPrefix(remaining, "'") {
+			if line[processedPos] == '\'' {
 				// This is a quoted string
-				if strings.Count(remaining, "'") >= 2 {
+				processedPos++ // Skip the opening quote
+				
+				// Look for the closing quote
+				quoteEnd := -1
+				for j := processedPos; j < len(line); j++ {
+					// Check for escaped quote
+					if line[j] == '\'' && (j == 0 || line[j-1] != '\\') {
+						quoteEnd = j
+						break
+					}
+				}
+				
+				if quoteEnd != -1 {
 					// Single-line quoted string
-					quoteEnd := strings.Index(remaining[1:], "'") + 1
-					value := remaining[1:quoteEnd]
+					value := line[processedPos:quoteEnd]
 					p.params[key] = value
-					processedPos += quoteEnd + 1
+					processedPos = quoteEnd + 1 // Move past the closing quote
 				} else {
 					// Start of multiline string
 					currentKey = key
-					currentValue.WriteString(remaining[1:])
+					currentValue.WriteString(line[processedPos:])
 					currentValue.WriteString("\n")
 					inMultilineString = true
 					break
 				}
 			} else {
-				// This is an unquoted value (number or boolean)
-				numMatch := regexp.MustCompile(`^([0-9]+|true|false|yes|no)`).FindStringSubmatchIndex(remaining)
-				if numMatch != nil {
-					valueStart, valueEnd := numMatch[2], numMatch[3]
-					value := remaining[valueStart:valueEnd]
-					p.params[key] = value
-					processedPos += valueEnd
-				} else {
-					// No valid value found, skip to next key
-					break
+				// This is an unquoted value
+				valueStart := processedPos
+				valueEnd := valueStart
+				
+				// Find the end of the value (space or end of line)
+				for valueEnd < len(line) && line[valueEnd] != ' ' && line[valueEnd] != '\t' {
+					valueEnd++
 				}
+				
+				value := line[valueStart:valueEnd]
+				p.params[key] = value
+				processedPos = valueEnd
 			}
 		}
 	}
@@ -130,51 +176,99 @@ func (p *ParamsParser) Parse(input string) error {
 }
 
 // ParseString is a simpler version that parses a string with the format:
-// key: 'value' key2: 'value2' or key: value key2: value2
+// key:value or key:'value'
 // This version doesn't support multiline strings and is optimized for one-line inputs
 func (p *ParamsParser) ParseString(input string) error {
-	// Trim the input and normalize spaces
+	// Trim the input
 	input = strings.TrimSpace(input)
 	
 	// Process the input to extract key-value pairs
 	var processedPos int
 	for processedPos < len(input) {
-		// Find the next key
-		keyMatch := regexp.MustCompile(`([a-zA-Z0-9_]+):\s*`).FindStringSubmatchIndex(input[processedPos:])
-		if keyMatch == nil {
+		// Skip leading whitespace
+		for processedPos < len(input) && (input[processedPos] == ' ' || input[processedPos] == '\t') {
+			processedPos++
+		}
+		
+		if processedPos >= len(input) {
 			break
 		}
 		
-		// Extract key
-		keyStart, keyEnd := keyMatch[2]+processedPos, keyMatch[3]+processedPos
-		key := input[keyStart:keyEnd]
+		// Find the next key by looking for a colon
+		keyStart := processedPos
+		colonPos := -1
 		
-		// Move position past the key and colon
-		processedPos = keyMatch[1] + processedPos
-		
-		// Check if the value is quoted
-		remaining := input[processedPos:]
-		if strings.HasPrefix(remaining, "'") {
-			// This is a quoted string
-			quoteEnd := strings.Index(remaining[1:], "'") + 1
-			if quoteEnd <= 0 {
-				return errors.New("unterminated quoted string")
-			}
-			value := remaining[1:quoteEnd]
-			p.params[key] = value
-			processedPos += quoteEnd + 1
-		} else {
-			// This is an unquoted value (number or boolean)
-			numMatch := regexp.MustCompile(`^([0-9]+|true|false|yes|no|1|0)\b`).FindStringSubmatchIndex(remaining)
-			if numMatch != nil {
-				valueStart, valueEnd := numMatch[2], numMatch[3]
-				value := remaining[valueStart:valueEnd]
-				p.params[key] = value
-				processedPos += valueEnd
-			} else {
-				// No valid value found, skip to next key
+		for j := processedPos; j < len(input); j++ {
+			if input[j] == ':' {
+				colonPos = j
 				break
 			}
+		}
+		
+		if colonPos == -1 {
+			// No colon found, skip this part
+			break
+		}
+		
+		// Extract key (only alphanumeric and underscore characters)
+		key := ""
+		for j := keyStart; j < colonPos; j++ {
+			ch := input[j]
+			if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
+				key += string(ch)
+			}
+		}
+		
+		if key == "" {
+			// Invalid key, move past the colon and continue
+			processedPos = colonPos + 1
+			continue
+		}
+		
+		// Move position past the colon
+		processedPos = colonPos + 1
+		
+		if processedPos >= len(input) {
+			// End of input reached, store empty value
+			p.params[key] = ""
+			break
+		}
+		
+		// Check if the value is quoted
+		if input[processedPos] == '\'' {
+			// This is a quoted string
+			processedPos++ // Skip the opening quote
+			
+			// Look for the closing quote
+			quoteEnd := -1
+			for j := processedPos; j < len(input); j++ {
+				// Check for escaped quote
+				if input[j] == '\'' && (j == 0 || input[j-1] != '\\') {
+					quoteEnd = j
+					break
+				}
+			}
+			
+			if quoteEnd == -1 {
+				return errors.New("unterminated quoted string")
+			}
+			
+			value := input[processedPos:quoteEnd]
+			p.params[key] = value
+			processedPos = quoteEnd + 1 // Move past the closing quote
+		} else {
+			// This is an unquoted value
+			valueStart := processedPos
+			valueEnd := valueStart
+			
+			// Find the end of the value (space or end of input)
+			for valueEnd < len(input) && input[valueEnd] != ' ' && input[valueEnd] != '\t' {
+				valueEnd++
+			}
+			
+			value := input[valueStart:valueEnd]
+			p.params[key] = value
+			processedPos = valueEnd
 		}
 	}
 	

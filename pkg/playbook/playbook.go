@@ -137,10 +137,10 @@ func (a *Action) HeroScript() string {
 		firstLine := true
 		for k, v := range params {
 			if firstLine {
-				out.WriteString(k + ": '" + v + "'\n")
+				out.WriteString(k + ":'" + v + "'\n")
 				firstLine = false
 			} else {
-				out.WriteString("    " + k + ": '" + v + "'\n")
+				out.WriteString("    " + k + ":'" + v + "'\n")
 			}
 		}
 	}

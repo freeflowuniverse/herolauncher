@@ -8,12 +8,12 @@ import (
 const testText1 = `
 //comment for the action
 !!mailclient.configure
-	name: 'myname'
-	host: 'localhost'
-	port: 25
-	secure: 1
-	reset: 1 
-	description: '
+	name:'myname'
+	host:'localhost'
+	port:25
+	secure:1
+	reset:1 
+	description:'
 		a description can be multiline
 
 		like this
@@ -130,12 +130,12 @@ func TestHeroScript(t *testing.T) {
 func TestMultipleActions(t *testing.T) {
 	const multipleActionsText = `
 !!mailclient.configure
-	name: 'myname'
-	host: 'localhost'
+	name:'myname'
+	host:'localhost'
 
 !!system.update
-	force: 1
-	packages: 'git,curl,wget'
+	force:1
+	packages:'git,curl,wget'
 `
 
 	pb, err := NewFromText(multipleActionsText)

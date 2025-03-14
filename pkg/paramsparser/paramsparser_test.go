@@ -5,7 +5,7 @@ import (
 )
 
 func TestParamsParserBasic(t *testing.T) {
-	input := "name: 'myname' host: 'localhost' port: 25 secure: 1 reset: 1"
+	input := "name:'myname' host:'localhost' port:25 secure:1 reset:1"
 	parser := New()
 	err := parser.ParseString(input)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestParamsParserBasic(t *testing.T) {
 }
 
 func TestParamsParserMultiline(t *testing.T) {
-	input := "name: 'myname' description: '\n\t\ta description can be multiline\n\n\t\tlike this\n'"
+	input := "name:'myname' description:'\n\t\ta description can be multiline\n\n\t\tlike this\n'"
 	parser := New()
 	err := parser.Parse(input)
 	if err != nil {
