@@ -93,11 +93,35 @@ func (u *User) ListMailboxes(subscribed bool) ([]backend.Mailbox, error) {
 			
 			// Check if the folder name contains a UID (with slash)
 			if strings.Contains(folderName, "/") {
-				// Split by slash and take the folder part
+				// For nested folders, we need to create both the parent and child folders
+				// Example: "inbox/work/project" should create "inbox", "inbox/work", and "inbox/work/project"
+				
 				folderParts := strings.Split(folderName, "/")
+				
+				// Add each level of the folder hierarchy
+				for i := 1; i <= len(folderParts); i++ {
+					parentFolder := strings.Join(folderParts[:i], "/")
+					
+					// Check if this is the last part (contains the UID)
+					if i == len(folderParts) && strings.Contains(folderParts[i-1], ":") {
+						// This is likely the UID part, not a folder name
+						continue
+					}
+					
+					// Convert to lowercase for consistency
+					parentFolder = strings.ToLower(parentFolder)
+					
+					if u.backend.debugMode {
+						log.Printf("DEBUG: Adding folder from hierarchy: %s", parentFolder)
+					}
+					
+					folderMap[parentFolder] = true
+				}
+				
+				// Use the first part as the base folder name
 				folderName = folderParts[0]
 				if u.backend.debugMode {
-					log.Printf("DEBUG: Folder name after removing UID part: %s", folderName)
+					log.Printf("DEBUG: Base folder name: %s", folderName)
 				}
 			}
 			

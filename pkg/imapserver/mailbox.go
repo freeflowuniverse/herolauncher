@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,6 +40,28 @@ func (m *Mailbox) Info() (*imap.MailboxInfo, error) {
 		// inbox is a special mailbox
 		info.Attributes = append(info.Attributes, "\\Inbox")
 	}
+	
+	// Handle standard mailboxes
+	if strings.EqualFold(m.name, "sent") || strings.EqualFold(m.name, "sent items") {
+		info.Attributes = append(info.Attributes, "\\Sent")
+	} else if strings.EqualFold(m.name, "drafts") {
+		info.Attributes = append(info.Attributes, "\\Drafts")
+	} else if strings.EqualFold(m.name, "trash") {
+		info.Attributes = append(info.Attributes, "\\Trash")
+	} else if strings.EqualFold(m.name, "junk") || strings.EqualFold(m.name, "spam") {
+		info.Attributes = append(info.Attributes, "\\Junk")
+	}
+	
+	// Handle nested folders
+	if strings.Contains(m.name, "/") {
+		// This is a child folder, mark it as such
+		info.Attributes = append(info.Attributes, "\\HasChildren")
+		
+		// Log for debugging
+		if m.backend.debugMode {
+			log.Printf("DEBUG: Mailbox %s is a nested folder", m.name)
+		}
+	}
 
 	return info, nil
 }
@@ -56,16 +79,34 @@ func (m *Mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	status.Flags = []string{imap.SeenFlag, imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.DraftFlag}
 	status.PermanentFlags = []string{imap.SeenFlag, imap.AnsweredFlag, imap.FlaggedFlag, imap.DeletedFlag, imap.DraftFlag}
 
+	// Filter messages to only include direct messages for this mailbox (not in subfolders)
+	var directMessages []*Message
+	lowerName := strings.ToLower(m.name)
+	prefix := fmt.Sprintf("mail:in:%s:%s:", m.user.username, lowerName)
+	
+	for _, msg := range m.messages {
+		// Check if this message belongs directly to this mailbox (not a subfolder)
+		if msg.Key != "" && strings.HasPrefix(msg.Key, prefix) && !strings.Contains(msg.Key[len(prefix):], "/") {
+			directMessages = append(directMessages, msg)
+		}
+	}
+	
+	if m.backend.debugMode {
+		log.Printf("DEBUG: Mailbox %s has %d total messages, %d direct messages", 
+			m.name, len(m.messages), len(directMessages))
+	}
+
 	for _, item := range items {
 		switch item {
 		case imap.StatusMessages:
-			status.Messages = uint32(len(m.messages))
+			// Only count direct messages, not messages in subfolders
+			status.Messages = uint32(len(directMessages))
 		case imap.StatusRecent:
 			status.Recent = 0 // No recent messages for simplicity
 		case imap.StatusUnseen:
-			// Count unseen messages
+			// Count unseen messages (only direct messages)
 			unseen := 0
-			for _, msg := range m.messages {
+			for _, msg := range directMessages {
 				if !contains(msg.Flags, imap.SeenFlag) {
 					unseen++
 				}
@@ -178,12 +219,14 @@ func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Litera
 	
 	// Create a new Email object
 	email := &mail.Email{
-		From:        headers["From"],
-		To:          strings.Split(headers["To"], ","),
-		Subject:     headers["Subject"],
 		Message:     messageBody,
 		Attachments: []mail.Attachment{}, // No attachments for now
 	}
+	
+	// Set envelope fields
+	email.SetFrom(headers["From"])
+	email.SetTo(strings.Split(headers["To"], ","))
+	email.SetSubject(headers["Subject"])
 	
 	// Generate a UID for the email
 	uid, err := email.UID()
@@ -212,10 +255,15 @@ func (m *Mailbox) CreateMessage(flags []string, date time.Time, body imap.Litera
 
 // UpdateMessagesFlags updates flags for the specified messages
 func (m *Mailbox) UpdateMessagesFlags(uid bool, seqSet *imap.SeqSet, operation imap.FlagsOp, flags []string) error {
+	log.Printf("Updating flags for messages in mailbox %s, operation: %v, flags: %v", m.name, operation, flags)
+	
 	// Make sure messages are loaded
 	if err := m.loadMessages(); err != nil {
 		return err
 	}
+
+	// Keep track of modified messages
+	var modifiedMessages []*Message
 
 	for i, msg := range m.messages {
 		seqNum := uint32(i + 1)
@@ -231,6 +279,10 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqSet *imap.SeqSet, operation i
 			continue
 		}
 
+		// Store original flags to check if they changed
+		originalFlags := make([]string, len(msg.Flags))
+		copy(originalFlags, msg.Flags)
+
 		// Update flags
 		switch operation {
 		case imap.SetFlags:
@@ -240,21 +292,329 @@ func (m *Mailbox) UpdateMessagesFlags(uid bool, seqSet *imap.SeqSet, operation i
 		case imap.RemoveFlags:
 			msg.Flags = removeFlags(msg.Flags, flags)
 		}
+
+		// Check if flags have changed
+		if !equalFlags(originalFlags, msg.Flags) {
+			modifiedMessages = append(modifiedMessages, msg)
+			if m.backend.debugMode {
+				log.Printf("DEBUG: Message UID %d flags changed from %v to %v", msg.Uid, originalFlags, msg.Flags)
+			}
+		}
+	}
+
+	// Persist flag changes to Redis
+	if len(modifiedMessages) > 0 {
+		log.Printf("Persisting flag changes for %d messages to Redis", len(modifiedMessages))
+		
+		for _, msg := range modifiedMessages {
+			// We need to update the message in Redis
+			if msg.Key == "" {
+				log.Printf("WARNING: Cannot update message in Redis, key is empty for UID %d", msg.Uid)
+				continue
+			}
+			
+			// Get the current message data from Redis
+			emailJSON, err := m.backend.redisClient.Get(m.backend.ctx, msg.Key).Result()
+			if err != nil {
+				log.Printf("ERROR: Failed to get message data from Redis for key %s: %v", msg.Key, err)
+				continue
+			}
+			
+			// Parse the email JSON
+			var email mail.Email
+			err = json.Unmarshal([]byte(emailJSON), &email)
+			if err != nil {
+				log.Printf("ERROR: Failed to unmarshal email JSON for key %s: %v", msg.Key, err)
+				continue
+			}
+			
+			// Update the flags in the email object
+			email.Flags = msg.Flags
+			
+			// Marshal the updated email back to JSON
+			updatedJSON, err := json.Marshal(email)
+			if err != nil {
+				log.Printf("ERROR: Failed to marshal updated email to JSON for key %s: %v", msg.Key, err)
+				continue
+			}
+			
+			// Save the updated email back to Redis
+			_, err = m.backend.redisClient.Set(m.backend.ctx, msg.Key, string(updatedJSON), 0).Result()
+			if err != nil {
+				log.Printf("ERROR: Failed to save updated email to Redis for key %s: %v", msg.Key, err)
+				continue
+			}
+			
+			if m.backend.debugMode {
+				log.Printf("DEBUG: Successfully updated flags in Redis for message UID %d, key %s", msg.Uid, msg.Key)
+			}
+		}
 	}
 
 	return nil
 }
 
+// equalFlags checks if two flag slices contain the same flags (order doesn't matter)
+func equalFlags(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	
+	// Create maps to count occurrences of each flag
+	countA := make(map[string]int)
+	countB := make(map[string]int)
+	
+	for _, flag := range a {
+		countA[flag]++
+	}
+	
+	for _, flag := range b {
+		countB[flag]++
+	}
+	
+	// Compare the maps
+	for flag, count := range countA {
+		if countB[flag] != count {
+			return false
+		}
+	}
+	
+	return true
+}
+
 // CopyMessages copies the specified messages to another mailbox
 func (m *Mailbox) CopyMessages(uid bool, seqSet *imap.SeqSet, destName string) error {
-	// This is not implemented as we're using Redis as a read-only source
-	return fmt.Errorf("copying messages is not supported")
+	log.Printf("Copying messages to mailbox %s", destName)
+	
+	// Make sure messages are loaded
+	if err := m.loadMessages(); err != nil {
+		return err
+	}
+	
+	// Find the destination mailbox
+	destMailbox, err := m.user.GetMailbox(destName)
+	if err != nil {
+		return fmt.Errorf("destination mailbox not found: %w", err)
+	}
+	
+	// Sort messages by UID
+	sort.Slice(m.messages, func(i, j int) bool {
+		return m.messages[i].Uid < m.messages[j].Uid
+	})
+	
+	for i, msg := range m.messages {
+		seqNum := uint32(i + 1)
+		
+		// Check if this message should be included based on the sequence set
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = seqNum
+		}
+		if !seqSet.Contains(id) {
+			continue
+		}
+		
+		// Create a new message in the destination mailbox
+		// We need to convert the Email back to a literal for CreateMessage
+		emailContent := formatEmailContent(msg.Email)
+		literal := bytes.NewBufferString(emailContent)
+		
+		// Copy the message to the destination mailbox
+		err := destMailbox.CreateMessage(msg.Flags, time.Now(), literal)
+		if err != nil {
+			return fmt.Errorf("failed to copy message: %w", err)
+		}
+	}
+	
+	return nil
 }
 
 // Expunge permanently removes messages marked for deletion
 func (m *Mailbox) Expunge() error {
-	// This is not implemented as we're using Redis as a read-only source
-	return fmt.Errorf("expunging messages is not supported")
+	log.Printf("Expunging deleted messages from mailbox %s", m.name)
+	
+	// Make sure messages are loaded
+	if err := m.loadMessages(); err != nil {
+		return err
+	}
+	
+	// Find messages marked for deletion
+	var messagesToDelete []*Message
+	for _, msg := range m.messages {
+		if contains(msg.Flags, imap.DeletedFlag) {
+			messagesToDelete = append(messagesToDelete, msg)
+		}
+	}
+	
+	if len(messagesToDelete) == 0 {
+		log.Printf("No messages marked for deletion in mailbox %s", m.name)
+		return nil
+	}
+	
+	log.Printf("Found %d messages to delete", len(messagesToDelete))
+	
+	// Delete each message from Redis
+	for _, msg := range messagesToDelete {
+		// Get the original Redis key for this message
+		// We need to find the exact key that was used to store this message
+		// since it could be in a nested folder
+		lowerName := strings.ToLower(m.name)
+		
+		// Create patterns to match both direct messages and nested folders
+		patterns := []string{
+			fmt.Sprintf("mail:in:%s:%s:%d", m.user.username, lowerName, msg.Uid),
+			fmt.Sprintf("mail:in:%s:%s/*:%d", m.user.username, lowerName, msg.Uid),
+		}
+		
+		if m.backend.debugMode {
+			log.Printf("DEBUG: Looking for message with UID %d using patterns: %v", msg.Uid, patterns)
+		}
+		
+		// Check each pattern for matching keys
+		deleted := false
+		for _, pattern := range patterns {
+			keys, err := m.backend.redisClient.Keys(m.backend.ctx, pattern).Result()
+			if err != nil {
+				log.Printf("ERROR: Failed to get keys from Redis with pattern %s: %v", pattern, err)
+				continue
+			}
+			
+			if m.backend.debugMode {
+				log.Printf("DEBUG: Found %d keys matching pattern %s", len(keys), pattern)
+			}
+			
+			// Delete all matching keys
+			for _, key := range keys {
+				if m.backend.debugMode {
+					log.Printf("DEBUG: Deleting message with key %s", key)
+				}
+				
+				_, err := m.backend.redisClient.Del(m.backend.ctx, key).Result()
+				if err != nil {
+					log.Printf("Error deleting message with key %s: %v", key, err)
+					// Continue with other deletions even if one fails
+				} else {
+					log.Printf("Successfully deleted message with key %s", key)
+					deleted = true
+				}
+			}
+		}
+		
+		if !deleted && m.backend.debugMode {
+			log.Printf("WARNING: Could not find any Redis keys for message with UID %d", msg.Uid)
+		}
+	}
+	
+	// Reload messages to reflect the changes
+	return m.loadMessages()
+}
+
+// MoveMessages moves the specified messages to another mailbox
+func (m *Mailbox) MoveMessages(uid bool, seqSet *imap.SeqSet, destName string) error {
+	log.Printf("Moving messages from %s to %s", m.name, destName)
+	
+	// First, copy the messages to the destination mailbox
+	err := m.CopyMessages(uid, seqSet, destName)
+	if err != nil {
+		return fmt.Errorf("failed to copy messages during move operation: %w", err)
+	}
+	
+	// Make sure messages are loaded
+	if err := m.loadMessages(); err != nil {
+		return err
+	}
+	
+	// Find messages that match the sequence set
+	var messagesToDelete []*Message
+	for i, msg := range m.messages {
+		seqNum := uint32(i + 1)
+		
+		// Check if this message should be included based on the sequence set
+		var id uint32
+		if uid {
+			id = msg.Uid
+		} else {
+			id = seqNum
+		}
+		
+		if seqSet.Contains(id) {
+			// Mark message for deletion
+			msg.Flags = addFlags(msg.Flags, []string{imap.DeletedFlag})
+			messagesToDelete = append(messagesToDelete, msg)
+			
+			// Log the message being marked for deletion
+			if m.backend.debugMode {
+				log.Printf("DEBUG: Marking message with UID %d for deletion during move operation", msg.Uid)
+			}
+		}
+	}
+	
+	if len(messagesToDelete) == 0 {
+		log.Printf("No messages found to move from %s to %s", m.name, destName)
+		return nil
+	}
+	
+	log.Printf("Marked %d messages for deletion after copying to %s", len(messagesToDelete), destName)
+	
+	// Directly delete the messages from Redis without relying on Expunge
+	// This ensures that the messages are actually deleted from Redis
+	for _, msg := range messagesToDelete {
+		// Get the original Redis key for this message
+		lowerName := strings.ToLower(m.name)
+		
+		// Create patterns to match both direct messages and nested folders
+		patterns := []string{
+			fmt.Sprintf("mail:in:%s:%s:%d", m.user.username, lowerName, msg.Uid),
+			fmt.Sprintf("mail:in:%s:%s/*:%d", m.user.username, lowerName, msg.Uid),
+		}
+		
+		if m.backend.debugMode {
+			log.Printf("DEBUG: Looking for message with UID %d to delete during move using patterns: %v", msg.Uid, patterns)
+		}
+		
+		// Check each pattern for matching keys
+		deleted := false
+		for _, pattern := range patterns {
+			keys, err := m.backend.redisClient.Keys(m.backend.ctx, pattern).Result()
+			if err != nil {
+				log.Printf("ERROR: Failed to get keys from Redis with pattern %s: %v", pattern, err)
+				continue
+			}
+			
+			if m.backend.debugMode {
+				log.Printf("DEBUG: Found %d keys matching pattern %s during move operation", len(keys), pattern)
+			}
+			
+			// Delete all matching keys
+			for _, key := range keys {
+				if m.backend.debugMode {
+					log.Printf("DEBUG: Deleting message with key %s during move operation", key)
+				}
+				
+				_, err := m.backend.redisClient.Del(m.backend.ctx, key).Result()
+				if err != nil {
+					log.Printf("Error deleting message with key %s during move: %v", key, err)
+				} else {
+					log.Printf("Successfully deleted message with key %s during move", key)
+					deleted = true
+				}
+			}
+		}
+		
+		if !deleted && m.backend.debugMode {
+			log.Printf("WARNING: Could not find any Redis keys for message with UID %d during move", msg.Uid)
+		}
+	}
+	
+	// Reload messages to reflect the changes
+	if err := m.loadMessages(); err != nil {
+		return fmt.Errorf("failed to reload messages after move operation: %w", err)
+	}
+	
+	log.Printf("Successfully moved %d messages from %s to %s", len(messagesToDelete), m.name, destName)
+	return nil
 }
 
 // loadMessages loads messages from Redis for this mailbox
@@ -263,40 +623,64 @@ func (m *Mailbox) loadMessages() error {
 	
 	// Always use lowercase mailbox name for consistency
 	lowerName := strings.ToLower(m.name)
-	pattern := fmt.Sprintf("mail:in:%s:%s*", m.user.username, lowerName)
 	
-	if m.backend.debugMode {
-		log.Printf("DEBUG: Using Redis pattern with lowercase name: %s", pattern)
-	} else {
-		log.Printf("Using Redis pattern with lowercase name: %s", pattern)
-	}
+	// Create patterns to match both direct messages and nested folders
+	// For example, for inbox, we want to match both:
+	// - mail:in:username:inbox:*  (direct messages in this mailbox)
+	// - mail:in:username:inbox/*  (messages in subfolders)
 	
-	// Use SCAN instead of KEYS for better performance and reliability
-	var cursor uint64
-	var keys []string
+	// First pattern is for direct messages in this mailbox (not in subfolders)
+	directPattern := fmt.Sprintf("mail:in:%s:%s:*", m.user.username, lowerName)
+	
+	// Second pattern is for messages in subfolders
+	subfolderPattern := fmt.Sprintf("mail:in:%s:%s/*", m.user.username, lowerName)
+	
+	// We'll collect all keys from both patterns
 	var allKeys []string
-	var scanErr error
+	var directKeys []string
+	var subfolderKeys []string
 	
-	for {
-		keys, cursor, scanErr = m.backend.redisClient.Scan(m.backend.ctx, cursor, pattern, 10).Result()
-		if scanErr != nil {
-			log.Printf("ERROR: Failed to scan keys from Redis: %v", scanErr)
-			return scanErr
-		}
-		
-		allKeys = append(allKeys, keys...)
-		if cursor == 0 {
-			break
-		}
+	if m.backend.debugMode {
+		log.Printf("DEBUG: Using direct pattern: %s", directPattern)
+		log.Printf("DEBUG: Using subfolder pattern: %s", subfolderPattern)
+	} else {
+		log.Printf("Using patterns: direct=%s, subfolder=%s", directPattern, subfolderPattern)
+	}
+	
+	// Get direct messages
+	keys, err := m.backend.redisClient.Keys(m.backend.ctx, directPattern).Result()
+	if err != nil {
+		log.Printf("ERROR: Failed to get keys from Redis with pattern %s: %v", directPattern, err)
+		return err
 	}
 	
 	if m.backend.debugMode {
-		log.Printf("DEBUG: Found %d keys with pattern %s using SCAN", len(allKeys), pattern)
+		log.Printf("DEBUG: Found %d direct message keys with pattern %s", len(keys), directPattern)
+	}
+	directKeys = keys
+	
+	// Get subfolder messages
+	keys, err = m.backend.redisClient.Keys(m.backend.ctx, subfolderPattern).Result()
+	if err != nil {
+		log.Printf("ERROR: Failed to get keys from Redis with pattern %s: %v", subfolderPattern, err)
+		return err
+	}
+	
+	if m.backend.debugMode {
+		log.Printf("DEBUG: Found %d subfolder message keys with pattern %s", len(keys), subfolderPattern)
+	}
+	subfolderKeys = keys
+	
+	// Combine all keys
+	allKeys = append(directKeys, subfolderKeys...)
+	
+	if m.backend.debugMode {
+		log.Printf("DEBUG: Found %d total keys (%d direct, %d subfolder)", len(allKeys), len(directKeys), len(subfolderKeys))
 		for i, key := range allKeys {
 			log.Printf("DEBUG: Key[%d]: %s", i, key)
 		}
 	} else {
-		log.Printf("Found %d keys with pattern %s", len(allKeys), pattern)
+		log.Printf("Found %d total keys (%d direct, %d subfolder)", len(allKeys), len(directKeys), len(subfolderKeys))
 	}
 	
 	// If still no keys found, try with a more generic pattern
@@ -310,22 +694,11 @@ func (m *Mailbox) loadMessages() error {
 			log.Printf("No keys found, listing all keys for user with pattern: %s", allKeysPattern)
 		}
 		
-		// Use SCAN for the generic pattern too
-		var genericCursor uint64
-		var genericKeys []string
-		var allUserKeys []string
-		
-		for {
-			genericKeys, genericCursor, scanErr = m.backend.redisClient.Scan(m.backend.ctx, genericCursor, allKeysPattern, 10).Result()
-			if scanErr != nil {
-				log.Printf("ERROR: Failed to scan all keys from Redis: %v", scanErr)
-				return scanErr
-			}
-			
-			allUserKeys = append(allUserKeys, genericKeys...)
-			if genericCursor == 0 {
-				break
-			}
+		// Use KEYS command for the generic pattern
+		allUserKeys, err := m.backend.redisClient.Keys(m.backend.ctx, allKeysPattern).Result()
+		if err != nil {
+			log.Printf("ERROR: Failed to get all keys from Redis: %v", err)
+			return err
 		}
 		
 		if m.backend.debugMode {
@@ -469,6 +842,7 @@ func (m *Mailbox) loadMessages() error {
 			Email: &email,
 			Uid:   parsedUID,
 			Flags: []string{}, // No flags by default
+			Key:   key, // Store the Redis key
 		}
 
 		m.messages = append(m.messages, msg)
@@ -485,20 +859,30 @@ func (m *Mailbox) loadMessages() error {
 
 // parseUID converts a string UID to uint32
 func parseUID(uidStr string) uint32 {
-	// Extract the epoch part for simplicity
-	// In a real implementation, you might want to handle this differently
-	if len(uidStr) > 10 {
-		uidStr = uidStr[:10] // Take first 10 chars which should be the epoch
-	}
-	
-	// Parse as time and convert to uint32
-	timestamp, err := time.Parse(time.RFC3339, uidStr)
+	// Try to parse as integer first
+	uid, err := strconv.ParseUint(uidStr, 10, 32)
 	if err == nil {
-		return uint32(timestamp.Unix())
+		return uint32(uid)
 	}
 	
-	// If parsing fails, use a simple hash of the string
-	var hash uint32
+	// If the string contains non-numeric characters, extract the numeric part
+	var numericPart string
+	for _, c := range uidStr {
+		if c >= '0' && c <= '9' {
+			numericPart += string(c)
+		}
+	}
+	
+	// If we extracted a numeric part, try to parse it
+	if numericPart != "" {
+		uid, err := strconv.ParseUint(numericPart, 10, 32)
+		if err == nil {
+			return uint32(uid)
+		}
+	}
+	
+	// If all else fails, use a hash of the string
+	var hash uint32 = 1
 	for _, c := range uidStr {
 		hash = hash*31 + uint32(c)
 	}
@@ -538,6 +922,30 @@ func removeFlags(slice []string, flags []string) []string {
 		}
 	}
 	return result
+}
+
+// formatEmailContent converts an Email struct back to a string representation
+func formatEmailContent(email *mail.Email) string {
+	// Create a simple email format
+	var buf strings.Builder
+	
+	// Add headers
+	buf.WriteString(fmt.Sprintf("From: %s\r\n", email.From()))
+	buf.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(email.To(), ", ")))
+	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", email.Subject()))
+	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
+	buf.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	
+	// Add blank line to separate headers from body
+	buf.WriteString("\r\n")
+	
+	// Add message body
+	buf.WriteString(email.Message)
+	
+	// Add attachments as base64 encoded content if needed
+	// (not implemented in this simple version)
+	
+	return buf.String()
 }
 
 // parseEmailContent extracts headers and body from an email message

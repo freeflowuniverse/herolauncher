@@ -29,6 +29,9 @@ func NewServer(redisClient *redis.Client, addr string, debugMode bool) *Server {
 	s.imapServer = server.New(backend)
 	s.imapServer.Addr = addr
 	s.imapServer.AllowInsecureAuth = true // Allow insecure authentication for testing
+	
+	// The MOVE capability will be automatically advertised by the server
+	// since we've implemented the MoveMessages method in the Mailbox struct
 
 	// Set up logging
 	s.imapServer.ErrorLog = log.New(os.Stderr, "IMAP SERVER ERROR: ", log.LstdFlags)

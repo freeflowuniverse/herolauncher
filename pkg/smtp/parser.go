@@ -61,11 +61,13 @@ func parseEmail(from string, to []string, data []byte) (*mailmodel.Email, error)
 
 	// Create email
 	email := &mailmodel.Email{
-		From:        from,
-		To:          to,
-		Subject:     subject,
 		Attachments: []mailmodel.Attachment{},
 	}
+	
+	// Set envelope fields
+	email.SetFrom(from)
+	email.SetTo(to)
+	email.SetSubject(subject)
 
 	// Process the body based on content type
 	contentType := msg.Header.Get("Content-Type")
@@ -179,12 +181,14 @@ func parseEmailManually(from string, to []string, data []byte) (*mailmodel.Email
 	
 	// Create a basic email structure
 	email := &mailmodel.Email{
-		From:        from,
-		To:          to,
-		Subject:     "",
 		Message:     "",
 		Attachments: []mailmodel.Attachment{},
 	}
+	
+	// Set envelope fields
+	email.SetFrom(from)
+	email.SetTo(to)
+	email.SetSubject("")
 	
 	// Convert data to string for easier processing
 	content := string(data)
@@ -234,7 +238,7 @@ func parseEmailManually(from string, to []string, data []byte) (*mailmodel.Email
 		// Process specific headers
 		switch strings.ToLower(headerName) {
 		case "subject":
-			email.Subject = headerValue
+			email.SetSubject(headerValue)
 		}
 	}
 	

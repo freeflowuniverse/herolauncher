@@ -15,6 +15,7 @@ type Message struct {
 	Email *mail.Email
 	Uid   uint32
 	Flags []string
+	Key   string // Redis key where this message is stored
 }
 
 // Fetch converts a Message to an imap.Message
@@ -32,12 +33,19 @@ func (m *Message) Fetch(seqNum uint32, items []imap.FetchItem) (*imap.Message, e
 		case imap.FetchFlags:
 			// Flags already set above
 		case imap.FetchInternalDate:
-			msg.InternalDate = time.Now() // Use current time for simplicity
+			// Use InternalDate from the Email struct if available, otherwise use current time
+			if m.Email.InternalDate > 0 {
+				msg.InternalDate = time.Unix(m.Email.InternalDate, 0)
+			} else {
+				msg.InternalDate = time.Now()
+			}
 		case imap.FetchRFC822Size:
-			// Estimate size based on message content
-			msg.Size = uint32(len(m.Email.Message) + len(m.Email.Subject) + len(m.Email.From) + len(strings.Join(m.Email.To, ", ")))
-			for _, att := range m.Email.Attachments {
-				msg.Size += uint32(len(att.Data))
+			// Use Size from the Email struct if available, otherwise calculate it
+			if m.Email.Size > 0 {
+				msg.Size = m.Email.Size
+			} else {
+				// Calculate size using the CalculateSize method
+				msg.Size = m.Email.CalculateSize()
 			}
 		default:
 			// Handle section fetch (BODY[...], BODY.PEEK[...])
@@ -79,15 +87,15 @@ func (m *Message) Match(seqNum uint32, criteria *imap.SearchCriteria) bool {
 		for field, values := range criteria.Header {
 			switch strings.ToLower(field) {
 			case "from":
-				if !matchAny(m.Email.From, values) {
+				if !matchAny(m.Email.From(), values) {
 					return false
 				}
 			case "to":
-				if !matchAnyInSlice(m.Email.To, values) {
+				if !matchAnyInSlice(m.Email.To(), values) {
 					return false
 				}
 			case "subject":
-				if !matchAny(m.Email.Subject, values) {
+				if !matchAny(m.Email.Subject(), values) {
 					return false
 				}
 			}
@@ -135,17 +143,77 @@ func (m *Message) Match(seqNum uint32, criteria *imap.SearchCriteria) bool {
 
 // createEnvelope creates an IMAP envelope from the email
 func (m *Message) createEnvelope() *imap.Envelope {
+	// If the email already has an envelope defined in the mail.Email struct, use that
+	if m.Email.Envelope != nil {
+		// Convert mail.Envelope to imap.Envelope
+		env := &imap.Envelope{
+			Date:    time.Unix(m.Email.Envelope.Date, 0),
+			Subject: m.Email.Envelope.Subject,
+			From:    make([]*imap.Address, 0, len(m.Email.Envelope.From)),
+			Sender:  make([]*imap.Address, 0, len(m.Email.Envelope.Sender)),
+			To:      make([]*imap.Address, 0, len(m.Email.Envelope.To)),
+			Cc:      make([]*imap.Address, 0, len(m.Email.Envelope.Cc)),
+			Bcc:     make([]*imap.Address, 0, len(m.Email.Envelope.Bcc)),
+		}
+		
+		// Convert addresses
+		for _, from := range m.Email.Envelope.From {
+			env.From = append(env.From, parseAddress(from))
+		}
+		
+		for _, sender := range m.Email.Envelope.Sender {
+			env.Sender = append(env.Sender, parseAddress(sender))
+		}
+		
+		for _, to := range m.Email.Envelope.To {
+			env.To = append(env.To, parseAddress(to))
+		}
+		
+		for _, cc := range m.Email.Envelope.Cc {
+			env.Cc = append(env.Cc, parseAddress(cc))
+		}
+		
+		for _, bcc := range m.Email.Envelope.Bcc {
+			env.Bcc = append(env.Bcc, parseAddress(bcc))
+		}
+		
+		// Set message IDs
+		env.MessageId = m.Email.Envelope.MessageId
+		env.InReplyTo = m.Email.Envelope.InReplyTo
+		
+		return env
+	}
+	
+	// Otherwise, create a new envelope from the basic email fields using accessor methods
 	env := &imap.Envelope{
 		Date:    time.Now(), // Use current time for simplicity
-		Subject: m.Email.Subject,
-		From:    []*imap.Address{parseAddress(m.Email.From)},
-		Sender:  []*imap.Address{parseAddress(m.Email.From)},
-		To:      make([]*imap.Address, 0, len(m.Email.To)),
+		Subject: m.Email.Subject(),
+		From:    []*imap.Address{parseAddress(m.Email.From())},
+		Sender:  []*imap.Address{parseAddress(m.Email.From())},
+		To:      make([]*imap.Address, 0, len(m.Email.To())),
 	}
 
 	// Add recipients
-	for _, to := range m.Email.To {
+	for _, to := range m.Email.To() {
 		env.To = append(env.To, parseAddress(to))
+	}
+	
+	// Add CC recipients if available
+	cc := m.Email.Cc()
+	if len(cc) > 0 {
+		env.Cc = make([]*imap.Address, 0, len(cc))
+		for _, ccAddr := range cc {
+			env.Cc = append(env.Cc, parseAddress(ccAddr))
+		}
+	}
+	
+	// Add BCC recipients if available
+	bcc := m.Email.Bcc()
+	if len(bcc) > 0 {
+		env.Bcc = make([]*imap.Address, 0, len(bcc))
+		for _, bccAddr := range bcc {
+			env.Bcc = append(env.Bcc, parseAddress(bccAddr))
+		}
 	}
 
 	return env
@@ -153,6 +221,10 @@ func (m *Message) createEnvelope() *imap.Envelope {
 
 // createBodyStructure creates an IMAP body structure
 func (m *Message) createBodyStructure(extended bool) *imap.BodyStructure {
+	// Generate a body structure using the GetBodyStructure method
+	// and parse it into an imap.BodyStructure
+	// For now, we'll continue with the existing implementation
+	
 	// Create a simple text body structure
 	bs := &imap.BodyStructure{
 		MIMEType:    "text",
@@ -239,13 +311,13 @@ func createHeader(email *mail.Email) []byte {
 	var buf bytes.Buffer
 	
 	// Add From header
-	buf.WriteString(fmt.Sprintf("From: %s\r\n", email.From))
+	buf.WriteString(fmt.Sprintf("From: %s\r\n", email.From()))
 	
 	// Add To header
-	buf.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(email.To, ", ")))
+	buf.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(email.To(), ", ")))
 	
 	// Add Subject header
-	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", email.Subject))
+	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", email.Subject()))
 	
 	// Add Date header
 	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))

@@ -115,13 +115,13 @@ func main() {
 			log.Printf("  Key[%d]: %s", i, key)
 		}
 
-		// Test with our scanKeys helper function (emulated KEYS)
-		log.Printf("Trying pattern with emulated KEYS: %s", pattern)
-		keysResult, err := scanKeys(ctx, redisClient, pattern)
+		// Test with the standard KEYS command
+		log.Printf("Trying pattern with KEYS: %s", pattern)
+		keysResult, err := redisClient.Keys(ctx, pattern).Result()
 		if err != nil {
-			log.Printf("Error with emulated KEYS command for pattern %s: %v", pattern, err)
+			log.Printf("Error with KEYS command for pattern %s: %v", pattern, err)
 		} else {
-			log.Printf("Found %d keys with pattern %s using emulated KEYS", len(keysResult), pattern)
+			log.Printf("Found %d keys with pattern %s using KEYS", len(keysResult), pattern)
 			for i, key := range keysResult {
 				log.Printf("  Key[%d]: %s", i, key)
 			}

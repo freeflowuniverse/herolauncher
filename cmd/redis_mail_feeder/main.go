@@ -97,12 +97,14 @@ func generateRandomEmail(r *rand.Rand) *mail.Email {
 
 	// Create email
 	email := &mail.Email{
-		From:        sender,
-		To:          to,
-		Subject:     subject,
 		Message:     message,
 		Attachments: []mail.Attachment{},
 	}
+	
+	// Set envelope fields
+	email.SetFrom(sender)
+	email.SetTo(to)
+	email.SetSubject(subject)
 
 	// Randomly add an attachment (20% chance)
 	if r.Intn(5) == 0 {
