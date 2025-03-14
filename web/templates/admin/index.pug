@@ -1,0 +1,57 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Dashboard
+      p Welcome to the HeroLauncher Admin Dashboard
+    
+    .grid
+      div
+        article
+          header
+            h3 System Status
+          
+          .grid
+            div
+              h4 Services
+              p
+                strong 12
+                |  running
+            
+            div
+              h4 CPU
+              p
+                strong 24%
+                |  usage
+            
+            div
+              h4 Memory
+              p
+                strong 1.2GB
+                |  / 8GB
+      
+      div
+        article
+          header
+            h3 Recent Activity
+          
+          ul
+            li Service 'redis' started (2 minutes ago)
+            li Package 'web-ui' updated (10 minutes ago)
+            li System backup completed (1 hour ago)
+            li User 'admin' logged in (2 hours ago)
+    
+    article
+      header
+        h3 Quick Actions
+      
+      .grid
+        div
+          a(href="/admin/services/start", role="button") Start Service
+        
+        div
+          a(href="/admin/services/stop", role="button", class="secondary") Stop Service
+        
+        div
+          a(href="/admin/packages/install", role="button", class="contrast") Install Package

@@ -1,0 +1,28 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title HeroLauncher Admin
+    link(rel="icon", href="/img/flower.svg", type="image/svg+xml")
+    link(rel="shortcut icon", href="/favicon.ico")
+    link(rel="stylesheet", href="/css/pico.min.css")
+    link(rel="stylesheet", href="/css/admin.css")
+    style.
+      :root {
+        --font-size: 70%; /* Reduce font size by 30% */
+      }
+  body
+    include partials/header
+    
+    .sidebar
+      nav
+        include partials/sidebar
+    
+    main
+      block content
+    
+    include partials/log-panel
+    
+    script(src="/js/admin.js")
+    block scripts

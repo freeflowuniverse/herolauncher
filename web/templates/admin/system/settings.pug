@@ -1,0 +1,67 @@
+extends ../layout
+
+block content
+  article
+    header
+      h2 System Settings
+      p Configure system parameters and preferences
+    
+    form
+      .grid
+        div
+          article
+            header
+              h3 Server Settings
+            
+            label(for="server-port") Server Port
+            input#server-port(type="number", value="9001")
+            
+            label(for="log-level") Default Log Level
+            select#log-level
+              option(value="info") Info
+              option(value="warning") Warning
+              option(value="error") Error
+              option(value="debug") Debug
+            
+            label(for="max-connections") Max Connections
+            input#max-connections(type="number", value="100")
+        
+        div
+          article
+            header
+              h3 Security Settings
+            
+            label(for="enable-auth") Enable Authentication
+            input#enable-auth(type="checkbox", checked)
+            
+            label(for="session-timeout") Session Timeout (minutes)
+            input#session-timeout(type="number", value="30")
+            
+            label(for="allowed-origins") Allowed Origins (CORS)
+            input#allowed-origins(type="text", value="*")
+      
+      .grid
+        div
+          article
+            header
+              h3 Redis Settings
+            
+            label(for="redis-port") Redis Port
+            input#redis-port(type="number", value="6379")
+            
+            label(for="redis-max-memory") Max Memory (MB)
+            input#redis-max-memory(type="number", value="512")
+        
+        div
+          article
+            header
+              h3 Executor Settings
+            
+            label(for="executor-timeout") Command Timeout (seconds)
+            input#executor-timeout(type="number", value="60")
+            
+            label(for="executor-max-processes") Max Concurrent Processes
+            input#executor-max-processes(type="number", value="10")
+      
+      button(type="submit") Save Settings
+      button.secondary(type="reset") Reset

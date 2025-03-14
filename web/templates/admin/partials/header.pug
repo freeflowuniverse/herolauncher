@@ -1,0 +1,17 @@
+//- header.pug - Header component
+header
+  nav.top-nav
+    .brand
+      img.brand-icon(src="/img/flower.svg", alt="HeroLauncher Logo", width="24", height="24")
+      span HeroLauncher
+    button.menu-toggle(aria-label="Toggle menu")
+      span Menu
+    ul
+      li
+        a(href="/admin") Dashboard
+      li
+        a(href="/admin/settings") Settings
+      li
+        a(href="/admin/users") Users
+      li
+        a(href="/") Back to App

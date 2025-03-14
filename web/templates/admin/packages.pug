@@ -1,0 +1,63 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Package Manager
+      p Install and manage packages
+    
+    .grid
+      div
+        article
+          header
+            h3 Installed Packages
+          
+          table
+            thead
+              tr
+                th Name
+                th Version
+                th Status
+                th Actions
+            tbody
+              tr
+                td web-ui
+                td 1.2.0
+                td 
+                  span.badge.success Installed
+                td
+                  div(role="group")
+                    button.outline Update
+                    button.outline.secondary Remove
+              tr
+                td redis-client
+                td 2.0.1
+                td 
+                  span.badge.success Installed
+                td
+                  div(role="group")
+                    button.outline Update
+                    button.outline.secondary Remove
+              tr
+                td executor-service
+                td 0.9.5
+                td 
+                  span.badge.warning Update Available
+                td
+                  div(role="group")
+                    button.outline Update
+                    button.outline.secondary Remove
+      
+      div
+        article
+          header
+            h3 Install New Package
+          
+          form
+            label(for="package-name") Package Name
+            input#package-name(type="text", placeholder="Enter package name")
+            
+            label(for="package-version") Version (optional)
+            input#package-version(type="text", placeholder="Latest")
+            
+            button(type="submit") Install Package

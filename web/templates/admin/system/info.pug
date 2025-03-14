@@ -1,0 +1,48 @@
+extends ../layout
+
+block content
+  article
+    header
+      h2 System Information
+      p Overview of system resources and configuration
+    
+    .grid
+      div
+        article
+          header
+            h3 Hardware
+          
+          table
+            tbody
+              tr
+                th CPU
+                td 4 cores (Intel i7)
+              tr
+                th Memory
+                td 8GB (2.4GB used)
+              tr
+                th Disk
+                td 256GB (120GB free)
+              tr
+                th Network
+                td 1Gbps (Up: 12Mbps, Down: 45Mbps)
+      
+      div
+        article
+          header
+            h3 Software
+          
+          table
+            tbody
+              tr
+                th OS
+                td macOS 12.6
+              tr
+                th Go Version
+                td 1.21.0
+              tr
+                th HeroLauncher
+                td v0.1.0
+              tr
+                th Uptime
+                td 3 days, 7 hours

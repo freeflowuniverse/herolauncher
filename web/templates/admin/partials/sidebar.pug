@@ -1,0 +1,38 @@
+//- sidebar.pug - Sidebar navigation component
+.sidebar-section
+  h3 Dashboard
+  ul
+    li
+      a(href="/admin") Overview
+    li
+      a(href="/admin/stats") Statistics
+
+.sidebar-section
+  h3 Services
+  ul
+    li
+      a(href="/admin/services") All Services
+    li
+      a(href="/admin/services/running") Running
+    li
+      a(href="/admin/services/stopped") Stopped
+
+.sidebar-section
+  h3 Package Manager
+  ul
+    li
+      a(href="/admin/packages") Installed Packages
+    li
+      a(href="/admin/packages/install") Install New
+    li
+      a(href="/admin/packages/update") Updates
+
+.sidebar-section
+  h3 System
+  ul
+    li
+      a(href="/admin/system/info") System Info
+    li
+      a(href="/admin/system/logs") Logs
+    li
+      a(href="/admin/system/settings") Settings
