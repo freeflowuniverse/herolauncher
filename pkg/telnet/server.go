@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"sync"
 )
 
@@ -22,28 +23,29 @@ const (
 
 // Server represents a telnet server
 type Server struct {
-	listener         net.Listener
-	clients          map[net.Conn]*Client
-	clientsMutex     sync.RWMutex
-	running          bool
-	authHandler      AuthHandler
-	commandHandler   CommandHandler
-	onClientConnect  func(*Client)
-	onClientDisconnect func(*Client)
+	listener           net.Listener
+	sessions           map[net.Conn]*Session
+	sessionsMutex      sync.RWMutex
+	running            bool
+	authHandler        AuthHandler
+	commandHandler     CommandHandler
+	onSessionConnect    func(*Session)
+	onSessionDisconnect func(*Session)
+	debugMode          bool // Whether to print debug messages
 }
 
-// AuthHandler is a function that authenticates a client
+// AuthHandler is a function that authenticates a session
 type AuthHandler func(string) bool
 
-// CommandHandler is a function that handles a command from a client
-type CommandHandler func(*Client, string) error
+// CommandHandler is a function that handles a command from a session
+type CommandHandler func(*Session, string) error
 
-// NewServer creates a new telnet server
-func NewServer(authHandler AuthHandler, commandHandler CommandHandler) *Server {
+func NewServer(authHandler AuthHandler, commandHandler CommandHandler, debugMode bool) *Server {
 	return &Server{
-		clients:        make(map[net.Conn]*Client),
+		sessions:        make(map[net.Conn]*Session),
 		authHandler:    authHandler,
 		commandHandler: commandHandler,
+		debugMode:      debugMode,
 	}
 }
 
@@ -74,25 +76,25 @@ func (s *Server) Stop() error {
 		}
 	}
 
-	// Close all client connections
-	s.clientsMutex.Lock()
-	for conn, client := range s.clients {
-		client.Close()
-		delete(s.clients, conn)
+	// Close all session connections
+	s.sessionsMutex.Lock()
+	for conn, session := range s.sessions {
+		session.Close()
+		delete(s.sessions, conn)
 	}
-	s.clientsMutex.Unlock()
+	s.sessionsMutex.Unlock()
 
 	return nil
 }
 
-// SetOnClientConnect sets the callback for when a client connects
-func (s *Server) SetOnClientConnect(callback func(*Client)) {
-	s.onClientConnect = callback
+// SetOnSessionConnect sets the callback for when a session connects
+func (s *Server) SetOnSessionConnect(callback func(*Session)) {
+	s.onSessionConnect = callback
 }
 
-// SetOnClientDisconnect sets the callback for when a client disconnects
-func (s *Server) SetOnClientDisconnect(callback func(*Client)) {
-	s.onClientDisconnect = callback
+// SetOnSessionDisconnect sets the callback for when a session disconnects
+func (s *Server) SetOnSessionDisconnect(callback func(*Session)) {
+	s.onSessionDisconnect = callback
 }
 
 // acceptConnections accepts incoming connections
@@ -110,93 +112,139 @@ func (s *Server) acceptConnections() {
 	}
 }
 
-// handleConnection handles a client connection
+// handleConnection handles a session connection
 func (s *Server) handleConnection(conn net.Conn) {
-	client := NewClient(conn)
-	
-	// Add client to the map
-	s.clientsMutex.Lock()
-	s.clients[conn] = client
-	s.clientsMutex.Unlock()
+	// Log connection information if debug mode is enabled
+	if s.debugMode {
+		fmt.Printf("DEBUG: New connection from %s\n", conn.RemoteAddr())
+	}
+	session := NewSession(conn)
+
+	// Add session to the map
+	s.sessionsMutex.Lock()
+	s.sessions[conn] = session
+	s.sessionsMutex.Unlock()
 
 	// Send initial terminal negotiation sequence
 	// This helps with proper terminal handling
-	conn.Write([]byte{255, 251, 1})   // IAC WILL ECHO
-	conn.Write([]byte{255, 251, 3})   // IAC WILL SUPPRESS GO AHEAD
-	conn.Write([]byte{255, 253, 34})  // IAC DO LINEMODE
+	conn.Write([]byte{255, 251, 1})                  // IAC WILL ECHO
+	conn.Write([]byte{255, 251, 3})                  // IAC WILL SUPPRESS GO AHEAD
+	conn.Write([]byte{255, 253, 34})                 // IAC DO LINEMODE
 	conn.Write([]byte{255, 250, 34, 1, 0, 255, 240}) // IAC SB LINEMODE MODE 0 IAC SE
 
-	// Call the onClientConnect callback if set
-	if s.onClientConnect != nil {
-		s.onClientConnect(client)
+	// Call the onSessionConnect callback if set
+	if s.onSessionConnect != nil {
+		s.onSessionConnect(session)
 	}
 
-	// Ensure client is removed when connection ends
+	// Ensure session is removed when connection ends
 	defer func() {
-		s.clientsMutex.Lock()
-		delete(s.clients, conn)
-		s.clientsMutex.Unlock()
-		
-		// Call the onClientDisconnect callback if set
-		if s.onClientDisconnect != nil {
-			s.onClientDisconnect(client)
+		s.sessionsMutex.Lock()
+		delete(s.sessions, conn)
+		s.sessionsMutex.Unlock()
+
+		// Call the onSessionDisconnect callback if set
+		if s.onSessionDisconnect != nil {
+			s.onSessionDisconnect(session)
 		}
-		
-		client.Close()
+
+		session.Close()
 	}()
 
 	// Handle authentication if an auth handler is provided
 	if s.authHandler != nil {
 		// Don't force interactive mode during authentication
-		origInteractive := client.interactive
-		client.Println("Welcome: you are not authenticated, provide secret.")
-		
-		// Read until we get a valid secret or client disconnects
+		origInteractive := session.interactive
+		session.PrintlnBold("Welcome to the telnet server!")
+		session.PrintlnBold("=== Authentication Required ===")
+		session.Println("To authenticate, type 'auth:YOUR_SECRET'")
+		session.Println("Welcome to the telnet server!")
+		session.Println("Please enter your password to authenticate.")
+		session.Println("You can also type q to quit.")
+
+		// Authentication loop
 		authenticated := false
+
+		// Read all input during authentication (echo is enabled)
 		for !authenticated {
-			line, err := client.ReadLine()
+			// Use ReadLine with suppressEcho parameter, but we've modified it to show typing
+			line, err := session.ReadLine(true)
 			if err != nil {
-				return // Client disconnected
+				fmt.Printf("Error during authentication: %v\n", err)
+				return // Session disconnected
 			}
-			
-			// Check for exit commands or special cases
-			if line == "!!exit" || line == "!!quit" || line == "q" || line == "" {
-				client.Println("Goodbye!")
+
+			// Check for exit commands
+			if line == "!!exit" || line == "!!quit" || line == "q" {
+				session.Println("Goodbye!")
 				return
 			}
+
+			// Try to authenticate with the provided password directly
+			// First, check if it has the old auth: prefix and extract it if needed
+			secret := line
+			if strings.Contains(line, "auth:") {
+				parts := strings.Split(line, "auth:")
+				if len(parts) > 1 {
+					secret = parts[1]
+				}
+			}
 			
-			if s.authHandler(line) {
+			// Trim any whitespace from the secret
+			secret = strings.TrimSpace(secret)
+
+			if s.debugMode {
+				fmt.Printf("DEBUG: Authentication attempt with secret: '%s'\n", secret)
+			}
+
+			// Validate the secret
+			if s.authHandler(secret) {
 				authenticated = true
-				client.Println("Welcome: you are authenticated.")
+				// Authentication successful
+				if s.debugMode {
+					fmt.Printf("DEBUG: Authentication successful with secret: '%s'\n", secret)
+				}
+				session.PrintlnGreen("Authentication successful!")
+				session.Println("Type 'help' or '?' for available commands.")
 			} else {
-				client.Println("Invalid secret. Try again or disconnect.")
+				session.PrintlnRed("Invalid password. Try again or type q to quit.")
+				if s.debugMode {
+					fmt.Printf("DEBUG: Authentication failed with secret: '%s'\n", secret)
+				}
 			}
 		}
-		
+
 		// Restore original interactive mode
-		client.interactive = origInteractive
+		session.interactive = origInteractive
 	}
 
 	// Main command processing loop
 	for {
-		line, err := client.ReadLine()
+		line, err := session.ReadLine(false)
 		if err != nil {
 			if err != io.EOF {
-				fmt.Printf("Error reading from client: %v\n", err)
+				fmt.Printf("Error reading from session: %v\n", err)
 			}
 			return
 		}
 
-		// Handle built-in commands
-		switch line {
+		// Handle built-in commands - use strings.TrimSpace to handle any whitespace
+		cleanLine := strings.TrimSpace(line)
+
+		// Debug output to see what command is being processed
+		if s.debugMode {
+			fmt.Printf("DEBUG: Processing command: '%s'\n", cleanLine)
+		}
+
+		switch cleanLine {
 		case "!!quit", "!!exit", "q":
-			client.PrintlnCyan("Goodbye!")
+			session.PrintlnCyan("Goodbye!")
 			return
 		case "!!interactive", "!!i", "i":
-			client.ToggleInteractive()
+			session.ToggleInteractive()
 			continue
-		case "!!help", "?", "h":
-			client.PrintHelp()
+		case "!!help", "?", "h", "help":
+			session.PrintHelp()
 			continue
 		case "":
 			// Empty line, just show prompt again
@@ -205,12 +253,17 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 		// Handle custom commands via the command handler
 		if s.commandHandler != nil {
-			if err := s.commandHandler(client, line); err != nil {
-				client.PrintlnRed(fmt.Sprintf("Error: %v", err))
+			// We already trimmed the line above
+			if s.debugMode {
+				fmt.Printf("DEBUG: Passing command to handler: '%s'\n", cleanLine)
+			}
+
+			if err := s.commandHandler(session, cleanLine); err != nil {
+				session.PrintlnRed(fmt.Sprintf("Error: %v", err))
 			}
 		} else {
 			// If no command handler is set, show a message
-			client.PrintlnYellow(fmt.Sprintf("Unknown command: %s", line))
+			session.PrintlnYellow(fmt.Sprintf("Unknown command: %s", cleanLine))
 		}
 	}
 }

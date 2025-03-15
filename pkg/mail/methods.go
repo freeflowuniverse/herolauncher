@@ -1,12 +1,8 @@
 package mail
 
 import (
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"strings"
-
-	"golang.org/x/crypto/blake2b"
 )
 
 // CalculateSize calculates the total size of the email in bytes
@@ -44,6 +40,15 @@ func (e *Email) CalculateSize() uint32 {
 
 // GetBodyStructure generates and returns a description of the MIME structure of the email
 // This can be used by IMAP clients to understand the structure of the message
+// should return a string in the format of an IMAP body structure
+//
+//	type BodyStructure struct {
+//		MIMEType    string          `json:"mime_type,omitempty"`    // MIME Type (e.g., text/plain, multipart/mixed)
+//		Encoding    string          `json:"encoding,omitempty"`    // Encoding method (e.g., quoted-printable, base64)
+//		Size        uint32          `json:"size,omitempty"`        // Size of the message body
+//		Parts       []*BodyStructure `json:"parts,omitempty"`      // Parts for multipart messages
+//		Disposition string          `json:"disposition,omitempty"` // Content disposition (inline, attachment)
+//	}
 func (e *Email) GetBodyStructure() string {
 	// If there are no attachments, return a simple text structure
 	if len(e.Attachments) == 0 {
@@ -182,31 +187,4 @@ func (e *Email) SetSubject(subject string) {
 func (e *Email) SetDate(date int64) {
 	e.EnsureEnvelope()
 	e.Envelope.Date = date
-}
-
-// UID returns the Blake2b-192 hash of the email in JSON format
-func (e *Email) UID() (string, error) {
-	// Marshal the email to JSON
-	emailJSON, err := json.Marshal(e)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal email: %w", err)
-	}
-
-	// Create a Blake2b-192 hash (24 bytes) from the email JSON
-	hash, err := blake2b.New(24, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create Blake2b hash: %w", err)
-	}
-
-	// Write the data to the hash
-	_, err = hash.Write(emailJSON)
-	if err != nil {
-		return "", fmt.Errorf("failed to write to hash: %w", err)
-	}
-
-	// Get the hash sum and convert to hex string
-	hashSum := hash.Sum(nil)
-	hashHex := hex.EncodeToString(hashSum)
-
-	return hashHex, nil
 }

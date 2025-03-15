@@ -2,6 +2,9 @@ package mail
 
 type Email struct {
 	// Content fields
+	UID         uint32       `json:"uid"`         // Unique identifier of the message (in the circle)
+	SeqNum      uint32       `json:"seq_num"`     // IMAP sequence number (in the mailbox)
+	Mailbox     string       `json:"mailbox"`     // The mailbox this email belongs to
 	Message     string       `json:"message"`     // The email body content
 	Attachments []Attachment `json:"attachments"` // Any file attachments
 
