@@ -1,0 +1,52 @@
+# lima-vfs9p.yaml
+# This configuration creates a Lima VM with 9P support
+
+# VM name
+name: vfs9p-vm
+
+# VM resources
+cpus: 2
+memory: 2GiB
+disk: 10GiB
+
+# Use Ubuntu 22.04 LTS
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+    arch: "x86_64"
+  - location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+
+# Mount the project directory
+mounts:
+  - location: "~"
+    writable: true
+  - location: "/tmp/lima"
+    writable: true
+
+# Port forwarding
+portForwards:
+  - guestSocket: "/run/user/{{.UID}}/podman/podman.sock"
+    hostSocket: "{{.Dir}}/sock/podman.sock"
+  - guestIP: "127.0.0.1"
+    guestPort: 5640
+    hostIP: "127.0.0.1"
+    hostPort: 5640
+
+# Provision the VM with necessary packages
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      apt-get update
+      apt-get install -y build-essential curl git golang net-tools vim
+
+# Additional message to show after VM is started
+message: |
+  Your Lima VM with 9P support is ready!
+  
+  To access the VM:
+    lima shell vfs9p-vm
+  
+  To mount the 9P filesystem inside the VM:
+    mount -t 9p -o trans=tcp,port=5640,version=9p2000 127.0.0.1 /mnt/vfs9p

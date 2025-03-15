@@ -27,13 +27,13 @@ func TestVFS9PAdapter(t *testing.T) {
 	}
 
 	// Create some test data
-	rootDir, err := vfsImpl.RootGet()
+	_, err = vfsImpl.RootGet()
 	if err != nil {
 		t.Fatalf("Failed to get root directory: %v", err)
 	}
 
 	// Create a test file
-	testFile, err := vfsImpl.FileCreate("/test.txt")
+	_, err = vfsImpl.FileCreate("/test.txt")
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -45,13 +45,13 @@ func TestVFS9PAdapter(t *testing.T) {
 	}
 
 	// Create a test directory
-	testDir, err := vfsImpl.DirCreate("/testdir")
+	_, err = vfsImpl.DirCreate("/testdir")
 	if err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
 	// Create a file in the test directory
-	nestedFile, err := vfsImpl.FileCreate("/testdir/nested.txt")
+	_, err = vfsImpl.FileCreate("/testdir/nested.txt")
 	if err != nil {
 		t.Fatalf("Failed to create nested file: %v", err)
 	}

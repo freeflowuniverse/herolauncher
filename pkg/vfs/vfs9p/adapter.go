@@ -2,9 +2,7 @@ package vfs9p
 
 import (
 	"context"
-	"fmt"
 	"sync"
-	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs"
 	"github.com/knusbaum/go9p"
@@ -75,11 +73,10 @@ func (v *VFS9P) Version(conn go9p.Conn, t *proto.TRVersion) (proto.FCall, error)
 	if t.Msize < 4096 {
 		t.Msize = 4096
 	}
-	return &proto.RRVersion{
-		Header:  proto.Header{Type: proto.Rversion, Tag: t.Tag},
-		Msize:   t.Msize,
-		Version: "9P2000",
-	}, nil
+	reply := *t
+	reply.Type = proto.Rversion
+	reply.Version = "9P2000"
+	return &reply, nil
 }
 
 // Auth implements go9p.Srv.Auth
@@ -461,7 +458,7 @@ func (v *VFS9P) Create(conn go9p.Conn, t *proto.TCreate) (proto.FCall, error) {
 	// Update the fid to point to the new file
 	fid.path = newPath
 	fid.entry = newEntry
-	fid.openMode = t.Mode
+	fid.openMode = proto.Mode(t.Mode)
 	fid.offset = 0
 	
 	return &proto.RCreate{
@@ -545,11 +542,9 @@ func (v *VFS9P) entryToQid(entry vfs.FSEntry) proto.Qid {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	
-	metadata := entry.GetMetadata()
-	
 	var qtype uint8
 	if entry.IsDir() {
-		qtype = proto.QTDIR
+		qtype = uint8(proto.DMDIR >> 24)
 	}
 	
 	qid := proto.Qid{
