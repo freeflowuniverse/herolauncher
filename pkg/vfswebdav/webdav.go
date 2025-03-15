@@ -164,15 +164,21 @@ func (fs *FileSystem) Create(ctx context.Context, name string, body io.ReadClose
 	
 	var entry vfs.FSEntry
 	if exists {
+		// Check if it's a directory
+		existingEntry, err := fs.vfsImpl.Get(name)
+		if err == nil && existingEntry.IsDir() {
+			return nil, false, webdav.NewHTTPError(http.StatusConflict, fmt.Errorf("cannot create file, path is a directory: %s", name))
+		}
+
 		// Update existing file
 		err = fs.vfsImpl.FileWrite(name, data)
 		if err != nil {
-			return nil, false, err
+			return nil, false, webdav.NewHTTPError(http.StatusInternalServerError, err)
 		}
 		
 		entry, err = fs.vfsImpl.Get(name)
 		if err != nil {
-			return nil, false, err
+			return nil, false, webdav.NewHTTPError(http.StatusInternalServerError, err)
 		}
 	} else {
 		// Create parent directories if they don't exist
@@ -180,26 +186,29 @@ func (fs *FileSystem) Create(ctx context.Context, name string, body io.ReadClose
 		if dir != "/" && !fs.vfsImpl.Exists(dir) {
 			_, err = fs.vfsImpl.DirCreate(dir)
 			if err != nil {
-				return nil, false, err
+				return nil, false, webdav.NewHTTPError(http.StatusConflict, 
+					fmt.Errorf("failed to create parent directory: %v", err))
 			}
 		}
 		
 		// Create new file
 		entry, err = fs.vfsImpl.FileCreate(name)
 		if err != nil {
-			return nil, false, err
+			return nil, false, webdav.NewHTTPError(http.StatusInternalServerError, 
+				fmt.Errorf("failed to create file: %v", err))
 		}
 		
 		// Write data to the new file
 		err = fs.vfsImpl.FileWrite(name, data)
 		if err != nil {
-			return nil, false, err
+			return nil, false, webdav.NewHTTPError(http.StatusInternalServerError, 
+				fmt.Errorf("failed to write to file: %v", err))
 		}
 		
 		// Get the updated entry
 		entry, err = fs.vfsImpl.Get(name)
 		if err != nil {
-			return nil, false, err
+			return nil, false, webdav.NewHTTPError(http.StatusInternalServerError, err)
 		}
 	}
 
@@ -231,13 +240,15 @@ func (fs *FileSystem) Mkdir(ctx context.Context, name string) error {
 	if fs.vfsImpl.Exists(name) {
 		entry, err := fs.vfsImpl.Get(name)
 		if err != nil {
-			return err
+			return webdav.NewHTTPError(http.StatusInternalServerError, err)
 		}
 		
 		if entry.IsDir() {
-			return webdav.NewHTTPError(http.StatusMethodNotAllowed, vfs.ErrAlreadyExists)
+			// Directory already exists, which is fine for WebDAV
+			return nil
 		}
-		return webdav.NewHTTPError(http.StatusConflict, vfs.ErrAlreadyExists)
+		return webdav.NewHTTPError(http.StatusConflict, 
+			fmt.Errorf("cannot create directory, path exists as a file: %s", name))
 	}
 
 	// Create parent directories if they don't exist
@@ -245,13 +256,15 @@ func (fs *FileSystem) Mkdir(ctx context.Context, name string) error {
 	if dir != "/" && !fs.vfsImpl.Exists(dir) {
 		_, err := fs.vfsImpl.DirCreate(dir)
 		if err != nil {
-			return err
+			return webdav.NewHTTPError(http.StatusConflict, 
+				fmt.Errorf("failed to create parent directory: %v", err))
 		}
 	}
 
 	_, err := fs.vfsImpl.DirCreate(name)
 	if err != nil {
-		return err
+		return webdav.NewHTTPError(http.StatusInternalServerError, 
+			fmt.Errorf("failed to create directory: %v", err))
 	}
 
 	return nil
