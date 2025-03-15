@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"sync"
 )
@@ -23,15 +24,15 @@ const (
 
 // Server represents a telnet server
 type Server struct {
-	listener           net.Listener
-	sessions           map[net.Conn]*Session
-	sessionsMutex      sync.RWMutex
-	running            bool
-	authHandler        AuthHandler
-	commandHandler     CommandHandler
+	listener            net.Listener
+	sessions            map[net.Conn]*Session
+	sessionsMutex       sync.RWMutex
+	running             bool
+	authHandler         AuthHandler
+	commandHandler      CommandHandler
 	onSessionConnect    func(*Session)
 	onSessionDisconnect func(*Session)
-	debugMode          bool // Whether to print debug messages
+	debugMode           bool // Whether to print debug messages
 }
 
 // AuthHandler is a function that authenticates a session
@@ -42,7 +43,7 @@ type CommandHandler func(*Session, string) error
 
 func NewServer(authHandler AuthHandler, commandHandler CommandHandler, debugMode bool) *Server {
 	return &Server{
-		sessions:        make(map[net.Conn]*Session),
+		sessions:       make(map[net.Conn]*Session),
 		authHandler:    authHandler,
 		commandHandler: commandHandler,
 		debugMode:      debugMode,
@@ -52,7 +53,22 @@ func NewServer(authHandler AuthHandler, commandHandler CommandHandler, debugMode
 // Start starts the telnet server on the specified address
 func (s *Server) Start(address string) error {
 	var err error
-	s.listener, err = net.Listen("tcp", address)
+
+	// Determine if this is a Unix socket path or a TCP address
+	networkType := "tcp"
+	if !strings.Contains(address, ":") {
+		// If there's no colon, assume it's a Unix socket path
+		networkType = "unix"
+
+		// Remove the socket file if it already exists
+		if _, err := os.Stat(address); err == nil {
+			if err := os.Remove(address); err != nil {
+				return fmt.Errorf("failed to remove existing socket file: %w", err)
+			}
+		}
+	}
+
+	s.listener, err = net.Listen(networkType, address)
 	if err != nil {
 		return fmt.Errorf("failed to start telnet server: %w", err)
 	}
@@ -189,7 +205,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 					secret = parts[1]
 				}
 			}
-			
+
 			// Trim any whitespace from the secret
 			secret = strings.TrimSpace(secret)
 
