@@ -3,6 +3,7 @@ package processmanager
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/telnet"
@@ -12,12 +13,15 @@ import (
 type TelnetAdapter struct {
 	processManager *ProcessManager
 	telnetServer   *telnet.Server
+	logEnabled     bool
 }
 
 // NewTelnetAdapter creates a new telnet adapter
 func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
+	log.Println("Creating new telnet adapter for process manager")
 	adapter := &TelnetAdapter{
 		processManager: processManager,
+		logEnabled:     true,
 	}
 
 	// Create telnet server with auth and command handlers
@@ -28,6 +32,8 @@ func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
 		},
 		// Command handler
 		adapter.handleCommand,
+		// Debug mode
+		false,
 	)
 
 	adapter.telnetServer = server
@@ -36,31 +42,59 @@ func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
 
 // Start starts the telnet server on the specified socket path
 func (ta *TelnetAdapter) Start(socketPath string) error {
-	return ta.telnetServer.Start(socketPath)
+	log.Printf("Starting telnet server on socket: %s", socketPath)
+	err := ta.telnetServer.Start(socketPath)
+	if err != nil {
+		log.Printf("Error starting telnet server: %v", err)
+		return err
+	}
+	log.Println("Telnet server started successfully")
+	return nil
 }
 
 // Stop stops the telnet server
 func (ta *TelnetAdapter) Stop() error {
-	return ta.telnetServer.Stop()
+	log.Println("Stopping telnet server")
+	err := ta.telnetServer.Stop()
+	if err != nil {
+		log.Printf("Error stopping telnet server: %v", err)
+		return err
+	}
+	log.Println("Telnet server stopped successfully")
+	return nil
 }
 
 // handleCommand handles commands from clients
-func (ta *TelnetAdapter) handleCommand(client *telnet.Client, command string) error {
+func (ta *TelnetAdapter) handleCommand(session *telnet.Session, command string) error {
 	// Handle empty command
 	if command == "" {
 		return nil
 	}
 
+	// Log the received command
+	if ta.logEnabled {
+		log.Printf("Received command: '%s'", command)
+	}
+
+	// Trim any leading/trailing whitespace
+	command = strings.TrimSpace(command)
+
 	// Process command
 	if strings.HasPrefix(command, "!!") || strings.HasPrefix(command, "!!process.") {
-		result := ta.executeHeroscript(command, client.IsInteractive())
-		client.Write(result)
+		if ta.logEnabled {
+			log.Printf("Executing heroscript command: '%s'", command)
+		}
+		result := ta.executeHeroscript(command, session.IsInteractive())
+		session.Write(result)
 		return nil
 	}
 
 	// Unknown command
-	client.PrintlnYellow(fmt.Sprintf("Unknown command: %s", command))
-	client.PrintlnYellow("Use '?' or 'help' to see available commands")
+	if ta.logEnabled {
+		log.Printf("Unknown command received: '%s'", command)
+	}
+	session.PrintlnYellow(fmt.Sprintf("Unknown command: %s", command))
+	session.PrintlnYellow("Use '?' or 'help' to see available commands")
 	return nil
 }
 
@@ -69,9 +103,20 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 	// For now, we'll just handle the commands directly without a playbook parser
 	// In a real implementation, you would parse the script properly
 	
+	// Trim any leading/trailing whitespace
+	script = strings.TrimSpace(script)
+	
+	// Log the script being executed
+	if ta.logEnabled {
+		log.Printf("Executing heroscript: '%s'", script)
+	}
+	
 	// Extract command parts
 	parts := strings.Fields(script)
 	if len(parts) == 0 {
+		if ta.logEnabled {
+			log.Println("Error: empty command")
+		}
 		return telnet.FormatError(fmt.Errorf("empty command"), interactive)
 	}
 
@@ -88,28 +133,61 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 	// Process based on command name
 	switch {
 		case strings.HasPrefix(cmd, "!!process.start"):
+			if ta.logEnabled {
+				log.Println("Handling process.start command")
+			}
 			actionResult = "Process start command received\n"
 		case strings.HasPrefix(cmd, "!!process.list"):
+			if ta.logEnabled {
+				log.Println("Handling process.list command")
+			}
 			actionResult = ta.handleProcessList()
 		case strings.HasPrefix(cmd, "!!process.delete"):
+			if ta.logEnabled {
+				log.Println("Handling process.delete command")
+			}
 			actionResult = "Process delete command received\n"
 		case strings.HasPrefix(cmd, "!!process.status"):
+			if ta.logEnabled {
+				log.Println("Handling process.status command")
+			}
 			actionResult = "Process status command received\n"
 		case strings.HasPrefix(cmd, "!!process.restart"):
+			if ta.logEnabled {
+				log.Println("Handling process.restart command")
+			}
 			actionResult = "Process restart command received\n"
 		case strings.HasPrefix(cmd, "!!process.stop"):
+			if ta.logEnabled {
+				log.Println("Handling process.stop command")
+			}
 			actionResult = "Process stop command received\n"
 		case strings.HasPrefix(cmd, "!!process.log"):
+			if ta.logEnabled {
+				log.Println("Handling process.log command")
+			}
 			actionResult = "Process log command received\n"
 		case cmd == "!!help" || cmd == "?" || cmd == "h":
+			if ta.logEnabled {
+				log.Println("Handling help command")
+			}
 			actionResult = ta.generateHelpText(interactive)
 		default:
+			if ta.logEnabled {
+				log.Printf("Unknown command received: '%s'", cmd)
+			}
 			actionResult = fmt.Sprintf("Unknown command: %s\n", cmd)
 		}
 
 	result.WriteString(actionResult)
 
-	return telnet.FormatResult(result.String(), jobID, interactive)
+	formattedResult := telnet.FormatResult(result.String(), jobID, interactive)
+	
+	if ta.logEnabled {
+		log.Printf("Command result: %s", strings.ReplaceAll(formattedResult, "\n", " "))
+	}
+	
+	return formattedResult
 }
 
 // handleProcessStart handles the process.start command

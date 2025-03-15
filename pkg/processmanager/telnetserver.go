@@ -1,11 +1,10 @@
 package processmanager
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -27,12 +26,11 @@ const (
 
 // TelnetServer represents a telnet server for interacting with the process manager
 type TelnetServer struct {
-	processManager     *ProcessManager
-	listener           net.Listener
-	clients            map[net.Conn]bool
-	clientsMutex       sync.RWMutex
-	running            bool
-	isWaitingForSecret bool // Flag to indicate if we're waiting for a secret
+	processManager *ProcessManager
+	listener       net.Listener
+	clients        map[net.Conn]bool
+	clientsMutex   sync.RWMutex
+	running        bool
 }
 
 // NewTelnetServer creates a new telnet server
@@ -114,13 +112,8 @@ func (ts *TelnetServer) acceptConnections() {
 func (ts *TelnetServer) handleConnection(conn net.Conn) {
 	// Add client to the map
 	ts.clientsMutex.Lock()
-	ts.clients[conn] = false     // Not authenticated yet
-	ts.isWaitingForSecret = true // Indicate we're waiting for a secret
+	ts.clients[conn] = false // Not authenticated yet
 	ts.clientsMutex.Unlock()
-
-	// Send telnet negotiation to disable echo on client side
-	// IAC WILL ECHO (server will handle echo)
-	conn.Write([]byte{255, 251, 1})
 
 	// Ensure client is removed when connection closes
 	defer func() {
@@ -130,219 +123,117 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 		ts.clientsMutex.Unlock()
 	}()
 
-	// Welcome message with proper line ending
+	// Welcome message
 	conn.Write([]byte(" ** Welcome: you are not authenticated, provide secret.\n"))
 
-	// Send telnet negotiation to disable echo on client side again
-	// This helps ensure the client doesn't echo back characters
-	conn.Write([]byte{255, 251, 1}) // IAC WILL ECHO
-
-	// Initialize variables for command handling
+	// Create a scanner for reading input
+	scanner := bufio.NewScanner(conn)
 	authenticated := false
 	var heroscriptBuffer strings.Builder
 	var lastCommand string
 	commandHistory := []string{}
-	historyPos := len(commandHistory)
+	historyPos := 0
 	interactiveMode := false
 
-	// Use raw mode for better control character handling
-	var buffer [1]byte
-	var escapeBuffer [3]byte
-	var currentLine strings.Builder
-
-	for {
-		// Read a single byte
-		_, err := conn.Read(buffer[:])
-		if err != nil {
-			if err != io.EOF {
-				fmt.Printf("Error reading from connection: %v\n", err)
-			}
-			break
-		}
+	// Process client input
+	for scanner.Scan() {
+		line := scanner.Text()
 
 		// Check for Ctrl+C (ASCII value 3)
-		if buffer[0] == 3 { // Ctrl+C
+		if line == "\x03" {
 			conn.Write([]byte("Goodbye!\n"))
 			return
 		}
 
-		// Check for Enter key (carriage return or line feed)
-		if buffer[0] == '\r' || buffer[0] == '\n' {
-			line := currentLine.String()
-			conn.Write([]byte("\n")) // Echo newline with proper telnet line ending
-			currentLine.Reset()
-
-			// Process the complete line
-			if line != "" && authenticated {
-				// Add to command history if not empty, not a duplicate of the last command, and authenticated
-				if len(commandHistory) == 0 || commandHistory[len(commandHistory)-1] != line {
-					commandHistory = append(commandHistory, line)
-				}
-				historyPos = len(commandHistory) // Reset history position to the end
+		// Check for arrow up (ANSI escape sequence for up arrow: "\x1b[A")
+		if line == "\x1b[A" && len(commandHistory) > 0 {
+			if historyPos > 0 {
+				historyPos--
 			}
-
-			// Handle authentication
-			if !authenticated {
-				if line == ts.processManager.GetSecret() {
-					authenticated = true
-					ts.clientsMutex.Lock()
-					ts.clients[conn] = true       // Mark as authenticated
-					ts.isWaitingForSecret = false // No longer waiting for secret
-					ts.clientsMutex.Unlock()
-					conn.Write([]byte(" ** Welcome: you are authenticated.\n"))
-				} else {
-					conn.Write([]byte("Invalid secret. Try again or disconnect.\n"))
-				}
-				continue
+			if historyPos < len(commandHistory) {
+				conn.Write([]byte(commandHistory[historyPos]))
+				line = commandHistory[historyPos]
 			}
+		}
 
-			// Handle quit/exit commands
-			if line == "!!quit" || line == "!!exit" || line == "q" {
-				conn.Write([]byte("Goodbye!\n"))
-				return
+		// Handle authentication
+		if !authenticated {
+			if line == ts.processManager.GetSecret() {
+				authenticated = true
+				ts.clientsMutex.Lock()
+				ts.clients[conn] = true // Mark as authenticated
+				ts.clientsMutex.Unlock()
+				conn.Write([]byte(" ** Welcome: you are authenticated.\n"))
+			} else {
+				conn.Write([]byte("Invalid secret. Try again or disconnect.\n"))
 			}
+			continue
+		}
 
-			// Handle help command
-			if line == "!!help" || line == "h" || line == "?" {
-				helpText := ts.generateHelpText(interactiveMode)
-				conn.Write([]byte(helpText))
-				continue
+		// Handle quit/exit commands
+		if line == "!!quit" || line == "!!exit" || line == "q" {
+			conn.Write([]byte("Goodbye!\n"))
+			return
+		}
+
+		// Handle help command
+		if line == "!!help" || line == "h" || line == "?" {
+			helpText := ts.generateHelpText(interactiveMode)
+			conn.Write([]byte(helpText))
+			continue
+		}
+
+		// Handle interactive mode toggle
+		if line == "!!interactive" || line == "!!i" || line == "i" {
+			interactiveMode = !interactiveMode
+			if interactiveMode {
+				conn.Write([]byte(ColorGreen + "Interactive mode enabled. Using colors for output." + ColorReset + "\n"))
+			} else {
+				conn.Write([]byte("Interactive mode disabled. Plain text output.\n"))
 			}
+			continue
+		}
 
-			// Handle interactive mode toggle
-			if line == "!!interactive" || line == "!!i" || line == "i" {
-				interactiveMode = !interactiveMode
-				if interactiveMode {
-					conn.Write([]byte(ColorGreen + "Interactive mode enabled. Using colors for output." + ColorReset + "\n"))
-				} else {
-					conn.Write([]byte("Interactive mode disabled. Plain text output.\n"))
-				}
-				continue
-			}
-
-			// Empty line executes previous command if there's no pending command
-			if line == "" {
-				if heroscriptBuffer.Len() > 0 {
-					// Execute pending command
-					result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
-					lastCommand = heroscriptBuffer.String()
-					conn.Write([]byte(result))
-					heroscriptBuffer.Reset()
-				} else if lastCommand != "" {
-					// Execute last command
-					result := ts.executeHeroscript(lastCommand, interactiveMode)
-					conn.Write([]byte(result))
-				}
-				continue
-			}
-
-			// Process heroscript commands
-			if (strings.HasPrefix(line, "!!") || strings.HasPrefix(line, "#")) && heroscriptBuffer.Len() > 0 {
-				// Execute previous heroscript if there's any
+		// Empty line executes previous command if there's no pending command
+		if line == "" {
+			if heroscriptBuffer.Len() > 0 {
+				// Execute pending command
 				result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
 				lastCommand = heroscriptBuffer.String()
 				conn.Write([]byte(result))
 				heroscriptBuffer.Reset()
+			} else if lastCommand != "" {
+				// Execute last command
+				result := ts.executeHeroscript(lastCommand, interactiveMode)
+				conn.Write([]byte(result))
 			}
-
-			// Handle heroscript commands
-			if strings.HasPrefix(line, "!") {
-				// Add to heroscript buffer
-				if heroscriptBuffer.Len() > 0 {
-					heroscriptBuffer.WriteString("\n")
-				}
-				heroscriptBuffer.WriteString(line)
-				continue
-			}
-
-			// Handle parameter lines (key:value format)
-			if strings.Contains(line, ":") {
-				// Add to heroscript buffer
-				if heroscriptBuffer.Len() > 0 {
-					heroscriptBuffer.WriteString("\n")
-					heroscriptBuffer.WriteString(line)
-					continue
-				}
-			}
-
-			// Execute heroscript
-			result := ts.executeHeroscript(line, interactiveMode)
-			conn.Write([]byte(result))
-		} else if buffer[0] == 27 { // ESC character - start of escape sequence
-			// Read the next two bytes for the escape sequence
-			conn.Read(escapeBuffer[0:1]) // Should be '['
-			conn.Read(escapeBuffer[1:2]) // Should be 'A' for up arrow
-
-			// Handle up arrow (ESC [ A)
-			if escapeBuffer[0] == '[' && escapeBuffer[1] == 'A' {
-				// Clear current line
-				currentLineLength := currentLine.Len()
-				if currentLineLength > 0 {
-					// Send backspaces to clear the line
-					for i := 0; i < currentLineLength; i++ {
-						conn.Write([]byte{8, 32, 8}) // Backspace, space, backspace
-					}
-					currentLine.Reset()
-				}
-
-				// Navigate command history
-				if len(commandHistory) > 0 {
-					if historyPos > 0 {
-						historyPos--
-					}
-
-					// Display the command from history
-					historyCmd := commandHistory[historyPos]
-					conn.Write([]byte(historyCmd))
-					currentLine.WriteString(historyCmd)
-				}
-			} else if escapeBuffer[0] == '[' && escapeBuffer[1] == 'B' {
-				// Handle down arrow (ESC [ B)
-				// Clear current line
-				currentLineLength := currentLine.Len()
-				if currentLineLength > 0 {
-					// Send backspaces to clear the line
-					for i := 0; i < currentLineLength; i++ {
-						conn.Write([]byte{8, 32, 8}) // Backspace, space, backspace
-					}
-					currentLine.Reset()
-				}
-
-				// Navigate command history (forward)
-				if len(commandHistory) > 0 && historyPos < len(commandHistory)-1 {
-					historyPos++
-
-					// Display the command from history
-					historyCmd := commandHistory[historyPos]
-					conn.Write([]byte(historyCmd))
-					currentLine.WriteString(historyCmd)
-				} else if historyPos == len(commandHistory)-1 {
-					// At the end of history, show empty line
-					historyPos = len(commandHistory)
-				}
-			}
-		} else if buffer[0] == 8 || buffer[0] == 127 { // Backspace or Delete
-			// Handle backspace
-			if currentLine.Len() > 0 {
-				// Remove last character from the builder
-				s := currentLine.String()
-				currentLine.Reset()
-				currentLine.WriteString(s[:len(s)-1])
-
-				// Echo the backspace (move cursor back, print space, move cursor back again)
-				conn.Write([]byte{8, 32, 8})
-			}
-		} else {
-			// Regular character - handle echo based on authentication state
-			if !authenticated && ts.isWaitingForSecret {
-				// If entering secret, echo * instead of the actual character
-				conn.Write([]byte("*"))
-			} else {
-				// Otherwise echo the character as normal
-				conn.Write(buffer[:])
-			}
-			currentLine.WriteByte(buffer[0])
+			continue
 		}
+
+		// Process heroscript commands
+		if (strings.HasPrefix(line, "!!") || strings.HasPrefix(line, "#")) && heroscriptBuffer.Len() > 0 {
+			// Execute previous heroscript if there's any
+			result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
+			lastCommand = heroscriptBuffer.String()
+			// Add to command history
+			commandHistory = append([]string{lastCommand}, commandHistory...)
+			if len(commandHistory) > 50 { // Limit history size
+				commandHistory = commandHistory[:50]
+			}
+			historyPos = 0
+			conn.Write([]byte(result))
+			heroscriptBuffer.Reset()
+		}
+
+		// Append the line to the heroscript buffer
+		heroscriptBuffer.WriteString(line + "\n")
+	}
+
+	// Execute any remaining heroscript
+	if authenticated && heroscriptBuffer.Len() > 0 {
+		result := ts.executeHeroscript(heroscriptBuffer.String(), interactiveMode)
+		lastCommand = heroscriptBuffer.String()
+		conn.Write([]byte(result))
 	}
 }
 
@@ -370,7 +261,7 @@ func (ts *TelnetServer) executeHeroscript(script string, interactive bool) strin
 	// Process each action
 	var result strings.Builder
 	if interactive {
-		result.WriteString(fmt.Sprintf("%s%s**RESULT** %s%s\n", ColorCyan, Bold, jobID, ColorReset))
+		result.WriteString(fmt.Sprintf(ColorCyan+Bold+"**RESULT** %s"+ColorReset+"\n", jobID))
 	} else {
 		result.WriteString(fmt.Sprintf("**RESULT** %s\n", jobID))
 	}
@@ -391,8 +282,6 @@ func (ts *TelnetServer) executeHeroscript(script string, interactive bool) strin
 				result.WriteString(ts.handleProcessRestart(action))
 			case "stop":
 				result.WriteString(ts.handleProcessStop(action))
-			case "log":
-				result.WriteString(ts.handleProcessLog(action, interactive))
 			default:
 				result.WriteString(fmt.Sprintf("Unknown action: %s.%s\n", action.Actor, action.Name))
 			}
@@ -592,56 +481,6 @@ func formatHeroscript(script string) string {
 	return formatted.String()
 }
 
-// handleProcessLog handles the process.log action
-func (ts *TelnetServer) handleProcessLog(action *playbook.Action, interactive bool) string {
-	// Get process name
-	name := action.Params.Get("name")
-	if name == "" {
-		return "Error: name parameter is required\n"
-	}
-
-	// Get number of lines to show (default to 20 if not specified)
-	linesStr := action.Params.Get("lines")
-	lines := 20 // Default
-	if linesStr != "" {
-		// Parse lines parameter
-		var parsedLines int
-		var err error
-
-		// Try to parse as integer directly
-		parsedLines, err = strconv.Atoi(linesStr)
-		if err != nil {
-			// If that fails, try Sscanf
-			if n, scanErr := fmt.Sscanf(linesStr, "%d", &parsedLines); scanErr != nil || n != 1 {
-				return fmt.Sprintf("Error: invalid lines parameter '%s', must be a number\n", linesStr)
-			}
-		}
-
-		lines = parsedLines
-	}
-
-	// Get logs from process manager
-	logs, err := ts.processManager.GetProcessLogs(name, lines)
-	if err != nil {
-		return fmt.Sprintf("Error getting logs: %v\n", err)
-	}
-
-	// Format the output
-	var output strings.Builder
-	if interactive {
-		output.WriteString(fmt.Sprintf("%s%sLast %d lines of logs for process '%s':%s\n",
-			ColorCyan, Bold, lines, name, ColorReset))
-		output.WriteString(fmt.Sprintf("%s%s\n", ColorGreen, logs))
-		output.WriteString(ColorReset)
-	} else {
-		output.WriteString(fmt.Sprintf("Last %d lines of logs for process '%s':\n", lines, name))
-		output.WriteString(logs)
-		output.WriteString("\n")
-	}
-
-	return output.String()
-}
-
 // generateHelpText generates help text for available commands
 func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	var helpText string
@@ -662,8 +501,7 @@ func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	helpText += "  !!process.delete name:'<name>'\n"
 	helpText += "  !!process.status name:'<name>' [format:'json']\n"
 	helpText += "  !!process.restart name:'<name>'\n"
-	helpText += "  !!process.stop name:'<name>'\n"
-	helpText += "  !!process.log name:'<name>' [lines:20]\n\n"
+	helpText += "  !!process.stop name:'<name>'\n\n"
 
 	// Special commands
 	if interactive {
