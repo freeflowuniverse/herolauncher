@@ -3,11 +3,10 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
 	"path/filepath"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/vfsdb"
-	"github.com/freeflowuniverse/herolauncher/pkg/vfs9p"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs/vfs9p"
 	"github.com/knusbaum/go9p"
 )
 
