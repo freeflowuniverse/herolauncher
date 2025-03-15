@@ -9,33 +9,21 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-type Email struct {
-	// Content fields
-	Message     string       `json:"message"`     // The email body content
-	Attachments []Attachment `json:"attachments"` // Any file attachments
-	
-	// IMAP specific fields
-	Flags       []string     `json:"flags,omitempty"`      // IMAP flags like \Seen, \Deleted, etc.
-	InternalDate int64       `json:"internal_date,omitempty"` // Unix timestamp when the email was received
-	Size        uint32       `json:"size,omitempty"`         // Size of the message in bytes
-	Envelope     *Envelope    `json:"envelope,omitempty"`     // IMAP envelope information (contains From, To, Subject, etc.)
-}
-
 // CalculateSize calculates the total size of the email in bytes
 func (e *Email) CalculateSize() uint32 {
 	size := uint32(len(e.Message))
-	
+
 	// Add size of attachments
 	for _, att := range e.Attachments {
 		size += uint32(len(att.Data))
 	}
-	
+
 	// Add estimated size of envelope data if available
 	if e.Envelope != nil {
 		size += uint32(len(e.Envelope.Subject))
 		size += uint32(len(e.Envelope.MessageId))
 		size += uint32(len(e.Envelope.InReplyTo))
-		
+
 		// Add size of address fields
 		for _, addr := range e.Envelope.From {
 			size += uint32(len(addr))
@@ -50,7 +38,7 @@ func (e *Email) CalculateSize() uint32 {
 			size += uint32(len(addr))
 		}
 	}
-	
+
 	return size
 }
 
@@ -59,17 +47,17 @@ func (e *Email) CalculateSize() uint32 {
 func (e *Email) GetBodyStructure() string {
 	// If there are no attachments, return a simple text structure
 	if len(e.Attachments) == 0 {
-		return "(\"text\" \"plain\" (\"charset\" \"utf-8\") NIL NIL \"7bit\" " + 
+		return "(\"text\" \"plain\" (\"charset\" \"utf-8\") NIL NIL \"7bit\" " +
 			fmt.Sprintf("%d %d", len(e.Message), countLines(e.Message)) + " NIL NIL NIL)"
 	}
-	
+
 	// For emails with attachments, create a multipart/mixed structure
 	result := "(\"multipart\" \"mixed\" NIL NIL NIL \"7bit\" NIL NIL ("
-	
+
 	// Add the text part
-	result += "(\"text\" \"plain\" (\"charset\" \"utf-8\") NIL NIL \"7bit\" " + 
+	result += "(\"text\" \"plain\" (\"charset\" \"utf-8\") NIL NIL \"7bit\" " +
 		fmt.Sprintf("%d %d", len(e.Message), countLines(e.Message)) + " NIL NIL NIL)"
-	
+
 	// Add each attachment
 	for _, att := range e.Attachments {
 		// Default to application/octet-stream if content type is empty
@@ -77,21 +65,21 @@ func (e *Email) GetBodyStructure() string {
 		if contentType == "" {
 			contentType = "application/octet-stream"
 		}
-		
+
 		// Split content type into type and subtype
 		parts := strings.SplitN(contentType, "/", 2)
 		if len(parts) != 2 {
 			parts = []string{"application", "octet-stream"}
 		}
-		
+
 		// Add the attachment part
-		result += fmt.Sprintf(" (\"application\" \"%s\" (\"name\" \"%s\") NIL NIL \"base64\" %d NIL (\"attachment\" (\"filename\" \"%s\")) NIL)", 
+		result += fmt.Sprintf(" (\"application\" \"%s\" (\"name\" \"%s\") NIL NIL \"base64\" %d NIL (\"attachment\" (\"filename\" \"%s\")) NIL)",
 			parts[1], att.Filename, len(att.Data), att.Filename)
 	}
-	
+
 	// Close the structure
 	result += ")"
-	
+
 	return result
 }
 
@@ -221,25 +209,4 @@ func (e *Email) UID() (string, error) {
 	hashHex := hex.EncodeToString(hashSum)
 
 	return hashHex, nil
-}
-
-// Attachment represents an email attachment
-type Attachment struct {
-	Filename    string `json:"filename"`
-	ContentType string `json:"content_type"`
-	Data        string `json:"data"` // Base64 encoded binary data
-}
-
-// Envelope represents an IMAP envelope structure
-type Envelope struct {
-	Date      int64    `json:"date,omitempty"`      // Date the message was sent
-	Subject   string   `json:"subject,omitempty"`   // Subject of the message
-	From      []string `json:"from,omitempty"`      // Sender addresses
-	Sender    []string `json:"sender,omitempty"`    // Actual sender addresses
-	ReplyTo   []string `json:"reply_to,omitempty"`  // Reply-To addresses
-	To        []string `json:"to,omitempty"`        // Recipient addresses
-	Cc        []string `json:"cc,omitempty"`        // CC addresses
-	Bcc       []string `json:"bcc,omitempty"`       // BCC addresses
-	InReplyTo string   `json:"in_reply_to,omitempty"` // Message-ID of the message being replied to
-	MessageId string   `json:"message_id,omitempty"`  // Message-ID
 }
