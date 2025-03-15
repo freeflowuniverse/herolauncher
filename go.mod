@@ -12,6 +12,7 @@ require (
 	github.com/gofiber/swagger v1.1.1
 	github.com/gofiber/template/pug/v2 v2.1.8
 	github.com/redis/go-redis/v9 v9.7.1
+	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/tidwall/redcon v1.6.2
 	github.com/yuin/goldmark v1.7.8
 	golang.org/x/crypto v0.36.0
@@ -46,7 +47,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/swaggo/files/v2 v2.0.2 // indirect
 	github.com/swaggo/swag v1.16.4 // indirect

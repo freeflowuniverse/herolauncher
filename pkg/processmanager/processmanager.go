@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +48,7 @@ type ProcessInfo struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	logFile    *os.File
+	logBuffer  *RingBuffer   // Ring buffer to store logs
 	mutex      sync.Mutex
 }
 
@@ -97,12 +100,34 @@ func (pm *ProcessManager) StartProcess(name, command string, logEnabled bool, de
 		}
 		procInfo.logFile = logFile
 	}
+	
+	// Create log buffer (20KB capacity)
+	procInfo.logBuffer = NewRingBuffer(20 * 1024)
 
 	// Start the process
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	if logEnabled && procInfo.logFile != nil {
-		cmd.Stdout = procInfo.logFile
-		cmd.Stderr = procInfo.logFile
+	
+	// Set up output redirection
+	if logEnabled {
+		// Create a multi-writer to write to both log file and ring buffer
+		var writers []io.Writer
+		
+		// Add log file if enabled
+		if procInfo.logFile != nil {
+			writers = append(writers, procInfo.logFile)
+		}
+		
+		// Always add the ring buffer
+		writers = append(writers, procInfo.logBuffer)
+		
+		// Create multi-writer for stdout and stderr
+		multiWriter := io.MultiWriter(writers...)
+		cmd.Stdout = multiWriter
+		cmd.Stderr = multiWriter
+	} else {
+		// If logging is disabled, still capture to ring buffer
+		cmd.Stdout = procInfo.logBuffer
+		cmd.Stderr = procInfo.logBuffer
 	}
 	
 	procInfo.cmd = cmd
@@ -343,6 +368,47 @@ func (pm *ProcessManager) ListProcesses() []*ProcessInfo {
 // GetSecret returns the authentication secret
 func (pm *ProcessManager) GetSecret() string {
 	return pm.secret
+}
+
+// listAvailableProcesses returns a string listing all available processes
+func (pm *ProcessManager) listAvailableProcesses() string {
+	pm.mutex.RLock()
+	defer pm.mutex.RUnlock()
+	
+	var result strings.Builder
+	if len(pm.processes) == 0 {
+		return "  No processes found\n"
+	}
+	
+	result.WriteString("  Available processes:\n")
+	for name := range pm.processes {
+		result.WriteString(fmt.Sprintf("  - %s\n", name))
+	}
+	return result.String()
+}
+
+// GetProcessLogs returns the logs for a specific process
+func (pm *ProcessManager) GetProcessLogs(name string, lines int) (string, error) {
+	pm.mutex.RLock()
+	procInfo, exists := pm.processes[name]
+	pm.mutex.RUnlock()
+
+	if !exists {
+		return "", fmt.Errorf("process '%s' not found", name)
+	}
+
+	// Default to 20 lines if not specified or negative
+	if lines <= 0 {
+		lines = 20
+	}
+
+	// Check if log buffer exists
+	if procInfo.logBuffer == nil {
+		return "", fmt.Errorf("log buffer is nil for process '%s'", name)
+	}
+
+	// Get logs from the ring buffer
+	return procInfo.logBuffer.GetLastLines(lines), nil
 }
 
 // FormatProcessInfo formats process information based on the specified format
