@@ -13,6 +13,7 @@ The `vfsdav` package implements the WebDAV protocol as defined in [RFC 4918](htt
 - Automatic MIME type detection
 - ETag generation for caching
 - Support for conditional requests (If-Match, If-None-Match)
+- Command-line tool for quickly serving directories over WebDAV
 
 ## Usage
 
@@ -96,6 +97,62 @@ You can connect to the WebDAV server using various clients:
 - **macOS**: In Finder, use "Connect to Server" (⌘K) and enter `http://localhost:8080`
 - **Linux**: Use `davfs2` to mount the WebDAV server
 - **Web browsers**: Most modern browsers can browse WebDAV servers directly
+
+## Command-Line Tool
+
+The package includes a command-line tool that allows you to quickly serve a directory over WebDAV:
+
+```bash
+# Start a WebDAV server serving the current directory
+go run ./pkg/vfsdav/cmd/main.go --dir .
+
+# Start a WebDAV server on a specific host and port
+go run ./pkg/vfsdav/cmd/main.go --host 0.0.0.0 --port 9090 --dir /path/to/directory
+
+# Start a WebDAV server with a temporary directory (for testing)
+go run ./pkg/vfsdav/cmd/main.go
+```
+
+## Examples
+
+The package includes several examples to demonstrate how to use the WebDAV server:
+
+### Basic Example
+
+The basic example shows how to create a simple WebDAV server serving a temporary directory:
+
+```bash
+go run ./pkg/vfsdav/examples/goclient/main.go
+```
+
+### WebDAV Client Example
+
+This example demonstrates how to use the WebDAV client API to interact with the WebDAV server:
+
+```bash
+go run ./pkg/vfsdav/examples/goclient/client/main.go
+```
+
+### Rclone Example
+
+This example shows how to use the popular `rclone` tool to interact with the WebDAV server:
+
+```bash
+# Requires rclone to be installed
+go run ./pkg/vfsdav/examples/rclone/main.go
+```
+
+## Testing
+
+The package includes comprehensive tests to ensure that all functionality works correctly:
+
+```bash
+# Run all tests
+go test ./pkg/vfsdav/tests
+
+# Run the verification script to test all components
+./pkg/vfsdav/scripts/works.sh
+```
 
 ## Implementation Details
 
