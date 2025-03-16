@@ -5,15 +5,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/vlang"
+	"github.com/freeflowuniverse/herolauncher/pkg/vlang/vlangspecs"
 )
 
 func main() {
 	// Create a new VlangProcessor
-	processor := vlang.NewVlangProcessor()
+	processor := vlangspecs.NewVlangProcessor()
 
 	// Default path to test
-	testPath := "/Users/despiegk/code/github/freeflowuniverse/herolib/lib/circles/core"
+	testPath := "/Users/despiegk/code/github/freeflowuniverse/herolib/lib/circles"
 
 	// Allow overriding the path from command line
 	if len(os.Args) > 1 {

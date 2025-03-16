@@ -19,12 +19,6 @@ go build
 
 ## Usage
 
-Simply run the executable to start the MCP server:
-
-```bash
-./mcpopenapi
-```
-
 The server will start and listen for MCP protocol requests on standard input/output. You can interact with it using any MCP client.
 
 ## MCP Tools
@@ -76,13 +70,13 @@ A simple greeting tool that demonstrates basic MCP tool functionality.
 
 ### 2. OpenAPI Validation Tool
 
-Validates an OpenAPI specification and returns information about its schemas or any validation errors.
+Validates an OpenAPI specification file and returns information about its schemas or any validation errors.
 
 #### Parameters
 
 ```json
 {
-  "spec": "The OpenAPI specification content to validate (as a string)"
+  "filePath": "The path to the OpenAPI specification file to validate"
 }
 ```
 
@@ -96,7 +90,7 @@ Validates an OpenAPI specification and returns information about its schemas or 
   "params": {
     "name": "validate_openapi",
     "arguments": {
-      "spec": "{ ... OpenAPI specification JSON ... }"
+      "filePath": "/path/to/openapi.json"
     }
   }
 }
@@ -118,30 +112,3 @@ For a valid OpenAPI specification:
   }
 }
 ```
-
-## Testing
-
-We provide several methods to test the MCP server:
-
-1. **MCP Inspector**: Use the provided `test_with_inspector.sh` script to test the server with a graphical interface.
-
-2. **JavaScript Test Script**: Run `node test_mcp_server.js` to test the server programmatically.
-
-3. **Manual Testing**: See the `TESTING.md` file for detailed instructions on manual testing.
-
-## Development
-
-This server is built using:
-
-- [mcp-golang](https://github.com/metoro-io/mcp-golang) - Go implementation of the Model Context Protocol
-- [libopenapi](https://github.com/pb33f/libopenapi) - OpenAPI specification validation library
-
-## MCP Specification Compliance
-
-This server implements the following parts of the MCP specification:
-
-- **Transport**: Uses stdio transport as defined in the specification
-- **Tools**: Implements tool discovery and execution
-- **Error Handling**: Provides proper error responses for invalid requests
-
-For more information on the MCP specification, visit [spec.modelcontextprotocol.io](https://spec.modelcontextprotocol.io/).

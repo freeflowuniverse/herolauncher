@@ -13,10 +13,10 @@ This package implements an MCP (Model Context Protocol) server for OpenAPI speci
 ### As a Command Line Tool
 
 ```bash
-# Build and run the MCP server
-cd pkg/mcpopenapi/cmd/mcpopenapi
-go build
-./mcpopenapi
+# Build
+cd ${HOME}/code/github/freeflowuniverse/herolauncher/pkg/mcp/openapi/cmd/openapi
+go build -o mcpopenapi
+cp mcpopenapi ${HOME}/hero/bin/
 ```
 
 ### As a Library
@@ -26,20 +26,16 @@ package main
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/mcpopenapi"
+	"github.com/freeflowuniverse/herolauncher/pkg/mcp/openapi"
 )
 
 func main() {
-	// Read an OpenAPI spec file
-	specContent, err := os.ReadFile("path/to/openapi.json")
-	if err != nil {
-		panic(err)
-	}
+	// Specify the path to an OpenAPI spec file
+	filePath := "path/to/openapi.json"
 
 	// Validate the OpenAPI spec
-	result, err := mcpopenapi.ValidateOpenAPISpec(specContent)
+	result, err := openapi.ValidateOpenAPISpec(filePath)
 	if err != nil {
 		panic(err)
 	}

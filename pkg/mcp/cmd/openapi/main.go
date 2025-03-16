@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/mcpopenapi"
+	mcpopenapi "github.com/freeflowuniverse/herolauncher/pkg/mcp/openapi"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 
 	// Log server information
 	log.Printf("MCP OpenAPI Server initialized and ready")
-	
+
 	// Start the server in a goroutine
 	go func() {
 		log.Println("MCP OpenAPI Server is now serving requests...")
@@ -40,8 +40,8 @@ func main() {
 	sig := <-done
 	log.Printf("Received signal: %v", sig)
 	log.Println("Shutting down mcpopenapi MCP server...")
-	
+
 	// Perform any cleanup here if needed
-	
+
 	log.Println("MCP OpenAPI Server shutdown complete")
 }

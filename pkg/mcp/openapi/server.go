@@ -15,7 +15,7 @@ type HelloArguments struct {
 
 // OpenAPIValidationArgs represents the arguments for the OpenAPI validation tool
 type OpenAPIValidationArgs struct {
-	Spec string `json:"spec" jsonschema:"required,description=The OpenAPI specification content to validate"`
+	FilePath string `json:"filePath" jsonschema:"required,description=The path to the OpenAPI specification file to validate"`
 }
 
 // NewMCPServer creates a new MCP server for OpenAPI validation
@@ -39,7 +39,7 @@ func NewMCPServer(stdin io.Reader, stdout io.Writer) (*mcp.Server, error) {
 	// Register the OpenAPI validation tool
 	err = server.RegisterTool("validate_openapi", "Validate an OpenAPI specification", 
 		func(args OpenAPIValidationArgs) (*mcp.ToolResponse, error) {
-			result, err := ValidateOpenAPISpec([]byte(args.Spec))
+			result, err := ValidateOpenAPISpec(args.FilePath)
 			if err != nil {
 				return mcp.NewToolResponse(mcp.NewTextContent(fmt.Sprintf("Error validating OpenAPI spec: %v", err))), nil
 			}

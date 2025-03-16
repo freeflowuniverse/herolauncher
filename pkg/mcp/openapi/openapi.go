@@ -2,13 +2,25 @@ package mcpopenapi
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pb33f/libopenapi"
 )
 
-// ValidateOpenAPISpec validates an OpenAPI specification and returns any errors found
-func ValidateOpenAPISpec(specContent []byte) (string, error) {
+// ValidateOpenAPISpec validates an OpenAPI specification from a file path and returns any errors found
+func ValidateOpenAPISpec(filePath string) (string, error) {
+	// Check if the file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", fmt.Errorf("file does not exist: %s", filePath)
+	}
+
+	// Read the file
+	specContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("cannot read file: %w", err)
+	}
+
 	document, err := libopenapi.NewDocument(specContent)
 	if err != nil {
 		return "", fmt.Errorf("cannot create new document: %w", err)
