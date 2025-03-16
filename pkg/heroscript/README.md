@@ -1,4 +1,4 @@
-# Playbook
+# HeroScript
 
 A Go package for parsing and executing HeroScript, a small scripting language for defining actions.
 
@@ -35,7 +35,7 @@ Key features:
 ```go
 import (
     "fmt"
-    "github.com/freeflowuniverse/herolauncher/pkg/playbook"
+    "github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 // Create a new playbook from HeroScript text
@@ -102,6 +102,73 @@ HeroScript supports different action types:
 - `!!action` - SAL (Service Access Layer)
 - `!!!action` - Macro
 
+## Integration with HandlerFactory
+
+The HeroScript package can be used with the HandlerFactory to process commands. Each handler is associated with an actor and implements methods for each action it supports.
+
+### Handler Implementation
+
+To create a handler that works with the HandlerFactory and HeroScript:
+
+```go
+// MyHandler handles actions for the "myactor" actor
+type MyHandler struct {
+	handlerfactory.BaseHandler
+}
+
+// NewMyHandler creates a new MyHandler
+func NewMyHandler() *MyHandler {
+	return &MyHandler{
+		BaseHandler: handlerfactory.BaseHandler{
+			ActorName: "myactor",
+		},
+	}
+}
+
+// Play processes all actions for this handler's actor
+func (h *MyHandler) Play(script string, handler interface{}) (string, error) {
+	return h.BaseHandler.Play(script, handler)
+}
+
+// DoSomething handles the myactor.do_something action
+func (h *MyHandler) DoSomething(script string) string {
+	log.Printf("MyActor.DoSomething called with: %s", script)
+	params, err := h.ParseParams(script)
+	if err != nil {
+		return fmt.Sprintf("Error parsing parameters: %v", err)
+	}
+	
+	// Process the action...
+	return "Action completed successfully"
+}
+```
+
+### Using with HandlerFactory
+
+```go
+// Create a new handler factory
+factory := handlerfactory.NewHandlerFactory()
+
+// Create and register a handler
+myHandler := NewMyHandler()
+err := factory.RegisterHandler(myHandler)
+if err != nil {
+	log.Fatalf("Failed to register handler: %v", err)
+}
+
+// Process a HeroScript command
+result, err := factory.ProcessHeroscript(`
+!!myactor.do_something
+    param1: 'value1'
+    param2: 'value2'
+`)
+if err != nil {
+	log.Fatalf("Error processing heroscript: %v", err)
+}
+
+fmt.Println(result)
+```
+
 ## Example
 
 See the [example](./example/main.go) for a complete demonstration of how to use this package.
@@ -109,5 +176,5 @@ See the [example](./example/main.go) for a complete demonstration of how to use 
 ## Running Tests
 
 ```bash
-go test -v ./pkg/playbook
+go test -v ./pkg/heroscript/playbook
 ```

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/playbook"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 // ANSI color codes for terminal output

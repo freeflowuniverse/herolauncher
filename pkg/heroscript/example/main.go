@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/playbook"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 const exampleScript = `
@@ -46,7 +46,7 @@ func main() {
 		fmt.Printf("Action %d: %s.%s\n", i+1, action.Actor, action.Name)
 		fmt.Printf("  Comments: %s\n", action.Comments)
 		fmt.Printf("  Parameters:\n")
-		
+
 		for key, value := range action.Params.GetAll() {
 			fmt.Printf("    %s: %s\n", key, value)
 		}

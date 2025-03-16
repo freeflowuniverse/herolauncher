@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/playbook"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 func main() {
@@ -137,21 +137,21 @@ func handleExecuteCommand(file, text string, priority int, actor, action string)
 	fmt.Printf("Executing %d actions:\n\n", len(actionsToExecute))
 	for i, action := range actionsToExecute {
 		fmt.Printf("Executing action %d: %s.%s\n", i+1, action.Actor, action.Name)
-		
+
 		// In a real implementation, you would have handlers for different actors and actions
 		// For this example, we'll just simulate execution
 		fmt.Printf("  Parameters:\n")
 		for key, value := range action.Params.GetAll() {
 			fmt.Printf("    %s: %s\n", key, value)
 		}
-		
+
 		// Mark the action as done
 		action.Done = true
-		
+
 		// Set some result data
 		action.Result.Set("status", "success")
 		action.Result.Set("execution_time", "0.5s")
-		
+
 		fmt.Printf("  Result: success\n\n")
 	}
 
