@@ -1,0 +1,58 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"os"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
+)
+
+func main() {
+	// Create a new Fiber app
+	app := fiber.New(fiber.Config{
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		JSONEncoder:  json.Marshal,
+		JSONDecoder:  json.Unmarshal,
+	})
+
+	// Add middleware
+	app.Use(recover.New())
+	app.Use(logger.New())
+	app.Use(cors.New())
+
+	// Register routes from OpenAPI spec
+{{range .Routes}}
+	// {{if .Summary}}{{.Summary}}{{else}}{{.Method}} {{.Path}}{{end}}
+	app.{{.Method}}("{{.Path}}", func(c *fiber.Ctx) error {
+		// Mock implementation for {{.OperationID}}
+{{if .Description}}		// Description: {{.Description}}{{end}}
+{{if .Responses}}
+		// Return example response
+{{range .Responses}}
+		return c.Status({{.StatusCode}}).Type("{{.MediaType}}").Send([]byte(`{{.Example}}`))
+{{end}}
+{{else}}
+		return c.SendStatus(fiber.StatusOK)
+{{end}}
+	})
+{{end}}
+
+	// Get port from environment variable or default to 8080
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Start the server
+	log.Printf("Server started on :%s", port)
+	if err := app.Listen(":" + port); err != nil {
+		log.Fatalf("Error starting server: %v", err)
+	}
+}

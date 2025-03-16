@@ -1,0 +1,11 @@
+package models
+
+// Generated types from OpenAPI schema
+{{range .Types}}
+// {{.Name}} {{if .Description}}- {{.Description}}{{end}}
+type {{.Name}} struct {
+{{range .Properties}}
+	{{.Name}} {{.Type}} {{.Tags}} {{if .Description}}// {{.Description}}{{end}}
+{{end}}
+}
+{{end}}

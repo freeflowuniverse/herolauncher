@@ -1,0 +1,36 @@
+// Handler for {{.OperationID}}
+func handle{{.OperationID}}(c *fiber.Ctx) error {
+{{if .PathParams}}
+	// Extract path parameters
+{{range .PathParams}}
+	{{.Name}} := c.Params("{{.Name}}")
+{{end}}
+{{end}}
+
+{{if .QueryParams}}
+	// Extract query parameters
+{{range .QueryParams}}
+	{{.Name}} := c.Query("{{.Name}}")
+{{end}}
+{{end}}
+
+{{if .RequestBody}}
+	// Parse request body
+	var requestBody {{.RequestBodyType}}
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+{{end}}
+
+	// Process the request (mock implementation)
+{{if .Responses}}
+	// Return example response
+{{range .Responses}}
+	return c.Status({{.StatusCode}}).Type("{{.MediaType}}").Send([]byte(`{{.Example}}`))
+{{end}}
+{{else}}
+	return c.SendStatus(fiber.StatusOK)
+{{end}}
+}

@@ -1,0 +1,30 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"github.com/gofiber/fiber/v2"
+)
+
+func main() {
+	app := fiber.New()
+
+	// Register routes from OpenAPI spec
+{{range .Routes}}
+	// {{if .Summary}}{{.Summary}}{{else}}{{.Method}} {{.Path}}{{end}}
+	app.{{.Method}}("{{.Path}}", func(c *fiber.Ctx) error {
+		// Mock implementation for {{.OperationID}}
+{{if .Responses}}
+		// Return example response
+{{range .Responses}}
+		return c.Status({{.StatusCode}}).Type("{{.MediaType}}").Send([]byte(`{{.Example}}`))
+{{end}}
+{{else}}
+		return c.SendStatus(fiber.StatusOK)
+{{end}}
+	})
+{{end}}
+
+	log.Println("Server started on :8080")
+	log.Fatal(app.Listen(":8080"))
+}
