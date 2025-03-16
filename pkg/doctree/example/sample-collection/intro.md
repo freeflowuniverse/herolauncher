@@ -1,3 +1,3 @@
 # Introduction
 
-This is the introduction page.
+This is an introduction to the sample collection.

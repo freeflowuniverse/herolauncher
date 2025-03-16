@@ -1,9 +1,0 @@
-This is a test attachment file.
-
-It contains multiple lines of text to demonstrate
-that attachments are properly handled by our SMTP server.
-
-The SMTP server should:
-1. Receive this attachment
-2. Decode it from base64
-3. Store it in Redis as part of the email JSON

@@ -1,3 +1,3 @@
 # Advanced Topics
 
-This covers advanced topics.
+This covers advanced topics for the sample collection.

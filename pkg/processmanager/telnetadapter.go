@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
-	"github.com/freeflowuniverse/herolauncher/pkg/telnet"
 )
 
 // TelnetAdapter represents an adapter between the process manager and telnet server
@@ -102,15 +100,15 @@ func (ta *TelnetAdapter) handleCommand(session *telnet.Session, command string) 
 func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) string {
 	// For now, we'll just handle the commands directly without a playbook parser
 	// In a real implementation, you would parse the script properly
-	
+
 	// Trim any leading/trailing whitespace
 	script = strings.TrimSpace(script)
-	
+
 	// Log the script being executed
 	if ta.logEnabled {
 		log.Printf("Executing heroscript: '%s'", script)
 	}
-	
+
 	// Extract command parts
 	parts := strings.Fields(script)
 	if len(parts) == 0 {
@@ -126,67 +124,67 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 	// Process the command
 	var result strings.Builder
 	var actionResult string
-	
+
 	// Extract command name
 	cmd := parts[0]
-	
+
 	// Process based on command name
 	switch {
-		case strings.HasPrefix(cmd, "!!process.start"):
-			if ta.logEnabled {
-				log.Println("Handling process.start command")
-			}
-			actionResult = "Process start command received\n"
-		case strings.HasPrefix(cmd, "!!process.list"):
-			if ta.logEnabled {
-				log.Println("Handling process.list command")
-			}
-			actionResult = ta.handleProcessList()
-		case strings.HasPrefix(cmd, "!!process.delete"):
-			if ta.logEnabled {
-				log.Println("Handling process.delete command")
-			}
-			actionResult = "Process delete command received\n"
-		case strings.HasPrefix(cmd, "!!process.status"):
-			if ta.logEnabled {
-				log.Println("Handling process.status command")
-			}
-			actionResult = "Process status command received\n"
-		case strings.HasPrefix(cmd, "!!process.restart"):
-			if ta.logEnabled {
-				log.Println("Handling process.restart command")
-			}
-			actionResult = "Process restart command received\n"
-		case strings.HasPrefix(cmd, "!!process.stop"):
-			if ta.logEnabled {
-				log.Println("Handling process.stop command")
-			}
-			actionResult = "Process stop command received\n"
-		case strings.HasPrefix(cmd, "!!process.log"):
-			if ta.logEnabled {
-				log.Println("Handling process.log command")
-			}
-			actionResult = "Process log command received\n"
-		case cmd == "!!help" || cmd == "?" || cmd == "h":
-			if ta.logEnabled {
-				log.Println("Handling help command")
-			}
-			actionResult = ta.generateHelpText(interactive)
-		default:
-			if ta.logEnabled {
-				log.Printf("Unknown command received: '%s'", cmd)
-			}
-			actionResult = fmt.Sprintf("Unknown command: %s\n", cmd)
+	case strings.HasPrefix(cmd, "!!process.start"):
+		if ta.logEnabled {
+			log.Println("Handling process.start command")
 		}
+		actionResult = "Process start command received\n"
+	case strings.HasPrefix(cmd, "!!process.list"):
+		if ta.logEnabled {
+			log.Println("Handling process.list command")
+		}
+		actionResult = ta.handleProcessList()
+	case strings.HasPrefix(cmd, "!!process.delete"):
+		if ta.logEnabled {
+			log.Println("Handling process.delete command")
+		}
+		actionResult = "Process delete command received\n"
+	case strings.HasPrefix(cmd, "!!process.status"):
+		if ta.logEnabled {
+			log.Println("Handling process.status command")
+		}
+		actionResult = "Process status command received\n"
+	case strings.HasPrefix(cmd, "!!process.restart"):
+		if ta.logEnabled {
+			log.Println("Handling process.restart command")
+		}
+		actionResult = "Process restart command received\n"
+	case strings.HasPrefix(cmd, "!!process.stop"):
+		if ta.logEnabled {
+			log.Println("Handling process.stop command")
+		}
+		actionResult = "Process stop command received\n"
+	case strings.HasPrefix(cmd, "!!process.log"):
+		if ta.logEnabled {
+			log.Println("Handling process.log command")
+		}
+		actionResult = "Process log command received\n"
+	case cmd == "!!help" || cmd == "?" || cmd == "h":
+		if ta.logEnabled {
+			log.Println("Handling help command")
+		}
+		actionResult = ta.generateHelpText(interactive)
+	default:
+		if ta.logEnabled {
+			log.Printf("Unknown command received: '%s'", cmd)
+		}
+		actionResult = fmt.Sprintf("Unknown command: %s\n", cmd)
+	}
 
 	result.WriteString(actionResult)
 
 	formattedResult := telnet.FormatResult(result.String(), jobID, interactive)
-	
+
 	if ta.logEnabled {
 		log.Printf("Command result: %s", strings.ReplaceAll(formattedResult, "\n", " "))
 	}
-	
+
 	return formattedResult
 }
 
@@ -294,15 +292,15 @@ func (ta *TelnetAdapter) handleProcessStatus(name string, format string) string 
 	result.WriteString(fmt.Sprintf("Name: %s\n", process.Name))
 	result.WriteString(fmt.Sprintf("Status: %s\n", status))
 	result.WriteString(fmt.Sprintf("Command: %s\n", process.Command))
-	
+
 	if process.Status == "running" {
 		result.WriteString(fmt.Sprintf("PID: %d\n", process.PID))
 	}
-	
+
 	if process.Cron != "" {
 		result.WriteString(fmt.Sprintf("Cron: %s\n", process.Cron))
 	}
-	
+
 	return result.String()
 }
 
@@ -370,7 +368,7 @@ func (ta *TelnetAdapter) handleProcessLog(name string, lines int, interactive bo
 // generateHelpText generates help text for available commands
 func (ta *TelnetAdapter) generateHelpText(interactive bool) string {
 	var helpText strings.Builder
-	
+
 	// Process commands
 	helpText.WriteString("Process management commands:\n")
 	helpText.WriteString("  !!process.start name:'<name>' command:'<command>' [log:true|false] [deadline:<seconds>] [cron:'<schedule>'] [jobid:'<id>']\n")
