@@ -2,6 +2,9 @@
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+rm -rf actionsapi
+rm -rf petstoreapi
+
 # Check if anything is running on port 9092
 if command -v lsof >/dev/null 2>&1; then
     # OSX
