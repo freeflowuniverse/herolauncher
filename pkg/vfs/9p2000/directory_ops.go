@@ -108,14 +108,11 @@ func (d *VFSDBDir) AddChild(n fs.FSNode) error {
 		return nil
 	}
 
-	// If the child is a directory, create it in vfsdb
+	// If the child is a directory, we don't need to create it in vfsdb here
+	// because it should have already been created in createVFSDBDir
+	// This avoids the "entry already exists" error when creating subdirectories
 	if n.Stat().Mode&proto.DMDIR > 0 {
-		log.Printf("Creating directory %s in vfsdb", childPath)
-		_, err := d.vfsImpl.DirCreate(childPath)
-		if err != nil {
-			log.Printf("Failed to create directory %s in vfsdb: %v", childPath, err)
-			return fmt.Errorf("failed to create directory in vfsdb: %w", err)
-		}
+		log.Printf("Directory %s should already exist in vfsdb, skipping creation", childPath)
 	}
 
 	// Set the parent of the child
@@ -196,17 +193,28 @@ func createVFSDBDir(vfsImpl vfs.VFSImplementation) func(fs *fs.FS, parent fs.Dir
 			return nil, fmt.Errorf("%s does not support modification", fs.FullPath(parent))
 		}
 		
-		err := modParent.AddChild(dir)
+		// Create the directory in the vfsdb first
+		// This will handle the case where the path has multiple segments
+		// and will create any necessary parent directories
+		_, err := vfsImpl.DirCreate(dirPath)
+		if err != nil {
+			// If the directory already exists, that's fine - we'll just use it
+			if err.Error() == "entry already exists" {
+				log.Printf("Directory %s already exists in vfsdb, using existing directory", dirPath)
+			} else {
+				log.Printf("Failed to create directory %s in vfsdb: %v", dirPath, err)
+				return nil, fmt.Errorf("failed to create directory in vfsdb: %w", err)
+			}
+		} else {
+			log.Printf("Successfully created directory %s in vfsdb", dirPath)
+		}
+		
+		// Now add the child to the parent in the 9p server structure
+		// This is idempotent and won't create the directory again in vfsdb
+		err = modParent.AddChild(dir)
 		if err != nil {
 			log.Printf("Failed to add directory %s to parent directory: %v", dirPath, err)
 			return nil, fmt.Errorf("failed to add directory to parent directory: %w", err)
-		}
-		
-		// Create the directory in the vfsdb
-		_, err = vfsImpl.DirCreate(dirPath)
-		if err != nil {
-			log.Printf("Failed to create directory %s in vfsdb: %v", dirPath, err)
-			return nil, fmt.Errorf("failed to create directory in vfsdb: %w", err)
 		}
 		
 		log.Printf("Successfully created directory %s", dirPath)
