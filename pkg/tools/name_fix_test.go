@@ -20,6 +20,7 @@ func TestNameFix(t *testing.T) {
 		{"Multiple   spaces", "multiple_spaces"},
 		{"Symbols: !@#$%^&*()", "symbols_"},
 		{"Getting- Started", "getting_started"},
+		{"Getting- ,Started", "getting_,started"},
 	}
 
 	for _, test := range tests {

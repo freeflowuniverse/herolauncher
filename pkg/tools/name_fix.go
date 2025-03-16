@@ -29,8 +29,8 @@ func NameFix(input string) string {
 	var result strings.Builder
 	lastWasUnderscore := false
 	for _, r := range lowered {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' {
-			// Keep alphanumeric characters and periods
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == ',' {
+			// Keep alphanumeric characters, periods, and commas
 			result.WriteRune(r)
 			lastWasUnderscore = false
 		} else {

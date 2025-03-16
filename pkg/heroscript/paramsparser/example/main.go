@@ -4,7 +4,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/paramsparser"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/paramsparser"
 )
 
 func main() {

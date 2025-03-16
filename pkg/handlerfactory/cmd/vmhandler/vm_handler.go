@@ -234,6 +234,11 @@ func (h *VMHandler) List(script string) string {
 	return result.String()
 }
 
+// Help handles the vm.help action
+func (h *VMHandler) Help(script string) string {
+	return GetVMTutorial()
+}
+
 // Status handles the vm.status action
 func (h *VMHandler) Status(script string) string {
 	params, err := h.ParseParams(script)

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/paramsparser"
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
@@ -70,7 +71,7 @@ func (h *BaseHandler) Play(script string, handler interface{}) (string, error) {
 }
 
 // ParseParams parses parameters from a heroscript action
-func (h *BaseHandler) ParseParams(script string) (*playbook.ParamsParser, error) {
+func (h *BaseHandler) ParseParams(script string) (*paramsparser.ParamsParser, error) {
 	pb, err := playbook.NewFromText(script)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse heroscript: %v", err)
@@ -81,7 +82,16 @@ func (h *BaseHandler) ParseParams(script string) (*playbook.ParamsParser, error)
 		return nil, fmt.Errorf("no actions found in script")
 	}
 
-	return pb.Actions[0].Params, nil
+	// Get the first action
+	action := pb.Actions[0]
+
+	// Check if the action is for this handler
+	if action.Actor != h.ActorName {
+		return nil, fmt.Errorf("action actor '%s' does not match handler actor '%s'", action.Actor, h.ActorName)
+	}
+
+	// The action already has a ParamsParser, so we can just return it
+	return action.Params, nil
 }
 
 // HandlerFactory manages a collection of handlers

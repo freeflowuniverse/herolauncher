@@ -16,8 +16,11 @@ The VM handler example shows how to:
 To run the example:
 
 ```bash
-cd /Users/despiegk/code/github/freeflowuniverse/herolauncher/handlerfactory/cmd/vmhandler
-go run main.go
+cd ~/code/github/freeflowuniverse/herolauncher/pkg/handlerfactory/cmd/vmhandler
+go run . tutorial
+#to run just the server do
+go run . 
+#you can then go to other terminal and play with telnet / nc
 ```
 
 This will start a telnet server on:

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/paramsparser"
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
@@ -60,7 +61,7 @@ func (h *BaseHandler) Play(script string, handler interface{}) (string, error) {
 }
 
 // ParseParams parses parameters from a heroscript action
-func (h *BaseHandler) ParseParams(script string) (*playbook.ParamsParser, error) {
+func (h *BaseHandler) ParseParams(script string) (*paramsparser.ParamsParser, error) {
 	pb, err := playbook.NewFromText(script)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse heroscript: %v", err)

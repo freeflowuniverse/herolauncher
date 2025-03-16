@@ -11,6 +11,8 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
 )
 
+// The tutorial functions are defined in tutorial.go
+
 func main() {
 	// Check if tutorial mode is requested
 	addTutorialCommand()
@@ -28,16 +30,10 @@ func main() {
 	}
 
 	// Create a telnet server with the handler factory
-	server := handlerfactory.NewTelnetServer(factory, "secret123")
-
-	// Get home directory for socket path
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatalf("Failed to get home directory: %v", err)
-	}
+	server := handlerfactory.NewTelnetServer(factory, "1234")
 
 	// Create socket directory if it doesn't exist
-	socketDir := filepath.Join(homeDir, ".herolauncher", "sockets")
+	socketDir := "/tmp"
 	err = os.MkdirAll(socketDir, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create socket directory: %v", err)
@@ -61,15 +57,8 @@ func main() {
 	fmt.Println("Connect with: telnet localhost 8024")
 
 	// Print available commands
-	fmt.Println("\nAvailable VM commands:")
-	fmt.Println("  !!vm.define name:'test_vm' cpu:4 memory:'8GB' storage:'100GB'")
-	fmt.Println("  !!vm.start name:'test_vm'")
-	fmt.Println("  !!vm.stop name:'test_vm'")
-	fmt.Println("  !!vm.disk_add name:'test_vm' size:'50GB' type:'SSD'")
-	fmt.Println("  !!vm.list")
-	fmt.Println("  !!vm.status name:'test_vm'")
-	fmt.Println("  !!vm.delete name:'test_vm' force:true")
-	fmt.Println("\nAuthentication secret: secret123")
+	fmt.Println("\nVM Handler started. Type '!!vm.help' to see available commands.")
+	fmt.Println("Authentication secret: 1234")
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)

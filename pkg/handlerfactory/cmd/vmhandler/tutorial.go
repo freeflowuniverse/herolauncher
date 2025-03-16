@@ -182,6 +182,85 @@ func waitForEnter() {
 	reader.ReadString('\n')
 }
 
+// VMTutorial contains the tutorial text for the VM handler
+const VMTutorial = `
+VM Handler Tutorial
+==================
+
+The VM handler provides a set of commands to manage virtual machines through heroscript commands.
+
+Available VM commands:
+  !!vm.define name:test_vm cpu:4 memory:8GB storage:100GB
+  !!vm.start name:test_vm
+  !!vm.stop name:test_vm
+  !!vm.disk_add name:test_vm size:50GB type:SSD
+  !!vm.list
+  !!vm.status name:test_vm
+  !!vm.delete name:test_vm force:true
+
+Authentication secret: 1234
+
+Command Details:
+--------------
+1. define - Create a new VM with specified resources
+   Parameters:
+   - name: (required) Name of the VM
+   - cpu: (optional) Number of CPUs, default: 1
+   - memory: (optional) Memory size, default: 1GB
+   - storage: (optional) Storage size, default: 10GB
+   - description: (optional) Description of the VM
+
+2. start - Start a VM
+   Parameters:
+   - name: (required) Name of the VM to start
+
+3. stop - Stop a running VM
+   Parameters:
+   - name: (required) Name of the VM to stop
+
+4. disk_add - Add a disk to a VM
+   Parameters:
+   - name: (required) Name of the VM
+   - size: (optional) Size of the disk, default: 10GB
+   - type: (optional) Type of disk (SSD, HDD), default: HDD
+
+5. list - List all VMs
+
+6. status - Show status of a VM
+   Parameters:
+   - name: (required) Name of the VM
+
+7. delete - Delete a VM
+   Parameters:
+   - name: (required) Name of the VM
+   - force: (optional) Force deletion even if VM is running, default: false
+
+8. help - Show this help message
+
+Examples:
+--------
+1. Create a new VM:
+   !!vm.define name:webserver cpu:2 memory:4GB storage:50GB description:'Web server VM'
+
+2. Start the VM:
+   !!vm.start name:webserver
+
+3. Add an SSD disk:
+   !!vm.disk_add name:webserver size:100GB type:SSD
+
+4. Check VM status:
+   !!vm.status name:webserver
+
+5. List all VMs:
+   !!vm.list
+
+6. Stop the VM:
+   !!vm.stop name:webserver
+
+7. Delete the VM:
+   !!vm.delete name:webserver force:true
+`
+
 // addTutorialCommand adds the tutorial command to the main function
 func addTutorialCommand() {
 	// Check command line arguments
@@ -189,4 +268,9 @@ func addTutorialCommand() {
 		runTutorial()
 		os.Exit(0)
 	}
+}
+
+// GetVMTutorial returns the VM handler tutorial text
+func GetVMTutorial() string {
+	return VMTutorial
 }

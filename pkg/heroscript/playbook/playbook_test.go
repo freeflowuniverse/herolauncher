@@ -7,11 +7,10 @@ import (
 
 const testText1 = `
 //comment for the action
-!!mailclient.configure
-	name:'myname'
-	host:'localhost'
+!!mailclient.configure host:localhost 
+	name: 'myname'		
 	port:25
-	secure:1
+	secure: 1
 	reset:1 
 	description:'
 		a description can be multiline
@@ -85,7 +84,7 @@ func TestHeroScript(t *testing.T) {
 
 	// Generate heroscript
 	script := pb.HeroScript(true)
-	
+
 	// Parse the generated script again
 	pb2, err := NewFromText(script)
 	if err != nil {
@@ -99,15 +98,15 @@ func TestHeroScript(t *testing.T) {
 
 	// Verify the actions have the same actor and name
 	if pb.Actions[0].Actor != pb2.Actions[0].Actor || pb.Actions[0].Name != pb2.Actions[0].Name {
-		t.Errorf("Actions don't match: %s.%s vs %s.%s", 
-			pb.Actions[0].Actor, pb.Actions[0].Name, 
+		t.Errorf("Actions don't match: %s.%s vs %s.%s",
+			pb.Actions[0].Actor, pb.Actions[0].Name,
 			pb2.Actions[0].Actor, pb2.Actions[0].Name)
 	}
 
 	// Verify the parameters are the same
 	params1 := pb.Actions[0].Params.GetAll()
 	params2 := pb2.Actions[0].Params.GetAll()
-	
+
 	// Check that all keys in params1 exist in params2
 	for k, v1 := range params1 {
 		v2, exists := params2[k]
@@ -115,7 +114,7 @@ func TestHeroScript(t *testing.T) {
 			t.Errorf("Key %s missing in generated script", k)
 			continue
 		}
-		
+
 		// For multiline strings, just check that they contain the same content
 		if strings.Contains(v1, "\n") {
 			if !strings.Contains(v2, "description") || !strings.Contains(v2, "multiline") {
@@ -124,6 +123,47 @@ func TestHeroScript(t *testing.T) {
 		} else if v1 != v2 {
 			t.Errorf("Value for key %s doesn't match: '%s' vs '%s'", k, v1, v2)
 		}
+	}
+}
+
+func TestSpacedValues(t *testing.T) {
+	const spacedValuesText = `
+!!mailclient.configure
+	name: 'myname'
+	host: 'localhost'
+	port: 25
+	secure: 1
+	description: 'This is a description'
+`
+
+	pb, err := NewFromText(spacedValuesText)
+	if err != nil {
+		t.Fatalf("Failed to parse text with spaces between colon and quoted values: %v", err)
+	}
+
+	if len(pb.Actions) != 1 {
+		t.Errorf("Expected 1 action, got %d", len(pb.Actions))
+	}
+
+	action := pb.Actions[0]
+	if action.Actor != "mailclient" || action.Name != "configure" {
+		t.Errorf("Action incorrect: %s.%s", action.Actor, action.Name)
+	}
+
+	// Test params with spaces after colon
+	name := action.Params.Get("name")
+	if name != "myname" {
+		t.Errorf("Expected name 'myname', got '%s'", name)
+	}
+
+	host := action.Params.Get("host")
+	if host != "localhost" {
+		t.Errorf("Expected host 'localhost', got '%s'", host)
+	}
+
+	desc := action.Params.Get("description")
+	if desc != "This is a description" {
+		t.Errorf("Expected description 'This is a description', got '%s'", desc)
 	}
 }
 

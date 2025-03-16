@@ -1,21 +1,22 @@
-package handlers
+package internal
 
 import (
 	"fmt"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlers"
 )
 
 // ExampleHandler handles example actions
 type ExampleHandler struct {
-	BaseHandler
+	handlers.BaseHandler
 	data map[string]string
 }
 
 // NewExampleHandler creates a new example handler
 func NewExampleHandler() *ExampleHandler {
 	return &ExampleHandler{
-		BaseHandler: BaseHandler{
+		BaseHandler: handlers.BaseHandler{
 			BaseHandler: handlerfactory.BaseHandler{
 				ActorName: "example",
 			},
@@ -26,7 +27,7 @@ func NewExampleHandler() *ExampleHandler {
 
 // Set handles the example.set action
 func (h *ExampleHandler) Set(script string) string {
-	params, err := h.ParseParams(script)
+	params, err := h.BaseHandler.ParseParams(script)
 	if err != nil {
 		return fmt.Sprintf("Error parsing parameters: %v", err)
 	}
@@ -47,7 +48,7 @@ func (h *ExampleHandler) Set(script string) string {
 
 // Get handles the example.get action
 func (h *ExampleHandler) Get(script string) string {
-	params, err := h.ParseParams(script)
+	params, err := h.BaseHandler.ParseParams(script)
 	if err != nil {
 		return fmt.Sprintf("Error parsing parameters: %v", err)
 	}
@@ -81,7 +82,7 @@ func (h *ExampleHandler) List(script string) string {
 
 // Delete handles the example.delete action
 func (h *ExampleHandler) Delete(script string) string {
-	params, err := h.ParseParams(script)
+	params, err := h.BaseHandler.ParseParams(script)
 	if err != nil {
 		return fmt.Sprintf("Error parsing parameters: %v", err)
 	}

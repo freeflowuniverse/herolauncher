@@ -1,0 +1,7 @@
+!!example.set key:username value:johndoe
+!!example.set key:email value:john@example.com
+!!example.set key:role value:admin
+!!example.list
+!!example.get key:username
+!!example.delete key:email
+!!example.list

@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/tools"
 )
 
 // ParamsParser represents a parameter parser that can handle various parameter sources
@@ -98,14 +100,9 @@ func (p *ParamsParser) Parse(input string) error {
 				break
 			}
 			
-			// Extract key (only alphanumeric and underscore characters)
-			key := ""
-			for j := keyStart; j < colonPos; j++ {
-				ch := line[j]
-				if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
-					key += string(ch)
-				}
-			}
+			// Extract key and use NameFix to standardize it
+			rawKey := strings.TrimSpace(line[keyStart:colonPos])
+			key := tools.NameFix(rawKey)
 			
 			if key == "" {
 				// Invalid key, move past the colon and continue
@@ -118,6 +115,17 @@ func (p *ParamsParser) Parse(input string) error {
 			
 			if processedPos >= len(line) {
 				// End of line reached, store empty value
+				p.params[key] = ""
+				break
+			}
+			
+			// Skip whitespace after the colon
+			for processedPos < len(line) && (line[processedPos] == ' ' || line[processedPos] == '\t') {
+				processedPos++
+			}
+			
+			if processedPos >= len(line) {
+				// End of line reached after whitespace, store empty value
 				p.params[key] = ""
 				break
 			}
@@ -140,6 +148,11 @@ func (p *ParamsParser) Parse(input string) error {
 				if quoteEnd != -1 {
 					// Single-line quoted string
 					value := line[processedPos:quoteEnd]
+					// For quoted values, we preserve the original formatting
+					// But for single-line values, we can apply NameFix if needed
+					if key != "description" {
+						value = tools.NameFix(value)
+					}
 					p.params[key] = value
 					processedPos = quoteEnd + 1 // Move past the closing quote
 				} else {
@@ -161,7 +174,9 @@ func (p *ParamsParser) Parse(input string) error {
 				}
 				
 				value := line[valueStart:valueEnd]
-				p.params[key] = value
+				// For unquoted values, use NameFix to standardize them
+				// This handles the 'without' keyword and other special cases
+				p.params[key] = tools.NameFix(value)
 				processedPos = valueEnd
 			}
 		}
@@ -210,14 +225,9 @@ func (p *ParamsParser) ParseString(input string) error {
 			break
 		}
 		
-		// Extract key (only alphanumeric and underscore characters)
-		key := ""
-		for j := keyStart; j < colonPos; j++ {
-			ch := input[j]
-			if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' {
-				key += string(ch)
-			}
-		}
+		// Extract key and use NameFix to standardize it
+		rawKey := strings.TrimSpace(input[keyStart:colonPos])
+		key := tools.NameFix(rawKey)
 		
 		if key == "" {
 			// Invalid key, move past the colon and continue
@@ -230,6 +240,17 @@ func (p *ParamsParser) ParseString(input string) error {
 		
 		if processedPos >= len(input) {
 			// End of input reached, store empty value
+			p.params[key] = ""
+			break
+		}
+		
+		// Skip whitespace after the colon
+		for processedPos < len(input) && (input[processedPos] == ' ' || input[processedPos] == '\t') {
+			processedPos++
+		}
+		
+		if processedPos >= len(input) {
+			// End of input reached after whitespace, store empty value
 			p.params[key] = ""
 			break
 		}
@@ -254,6 +275,11 @@ func (p *ParamsParser) ParseString(input string) error {
 			}
 			
 			value := input[processedPos:quoteEnd]
+			// For quoted values in ParseString, we can apply NameFix
+			// since this method doesn't handle multiline strings
+			if key != "description" {
+				value = tools.NameFix(value)
+			}
 			p.params[key] = value
 			processedPos = quoteEnd + 1 // Move past the closing quote
 		} else {
@@ -267,7 +293,9 @@ func (p *ParamsParser) ParseString(input string) error {
 			}
 			
 			value := input[valueStart:valueEnd]
-			p.params[key] = value
+			// For unquoted values, use NameFix to standardize them
+			// This handles the 'without' keyword and other special cases
+			p.params[key] = tools.NameFix(value)
 			processedPos = valueEnd
 		}
 	}

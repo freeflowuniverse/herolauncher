@@ -38,10 +38,10 @@ type TelnetServer struct {
 // NewTelnetServer creates a new telnet server
 func NewTelnetServer(factory *HandlerFactory, secrets ...string) *TelnetServer {
 	return &TelnetServer{
-		factory:      factory,
-		secrets:      secrets,
-		clients:      make(map[net.Conn]bool),
-		running:      false,
+		factory: factory,
+		secrets: secrets,
+		clients: make(map[net.Conn]bool),
+		running: false,
 	}
 }
 
@@ -151,7 +151,7 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 	}()
 
 	// Welcome message
-	conn.Write([]byte(" ** Welcome: you are not authenticated, please authenticate with !!auth secret:'your_secret'.\n"))
+	conn.Write([]byte(" ** Welcome: you are not authenticated, please authenticate with !!core.auth secret:1234\n"))
 
 	// Create a scanner for reading input
 	scanner := bufio.NewScanner(conn)
@@ -199,8 +199,11 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 		if line == "!!interactive" || line == "!!i" || line == "i" {
 			interactiveMode = !interactiveMode
 			if interactiveMode {
-				conn.Write([]byte(ColorGreen + "Interactive mode enabled. Using colors for output." + ColorReset + "\n"))
+				// Only use colors in terminal output, not in telnet
+				fmt.Println(ColorGreen + "Interactive mode enabled for client. Using colors for console output." + ColorReset)
+				conn.Write([]byte("Interactive mode enabled. Using formatted output.\n"))
 			} else {
+				fmt.Println("Interactive mode disabled for client. Plain text console output.")
 				conn.Write([]byte("Interactive mode disabled. Plain text output.\n"))
 			}
 			continue
@@ -212,24 +215,36 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 		// Handle authentication
 		if !isAuthenticated {
 			// Check if this is an auth command
-			if strings.HasPrefix(strings.TrimSpace(line), "!!auth") {
+			if strings.HasPrefix(strings.TrimSpace(line), "!!core.auth") || strings.HasPrefix(strings.TrimSpace(line), "!!auth") {
 				pb, err := playbook.NewFromText(line)
-				if err == nil && len(pb.Actions) > 0 {
+				if err != nil {
+					conn.Write([]byte("Authentication syntax error. Use !!core.auth secret:'your_secret'\n"))
+					continue
+				}
+
+				if len(pb.Actions) > 0 {
 					action := pb.Actions[0]
-					if action.Actor == "auth" && action.Name == "auth" {
+					// Support both auth.auth and core.auth patterns
+					validActor := action.Actor == "auth" || action.Actor == "core"
+					validAction := action.Name == "auth"
+
+					if validActor && validAction {
 						secret := action.Params.Get("secret")
 						if ts.isValidSecret(secret) {
 							ts.clientsMutex.Lock()
 							ts.clients[conn] = true
 							ts.clientsMutex.Unlock()
-							conn.Write([]byte(ColorGreen + " ** Authentication successful. You can now send commands.\n" + ColorReset))
+							conn.Write([]byte(" ** Authentication successful. You can now send commands.\n"))
+							continue
+						} else {
+							conn.Write([]byte("Authentication failed: Invalid secret provided.\n"))
 							continue
 						}
 					}
 				}
-				conn.Write([]byte(ColorRed + "Invalid authentication. Use !!auth secret:'your_secret'\n" + ColorReset))
+				conn.Write([]byte("Invalid authentication format. Use !!core.auth secret:'your_secret'\n"))
 			} else {
-				conn.Write([]byte(ColorRed + "You must authenticate first. Use !!auth secret:'your_secret'\n" + ColorReset))
+				conn.Write([]byte("You must authenticate first. Use !!core.auth secret:'your_secret'\n"))
 			}
 			continue
 		}
@@ -241,11 +256,11 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 				commandText := heroscriptBuffer.String()
 				result := ts.executeHeroscript(commandText, interactiveMode)
 				conn.Write([]byte(result + "\n"))
-				
+
 				// Add to history
 				commandHistory = append(commandHistory, commandText)
 				historyPos = len(commandHistory)
-				
+
 				// Reset buffer
 				heroscriptBuffer.Reset()
 				lastCommand = commandText
@@ -274,7 +289,7 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 func (ts *TelnetServer) isClientAuthenticated(conn net.Conn) bool {
 	ts.clientsMutex.RLock()
 	defer ts.clientsMutex.RUnlock()
-	
+
 	authenticated, exists := ts.clients[conn]
 	return exists && authenticated
 }
@@ -304,39 +319,42 @@ func (ts *TelnetServer) executeHeroscript(script string, interactive bool) strin
 	if err != nil {
 		errorMsg := fmt.Sprintf("Error: %v", err)
 		if interactive {
-			return ColorRed + errorMsg + ColorReset
+			// Only use colors in terminal output, not in telnet response
+			fmt.Println(ColorRed + errorMsg + ColorReset)
 		}
 		return errorMsg
 	}
 
 	if interactive {
-		return ColorGreen + result + ColorReset
+		// Only use colors in terminal output, not in telnet response
+		fmt.Println(ColorGreen + "Result: " + result + ColorReset)
 	}
 	return result
 }
 
-// formatHeroscript formats heroscript with colors for interactive mode
+// formatHeroscript formats heroscript with colors for console output only
+// This is not used for telnet responses, only for server-side logging
 func formatHeroscript(script string) string {
 	var formatted strings.Builder
 	lines := strings.Split(script, "\n")
-	
+
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
+
 		// Comments
 		if strings.HasPrefix(trimmed, "//") {
 			formatted.WriteString(ColorBlue + line + ColorReset + "\n")
 			continue
 		}
-		
+
 		// Action lines
 		if strings.HasPrefix(trimmed, "!") {
 			parts := strings.SplitN(trimmed, " ", 2)
 			actionPart := parts[0]
-			
+
 			// Highlight actor.action
 			formatted.WriteString(Bold + ColorYellow + actionPart + ColorReset)
-			
+
 			// Add the rest of the line
 			if len(parts) > 1 {
 				formatted.WriteString(" " + parts[1])
@@ -344,14 +362,14 @@ func formatHeroscript(script string) string {
 			formatted.WriteString("\n")
 			continue
 		}
-		
+
 		// Parameter lines
 		if strings.Contains(line, ":") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				// Parameter name
 				formatted.WriteString(parts[0] + ":")
-				
+
 				// Parameter value
 				value := parts[1]
 				if strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'") {
@@ -362,24 +380,25 @@ func formatHeroscript(script string) string {
 				continue
 			}
 		}
-		
+
 		// Default formatting
 		formatted.WriteString(line + "\n")
 	}
-	
+
 	return formatted.String()
 }
 
 // generateHelpText generates help text for available commands
 func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	var help strings.Builder
-	
+
+	// Only use colors in console output, not in telnet
 	if interactive {
-		help.WriteString(Bold + ColorCyan + "Available Commands:\n" + ColorReset)
-	} else {
-		help.WriteString("Available Commands:\n")
+		fmt.Println(Bold + ColorCyan + "Generating help text for client" + ColorReset)
 	}
-	
+
+	help.WriteString("Available Commands:\n")
+
 	// System commands
 	help.WriteString("  System Commands:\n")
 	help.WriteString("    !!help, h, ?      - Show this help\n")
@@ -387,12 +406,12 @@ func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	help.WriteString("    !!quit, q         - Disconnect\n")
 	help.WriteString("    !!exit            - Disconnect\n")
 	help.WriteString("\n")
-	
+
 	// Authentication
 	help.WriteString("  Authentication:\n")
-	help.WriteString("    !!auth secret:'your_secret'  - Authenticate with a secret\n")
+	help.WriteString("    !!core.auth secret:'your_secret'  - Authenticate with a secret\n")
 	help.WriteString("\n")
-	
+
 	// Handler actions
 	help.WriteString("  Supported Actions:\n")
 	actions := ts.factory.GetSupportedActions()
@@ -403,12 +422,12 @@ func (ts *TelnetServer) generateHelpText(interactive bool) string {
 		}
 	}
 	help.WriteString("\n")
-	
+
 	// Usage tips
 	help.WriteString("  Usage Tips:\n")
 	help.WriteString("    - Enter an empty line to execute a command\n")
 	help.WriteString("    - Commands can span multiple lines\n")
 	help.WriteString("    - Use arrow up to access command history\n")
-	
+
 	return help.String()
 }
