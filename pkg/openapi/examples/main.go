@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	
+	"gopkg.in/yaml.v3"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/openapi"
 	"github.com/gofiber/fiber/v2"
@@ -25,8 +27,8 @@ const (
 
 func main() {
 	// Generate code for both APIs
-	generatePetstoreApi()
-	generateActionsApi()
+	generateApiFromSpec("Petstore", petstoreSpecPath, petstoreApiDir)
+	generateApiFromSpec("Actions", actionsSpecPath, actionsApiDir)
 
 	// Create the main server
 	app := fiber.New(fiber.Config{
@@ -50,14 +52,14 @@ func main() {
 	}
 }
 
-// generatePetstoreApi generates the Petstore API code
-func generatePetstoreApi() {
-	fmt.Println("Generating Petstore API code...")
+// generateApiFromSpec generates API code from an OpenAPI specification file
+func generateApiFromSpec(apiName string, specPath string, outputDir string) {
+	fmt.Printf("Generating %s API code...\n", apiName)
 
 	// Parse the OpenAPI specification
-	spec, err := openapi.ParseFromFile(petstoreSpecPath)
+	spec, err := openapi.ParseFromFile(specPath)
 	if err != nil {
-		log.Fatalf("Failed to parse Petstore OpenAPI specification: %v", err)
+		log.Fatalf("Failed to parse %s OpenAPI specification: %v", apiName, err)
 	}
 
 	// Create a server generator
@@ -67,47 +69,17 @@ func generatePetstoreApi() {
 	serverCode := generator.GenerateServerCode()
 
 	// Write the server code to a file
-	outputPath := filepath.Join(petstoreApiDir, "server.go")
+	outputPath := filepath.Join(outputDir, "server.go")
 	err = os.WriteFile(outputPath, []byte(serverCode), 0644)
 	if err != nil {
-		log.Fatalf("Failed to write Petstore server code: %v", err)
+		log.Fatalf("Failed to write %s server code: %v", apiName, err)
 	}
 
 	// Copy the OpenAPI spec to the output directory
-	specOutputPath := filepath.Join(petstoreApiDir, "openapi.yaml")
-	copyFile(petstoreSpecPath, specOutputPath)
+	specOutputPath := filepath.Join(outputDir, "openapi.yaml")
+	copyFile(specPath, specOutputPath)
 
-	fmt.Printf("Generated Petstore API code in %s\n", outputPath)
-}
-
-// generateActionsApi generates the Actions API code
-func generateActionsApi() {
-	fmt.Println("Generating Actions API code...")
-
-	// Parse the OpenAPI specification
-	spec, err := openapi.ParseFromFile(actionsSpecPath)
-	if err != nil {
-		log.Fatalf("Failed to parse Actions OpenAPI specification: %v", err)
-	}
-
-	// Create a server generator
-	generator := openapi.NewServerGenerator(spec)
-
-	// Generate server code
-	serverCode := generator.GenerateServerCode()
-
-	// Write the server code to a file
-	outputPath := filepath.Join(actionsApiDir, "server.go")
-	err = ioutil.WriteFile(outputPath, []byte(serverCode), 0644)
-	if err != nil {
-		log.Fatalf("Failed to write Actions server code: %v", err)
-	}
-
-	// Copy the OpenAPI spec to the output directory
-	specOutputPath := filepath.Join(actionsApiDir, "openapi.yaml")
-	copyFile(actionsSpecPath, specOutputPath)
-
-	fmt.Printf("Generated Actions API code in %s\n", outputPath)
+	fmt.Printf("Generated %s API code in %s\n", apiName, outputPath)
 }
 
 // APIHomeData holds the data for the API home template
@@ -119,7 +91,7 @@ type APIHomeData struct {
 func getAPIHomeHtml() string {
 	// Define the template path
 	tmplPath := filepath.Join("templates", "api-home.html")
-	
+
 	// Parse the template
 	tmpl, err := template.ParseFiles(tmplPath)
 	if err != nil {
@@ -150,12 +122,12 @@ func getAPIHomeHtml() string {
 			</html>
 		`
 	}
-	
+
 	// Prepare the template data
 	data := APIHomeData{
 		Title: "API Home",
 	}
-	
+
 	// Execute the template
 	buf := new(bytes.Buffer)
 	if err := tmpl.Execute(buf, data); err != nil {
@@ -172,7 +144,7 @@ func getAPIHomeHtml() string {
 			</html>
 		`
 	}
-	
+
 	return buf.String()
 }
 
@@ -187,35 +159,68 @@ func setupApiRoutes(app *fiber.App) {
 	// Serve Swagger UI
 	app.Static("/api/swagger-ui", "./swagger-ui")
 
-	// Petstore API Swagger UI
-	app.Get("/api/swagger/petstore", func(c *fiber.Ctx) error {
-		c.Set("Content-Type", "text/html")
-		return c.SendString(getSwaggerUIHtml("Petstore API", "/api/petstore/openapi.yaml", fmt.Sprintf("http://localhost:%d/api/petstore", port)))
-	})
+	// Setup Swagger UI for each API
+	setupSwaggerUI(app, "Petstore", petstoreApiDir, petstoreSpecPath)
+	setupSwaggerUI(app, "Actions", actionsApiDir, actionsSpecPath)
 
-	// Actions API Swagger UI
-	app.Get("/api/swagger/actions", func(c *fiber.Ctx) error {
-		c.Set("Content-Type", "text/html")
-		return c.SendString(getSwaggerUIHtml("Actions API", "/api/actions/openapi.yaml", fmt.Sprintf("http://localhost:%d/api/actions", port)))
-	})
+	// OpenAPI specs are now served dynamically by setupSwaggerUI
 
-	// Serve OpenAPI specs
-	app.Static("/api/petstore/openapi.yaml", filepath.Join(petstoreApiDir, "openapi.yaml"))
-	app.Static("/api/actions/openapi.yaml", filepath.Join(actionsApiDir, "openapi.yaml"))
-
-	// Mount the Petstore API
-	setupPetstoreApi(app)
-
-	// Mount the Actions API
-	setupActionsApi(app)
+	// Mount the APIs
+	setupApi(app, "Petstore", petstoreSpecPath, "/api/petstore")
+	setupApi(app, "Actions", actionsSpecPath, "/api/actions")
 }
 
-// setupPetstoreApi sets up the Petstore API
-func setupPetstoreApi(app *fiber.App) {
+// setupSwaggerUI sets up the Swagger UI for an API
+func setupSwaggerUI(app *fiber.App, apiName string, apiDir string, specPath string) {
+	// API Swagger UI
+	app.Get(fmt.Sprintf("/api/swagger/%s", strings.ToLower(apiName)), func(c *fiber.Ctx) error {
+		c.Set("Content-Type", "text/html")
+		// Set the baseUrl to include the API prefix
+		baseUrl := fmt.Sprintf("http://localhost:%d/api/%s", port, strings.ToLower(apiName))
+		specUrl := fmt.Sprintf("/api/%s/openapi.yaml", strings.ToLower(apiName))
+		return c.SendString(getSwaggerUIHtml(fmt.Sprintf("%s API", apiName), specUrl, baseUrl))
+	})
+
+	// Create a modified version of the OpenAPI spec with server information
+	app.Get(fmt.Sprintf("/api/%s/openapi.yaml", strings.ToLower(apiName)), func(c *fiber.Ctx) error {
+		// Read the original spec file
+		specData, err := os.ReadFile(specPath)
+		if err != nil {
+			return fmt.Errorf("failed to read OpenAPI spec file: %w", err)
+		}
+
+		// Parse the YAML into a map
+		var specMap map[string]interface{}
+		if err := yaml.Unmarshal(specData, &specMap); err != nil {
+			return fmt.Errorf("failed to parse OpenAPI spec: %w", err)
+		}
+
+		// Add or update the servers section
+		specMap["servers"] = []map[string]interface{}{
+			{
+				"url": fmt.Sprintf("/api/%s", strings.ToLower(apiName)),
+				"description": fmt.Sprintf("%s API Server", apiName),
+			},
+		}
+
+		// Convert back to YAML
+		modifiedSpec, err := yaml.Marshal(specMap)
+		if err != nil {
+			return fmt.Errorf("failed to marshal modified OpenAPI spec: %w", err)
+		}
+
+		// Send the modified spec
+		c.Set("Content-Type", "application/yaml")
+		return c.Send(modifiedSpec)
+	})
+}
+
+// setupApi sets up an API based on an OpenAPI specification
+func setupApi(app *fiber.App, apiName string, specPath string, basePath string) {
 	// Parse the OpenAPI specification
-	spec, err := openapi.ParseFromFile(petstoreSpecPath)
+	spec, err := openapi.ParseFromFile(specPath)
 	if err != nil {
-		log.Fatalf("Failed to parse Petstore OpenAPI specification: %v", err)
+		log.Fatalf("Failed to parse %s OpenAPI specification: %v", apiName, err)
 	}
 
 	// Create a server generator
@@ -225,50 +230,19 @@ func setupPetstoreApi(app *fiber.App) {
 	apiServer := generator.GenerateServer()
 
 	// Create a handler for the root path
-	app.Get("/api/petstore", func(c *fiber.Ctx) error {
-		return c.JSON(map[string]string{"message": "Welcome to the Petstore API"})
+	app.Get(basePath, func(c *fiber.Ctx) error {
+		return c.JSON(map[string]string{"message": fmt.Sprintf("Welcome to the %s API", apiName)})
 	})
 
-	// Register all routes from the generated server directly on the main app with the /api/petstore prefix
+	// Register all routes from the generated server directly on the main app with the basePath prefix
 	for _, route := range apiServer.GetRoutes() {
 		// Skip the root path as we've already handled it
 		if route.Path == "/" {
 			continue
 		}
 
-		// Add the route to the main app with the /api/petstore prefix
-		app.Add(route.Method, "/api/petstore"+route.Path, route.Handlers...)
-	}
-}
-
-// setupActionsApi sets up the Actions API
-func setupActionsApi(app *fiber.App) {
-	// Parse the OpenAPI specification
-	spec, err := openapi.ParseFromFile(actionsSpecPath)
-	if err != nil {
-		log.Fatalf("Failed to parse Actions OpenAPI specification: %v", err)
-	}
-
-	// Create a server generator
-	generator := openapi.NewServerGenerator(spec)
-
-	// Generate the server
-	apiServer := generator.GenerateServer()
-
-	// Create a handler for the root path
-	app.Get("/api/actions", func(c *fiber.Ctx) error {
-		return c.JSON(map[string]string{"message": "Welcome to the Actions API"})
-	})
-
-	// Register all routes from the generated server directly on the main app with the /api/actions prefix
-	for _, route := range apiServer.GetRoutes() {
-		// Skip the root path as we've already handled it
-		if route.Path == "/" {
-			continue
-		}
-
-		// Add the route to the main app with the /api/actions prefix
-		app.Add(route.Method, "/api/actions"+route.Path, route.Handlers...)
+		// Add the route to the main app with the basePath prefix
+		app.Add(route.Method, basePath+route.Path, route.Handlers...)
 	}
 }
 
