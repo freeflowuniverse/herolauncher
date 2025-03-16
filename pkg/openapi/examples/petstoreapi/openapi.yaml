@@ -1,0 +1,58 @@
+openapi: 3.0.0
+info:
+  title: Petstore API
+  version: 1.0.0
+  description: A simple API to manage pets
+paths:
+  /pets:
+    get:
+      summary: List all pets
+      operationId: listPets
+      responses:
+        '200':
+          description: A list of pets
+          content:
+            application/json:
+              example: |
+                [
+                  {"id": 1, "name": "Fluffy", "type": "cat"},
+                  {"id": 2, "name": "Buddy", "type": "dog"}
+                ]
+    post:
+      summary: Create a pet
+      operationId: createPet
+      requestBody:
+        content:
+          application/json:
+            example: |
+              {"name": "Rex", "type": "dog"}
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              example: |
+                {"id": 3, "name": "Rex", "type": "dog"}
+  /pets/{id}:
+    get:
+      summary: Get a pet by ID
+      operationId: getPet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A pet
+          content:
+            application/json:
+              example: |
+                {"id": 1, "name": "Fluffy", "type": "cat"}
+        '404':
+          description: Pet not found
+          content:
+            application/json:
+              example: |
+                {"error": "Pet not found"}

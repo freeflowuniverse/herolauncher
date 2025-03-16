@@ -403,10 +403,20 @@ func createRouteData(method, path string, operation *v3.Operation) RouteData {
 
 // loadTemplate loads a template from a file with fallback paths
 func loadTemplate(name string) (string, error) {
+	// Get the executable directory
+	execDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %v", err)
+	}
+	
 	// Try different paths for the template
 	paths := []string{
-		fmt.Sprintf("templates/%s.tmpl", name),
-		fmt.Sprintf("pkg/openapi/templates/%s.tmpl", name),
+		fmt.Sprintf("%s/templates/%s.tmpl", execDir, name),
+		fmt.Sprintf("%s/pkg/openapi/templates/%s.tmpl", execDir, name),
+		fmt.Sprintf("%s/../templates/%s.tmpl", execDir, name),
+		fmt.Sprintf("%s/../../templates/%s.tmpl", execDir, name),
+		// Absolute paths for the repo structure
+		fmt.Sprintf("%s/pkg/openapi/templates/%s.tmpl", strings.TrimSuffix(execDir, "/pkg/openapi/examples"), name),
 	}
 
 	for _, path := range paths {
@@ -416,7 +426,7 @@ func loadTemplate(name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("template %s not found", name)
+	return "", fmt.Errorf("template %s not found (searched in %v)", name, paths)
 }
 
 // GenerateServerCode generates Fiber server code as a string

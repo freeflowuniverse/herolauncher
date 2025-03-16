@@ -4,18 +4,12 @@ This package provides tools for working with OpenAPI specifications, including p
 
 ## Features
 
-- Parse OpenAPI 3.0 specifications from files or byte slices
+- Parse OpenAPI 3.1 specifications from files or byte slices
 - Extract paths, operations, and examples from OpenAPI specifications
 - Generate Fiber server code based on OpenAPI specifications using Go templates
 - Create mock implementations using examples from the OpenAPI spec
 - Properly handle complex example types from OpenAPI specifications
 - Command-line tool for testing and demonstration
-
-## Dependencies
-
-- [github.com/pb33f/libopenapi](https://github.com/pb33f/libopenapi) - For parsing and working with OpenAPI specifications
-- [github.com/gofiber/fiber/v2](https://github.com/gofiber/fiber/v2) - For generating HTTP servers
-- [text/template](https://golang.org/pkg/text/template/) - For template-based code generation
 
 ## Usage
 
@@ -29,7 +23,7 @@ if err != nil {
 }
 
 // Parse from bytes
-data := []byte(`{"openapi": "3.0.0", ...}`)
+data := []byte(`{"openapi": "3.1.0", ...}`)
 spec, err := openapi.ParseFromBytes(data)
 if err != nil {
     log.Fatalf("Failed to parse OpenAPI spec: %v", err)

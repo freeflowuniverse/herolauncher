@@ -9,7 +9,7 @@ import (
 func Example() {
 	// Example OpenAPI spec as a string
 	specJSON := `{
-		"openapi": "3.0.0",
+		"openapi": "3.1.0",
 		"info": {
 			"title": "Example API",
 			"version": "1.0.0"
@@ -153,7 +153,7 @@ func Example() {
 
 	// Create a server generator
 	generator := NewServerGenerator(spec)
-	
+
 	// Generate server code
 	serverCode := generator.GenerateServerCode()
 	fmt.Println("\nGenerated server code (excerpt):")
