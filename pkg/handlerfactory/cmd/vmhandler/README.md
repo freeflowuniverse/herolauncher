@@ -16,12 +16,12 @@ The VM handler example shows how to:
 To run the example:
 
 ```bash
-cd /Users/despiegk/code/github/freeflowuniverse/herolauncher
-go run cmd/vmhandler/main.go cmd/vmhandler/vm_handler.go
+cd /Users/despiegk/code/github/freeflowuniverse/herolauncher/handlerfactory/cmd/vmhandler
+go run main.go
 ```
 
 This will start a telnet server on:
-- Unix socket: `~/.herolauncher/sockets/vmhandler.sock`
+- Unix socket: `/tmp/vmhandler.sock`
 - TCP: `localhost:8024`
 
 ## Connecting to the Server
@@ -29,7 +29,7 @@ This will start a telnet server on:
 ### Using Unix Socket
 
 ```bash
-nc -U ~/.herolauncher/sockets/vmhandler.sock
+nc -U /tmp/vmhandler.sock
 ```
 
 ### Using TCP
@@ -43,7 +43,7 @@ telnet localhost 8024
 When you connect, you'll need to authenticate with the secret:
 
 ```
-secret123
+!!auth secret:1234
 ```
 
 ## Available Commands
@@ -69,7 +69,8 @@ $ telnet localhost 8024
 Connected to localhost.
 Escape character is '^]'.
  ** Welcome: you are not authenticated, provide secret.
-secret123
+!!auth secret:1234
+
  ** Welcome: you are authenticated.
 !!vm.define name:'test_vm' cpu:4 memory:'8GB' storage:'100GB'
 VM 'test_vm' defined successfully with 4 CPU, 8GB memory, and 100GB storage

@@ -82,7 +82,7 @@ func (h *VMHandler) Define(script string) string {
 	// Add VM to map
 	h.vms[name] = vm
 
-	return fmt.Sprintf("VM '%s' defined successfully with %d CPU, %s memory, and %s storage", 
+	return fmt.Sprintf("VM '%s' defined successfully with %d CPU, %s memory, and %s storage",
 		name, cpu, memory, storage)
 }
 
@@ -220,9 +220,9 @@ func (h *VMHandler) List(script string) string {
 			status = "running"
 		}
 
-		result.WriteString(fmt.Sprintf("- %s (%s): %d CPU, %s memory, %s storage\n", 
+		result.WriteString(fmt.Sprintf("- %s (%s): %d CPU, %s memory, %s storage\n",
 			vm.Name, status, vm.CPU, vm.Memory, vm.Storage))
-		
+
 		if len(vm.Disks) > 0 {
 			result.WriteString("  Attached disks:\n")
 			for i, disk := range vm.Disks {
@@ -264,11 +264,11 @@ func (h *VMHandler) Status(script string) string {
 	result.WriteString(fmt.Sprintf("- CPU: %d\n", vm.CPU))
 	result.WriteString(fmt.Sprintf("- Memory: %s\n", vm.Memory))
 	result.WriteString(fmt.Sprintf("- Storage: %s\n", vm.Storage))
-	
+
 	if vm.Description != "" {
 		result.WriteString(fmt.Sprintf("- Description: %s\n", vm.Description))
 	}
-	
+
 	if len(vm.Disks) > 0 {
 		result.WriteString("- Attached disks:\n")
 		for i, disk := range vm.Disks {

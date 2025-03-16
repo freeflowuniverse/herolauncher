@@ -1,3 +1,8 @@
 we are coding a pure golang project, 
+
 we want to organize he code nicely
 when we code we always run a linter and compile and fix the code automatically
+
+we have packages (pkg) and inside each package we have cmd and examples if relevant
+in cmd we create command lines tools to test the functionality
+
