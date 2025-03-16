@@ -1,0 +1,716 @@
+openapi: 3.1.0
+info:
+  title: HeroLib Circles API
+  description: API for managing jobs and actions in the HeroLib Circles module
+  version: 1.0.0
+  contact:
+    name: FreeFlow Universe
+    url: https://github.com/freeflowuniverse/herolib
+
+servers:
+  - url: /api/v1
+    description: Default API server
+
+paths:
+  /jobs:
+    get:
+      summary: List all jobs
+      description: Returns all job IDs in the system
+      operationId: listJobs
+      tags:
+        - jobs
+      responses:
+        '200':
+          description: A list of job IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                  format: int32
+              examples:
+                listJobsExample:
+                  value: [1, 2, 3, 4, 5]
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new job
+      description: Creates a new job in the system
+      operationId: createJob
+      tags:
+        - jobs
+      requestBody:
+        description: Job object to be created
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobCreate'
+            examples:
+              createJobExample:
+                value:
+                  agents: ["agent1pubkey", "agent2pubkey"]
+                  source: "sourcepubkey"
+                  circle: "default"
+                  context: "default"
+                  actor: "vm_manager"
+                  action: "start"
+                  params:
+                    id: "10"
+                    name: "test-vm"
+                  timeout_schedule: 60
+                  timeout: 3600
+                  log: true
+                  ignore_error: false
+                  ignore_error_codes: []
+                  debug: false
+                  retry: 0
+                  dependencies: []
+      responses:
+        '201':
+          description: Job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /jobs/all:
+    get:
+      summary: Get all jobs
+      description: Returns all jobs in the system
+      operationId: getAllJobs
+      tags:
+        - jobs
+      responses:
+        '200':
+          description: A list of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+              examples:
+                getAllJobsExample:
+                  value:
+                    - id: 1
+                      guid: "job-guid-1"
+                      agents: ["agent1pubkey"]
+                      source: "sourcepubkey"
+                      circle: "default"
+                      context: "default"
+                      actor: "vm_manager"
+                      action: "start"
+                      params:
+                        id: "10"
+                      timeout_schedule: 60
+                      timeout: 3600
+                      log: true
+                      ignore_error: false
+                      ignore_error_codes: []
+                      debug: false
+                      retry: 0
+                      status:
+                        guid: "job-guid-1"
+                        created: "2025-03-16T13:20:30Z"
+                        start: "2025-03-16T13:21:00Z"
+                        end: "2025-03-16T13:25:45Z"
+                        status: "ok"
+                      dependencies: []
+                    - id: 2
+                      guid: "job-guid-2"
+                      agents: ["agent2pubkey"]
+                      source: "sourcepubkey"
+                      circle: "default"
+                      context: "default"
+                      actor: "vm_manager"
+                      action: "stop"
+                      params:
+                        id: "11"
+                      timeout_schedule: 60
+                      timeout: 3600
+                      log: true
+                      ignore_error: false
+                      ignore_error_codes: []
+                      debug: false
+                      retry: 0
+                      status:
+                        guid: "job-guid-2"
+                        created: "2025-03-16T14:10:30Z"
+                        start: "2025-03-16T14:11:00Z"
+                        end: "2025-03-16T14:12:45Z"
+                        status: "ok"
+                      dependencies: []
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+              examples:
+                internalServerErrorExample:
+                  value:
+                    code: 500
+                    message: "Internal server error"
+
+  /jobs/{id}:
+    get:
+      summary: Get a job by ID
+      description: Returns a job by its numeric ID
+      operationId: getJobById
+      tags:
+        - jobs
+      parameters:
+        - name: id
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+              examples:
+                getJobByIdExample:
+                  value:
+                    id: 1
+                    guid: "job-guid-1"
+                    agents: ["agent1pubkey"]
+                    source: "sourcepubkey"
+                    circle: "default"
+                    context: "default"
+                    actor: "vm_manager"
+                    action: "start"
+                    params:
+                      id: "10"
+                    timeout_schedule: 60
+                    timeout: 3600
+                    log: true
+                    ignore_error: false
+                    ignore_error_codes: []
+                    debug: false
+                    retry: 0
+                    status:
+                      guid: "job-guid-1"
+                      created: "2025-03-16T13:20:30Z"
+                      start: "2025-03-16T13:21:00Z"
+                      end: "2025-03-16T13:25:45Z"
+                      status: "ok"
+                    dependencies: []
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a job
+      description: Updates an existing job
+      operationId: updateJob
+      tags:
+        - jobs
+      parameters:
+        - name: id
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        description: Job object to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+            examples:
+              updateJobExample:
+                value:
+                  id: 1
+                  guid: "job-guid-1"
+                  agents: ["agent1pubkey", "agent3pubkey"]
+                  source: "sourcepubkey"
+                  circle: "default"
+                  context: "default"
+                  actor: "vm_manager"
+                  action: "restart"
+                  params:
+                    id: "10"
+                    force: "true"
+                  timeout_schedule: 30
+                  timeout: 1800
+                  log: true
+                  ignore_error: true
+                  ignore_error_codes: [404]
+                  debug: true
+                  retry: 2
+                  status:
+                    guid: "job-guid-1"
+                    created: "2025-03-16T13:20:30Z"
+                    start: "2025-03-16T13:21:00Z"
+                    end: "2025-03-16T13:25:45Z"
+                    status: "ok"
+                  dependencies: []
+      responses:
+        '200':
+          description: Job updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+              examples:
+                badRequestExample:
+                  value:
+                    code: 400
+                    message: "Invalid request parameters"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a job
+      description: Deletes a job by its ID
+      operationId: deleteJob
+      tags:
+        - jobs
+      parameters:
+        - name: id
+          in: path
+          description: Job ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Job deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /jobs/guid/{guid}:
+    get:
+      summary: Get a job by GUID
+      description: Returns a job by its GUID
+      operationId: getJobByGuid
+      tags:
+        - jobs
+      parameters:
+        - name: guid
+          in: path
+          description: Job GUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+              examples:
+                getJobByGuidExample:
+                  value:
+                    id: 1
+                    guid: "job-guid-1"
+                    agents: ["agent1pubkey"]
+                    source: "sourcepubkey"
+                    circle: "default"
+                    context: "default"
+                    actor: "vm_manager"
+                    action: "start"
+                    params:
+                      id: "10"
+                    timeout_schedule: 60
+                    timeout: 3600
+                    log: true
+                    ignore_error: false
+                    ignore_error_codes: []
+                    debug: false
+                    retry: 0
+                    status:
+                      guid: "job-guid-1"
+                      created: "2025-03-16T13:20:30Z"
+                      start: "2025-03-16T13:21:00Z"
+                      end: "2025-03-16T13:25:45Z"
+                      status: "ok"
+                    dependencies: []
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a job by GUID
+      description: Deletes a job by its GUID
+      operationId: deleteJobByGuid
+      tags:
+        - jobs
+      parameters:
+        - name: guid
+          in: path
+          description: Job GUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Job deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /jobs/guid/{guid}/status:
+    put:
+      summary: Update job status
+      description: Updates the status of a job by its GUID
+      operationId: updateJobStatus
+      tags:
+        - jobs
+      parameters:
+        - name: guid
+          in: path
+          description: Job GUID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: New job status
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobStatus'
+            examples:
+              updateJobStatusExample:
+                value:
+                  guid: "job-guid-1"
+                  created: "2025-03-16T13:20:30Z"
+                  start: "2025-03-16T13:21:00Z"
+                  end: "2025-03-16T13:30:45Z"
+                  status: "running"
+      responses:
+        '200':
+          description: Job status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    format: int32
+                  message:
+                    type: string
+              examples:
+                badRequestExample:
+                  value:
+                    code: 400
+                    message: "Invalid request parameters"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Job:
+      type: object
+      required:
+        - id
+        - guid
+        - agents
+        - source
+        - actor
+        - action
+        - status
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Unique numeric ID for the job
+        guid:
+          type: string
+          description: Unique ID for the job
+        agents:
+          type: array
+          description: The public keys of the agent(s) which will execute the command
+          items:
+            type: string
+        source:
+          type: string
+          description: Public key from the agent who asked for the job
+        circle:
+          type: string
+          description: Circle in which the job is organized
+          default: default
+        context:
+          type: string
+          description: High level context in which actors will execute the work inside a circle
+          default: default
+        actor:
+          type: string
+          description: The actor that will execute the job (e.g. vm_manager)
+        action:
+          type: string
+          description: The action to be executed (e.g. start)
+        params:
+          type: object
+          description: Parameters for the job (e.g. id:10)
+          additionalProperties:
+            type: string
+        timeout_schedule:
+          type: integer
+          format: int32
+          description: Timeout before the job is picked up (in seconds)
+          default: 60
+        timeout:
+          type: integer
+          format: int32
+          description: Timeout for job execution (in seconds)
+          default: 3600
+        log:
+          type: boolean
+          description: Whether to log job execution
+          default: true
+        ignore_error:
+          type: boolean
+          description: If true, errors will be ignored and not reported
+          default: false
+        ignore_error_codes:
+          type: array
+          description: Error codes to ignore
+          items:
+            type: integer
+            format: int32
+        debug:
+          type: boolean
+          description: If true, more context will be provided for debugging
+          default: false
+        retry:
+          type: integer
+          format: int32
+          description: Number of retries for the job
+          default: 0
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        dependencies:
+          type: array
+          description: Jobs that must be completed before this job can execute
+          items:
+            $ref: '#/components/schemas/JobDependency'
+
+    JobCreate:
+      type: object
+      required:
+        - agents
+        - source
+        - actor
+        - action
+      properties:
+        agents:
+          type: array
+          description: The public keys of the agent(s) which will execute the command
+          items:
+            type: string
+        source:
+          type: string
+          description: Public key from the agent who asked for the job
+        circle:
+          type: string
+          description: Circle in which the job is organized
+          default: default
+        context:
+          type: string
+          description: High level context in which actors will execute the work inside a circle
+          default: default
+        actor:
+          type: string
+          description: The actor that will execute the job (e.g. vm_manager)
+        action:
+          type: string
+          description: The action to be executed (e.g. start)
+        params:
+          type: object
+          description: Parameters for the job (e.g. id:10)
+          additionalProperties:
+            type: string
+        timeout_schedule:
+          type: integer
+          format: int32
+          description: Timeout before the job is picked up (in seconds)
+          default: 60
+        timeout:
+          type: integer
+          format: int32
+          description: Timeout for job execution (in seconds)
+          default: 3600
+        log:
+          type: boolean
+          description: Whether to log job execution
+          default: true
+        ignore_error:
+          type: boolean
+          description: If true, errors will be ignored and not reported
+          default: false
+        ignore_error_codes:
+          type: array
+          description: Error codes to ignore
+          items:
+            type: integer
+            format: int32
+        debug:
+          type: boolean
+          description: If true, more context will be provided for debugging
+          default: false
+        retry:
+          type: integer
+          format: int32
+          description: Number of retries for the job
+          default: 0
+        dependencies:
+          type: array
+          description: Jobs that must be completed before this job can execute
+          items:
+            $ref: '#/components/schemas/JobDependency'
+
+    JobStatus:
+      type: object
+      required:
+        - guid
+        - status
+      properties:
+        guid:
+          type: string
+          description: Unique ID for the job
+        created:
+          type: string
+          format: date-time
+          description: When the job was created
+        start:
+          type: string
+          format: date-time
+          description: When the job started or should start
+        end:
+          type: string
+          format: date-time
+          description: When the job ended
+        status:
+          type: string
+          description: Current status of the job
+          enum:
+            - created
+            - scheduled
+            - planned
+            - running
+            - error
+            - ok
+
+    JobDependency:
+      type: object
+      required:
+        - guid
+      properties:
+        guid:
+          type: string
+          description: Unique ID for the dependent job
+        agents:
+          type: array
+          description: The public keys of the agent(s) which can execute the command
+          items:
+            type: string
+            
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Error code
+        message:
+          type: string
+          description: Error message
+          
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            badRequestExample:
+              value:
+                code: 400
+                message: "Invalid request parameters"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFoundExample:
+              value:
+                code: 404
+                message: "Job not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internalServerErrorExample:
+              value:
+                code: 500
+                message: "Internal server error"
