@@ -112,14 +112,19 @@ func (vp *VlangProcessor) processFile(filePath string) (string, error) {
 		trimmedLine := strings.TrimSpace(line)
 		
 		// Collect documentation comments
-		if strings.HasPrefix(trimmedLine, "//") && !inMethod {
+		if strings.HasPrefix(trimmedLine, "//") {
 			currentDocComment.WriteString(line)
 			currentDocComment.WriteString("\n")
 			continue
 		}
 		
-		// Reset doc comment if we encounter a non-comment, non-empty line and we're not in a struct or method or enum
-		if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "//") && !inStruct && !inMethod && !inEnum {
+		// Only reset doc comment if we encounter a non-comment line that's not part of a struct/enum/method
+		// This helps preserve comments that belong to declarations
+		if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "//") && 
+		   !inStruct && !inMethod && !inEnum && 
+		   !structRegex.MatchString(trimmedLine) && 
+		   !methodRegex.MatchString(trimmedLine) && 
+		   !enumRegex.MatchString(trimmedLine) {
 			currentDocComment.Reset()
 		}
 		
