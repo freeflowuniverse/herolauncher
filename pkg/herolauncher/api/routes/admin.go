@@ -3,6 +3,8 @@ package routes
 import (
 	"fmt"
 	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -83,6 +85,9 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 	admin.Get("/system/hardware-stats", h.getHardwareStats)
 	admin.Get("/system/logs", h.getSystemLogs)
 	admin.Get("/system/logs-test", h.getSystemLogsTest)
+	
+	// API endpoints
+	admin.Get("/api/hardware-stats", h.getHardwareStatsJSON)
 	admin.Get("/system/settings", h.getSystemSettings)
 
 	// Redirect root to admin
@@ -331,5 +336,102 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 
 	return c.Render("admin/system/hardware_stats", fiber.Map{
 		"hardware": hardware,
+	})
+}
+
+// getHardwareStatsJSON returns hardware stats in JSON format for API consumption
+func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
+	// CPU - use runtime.NumCPU() as a fallback if gopsutil fails
+	cpuCount := runtime.NumCPU()
+	cpuModel := "Unknown"
+	
+	// CPU usage percentage
+	cpuUsage := 0.0
+	
+	// Try to get CPU info, but don't fail if it's not available
+	try := func() {
+		info, err := cpu.Info()
+		if err == nil && len(info) > 0 {
+			cpuModel = info[0].ModelName
+		}
+		
+		// Get CPU usage percentage
+		percentages, err := cpu.Percent(0, false)
+		if err == nil && len(percentages) > 0 {
+			cpuUsage = percentages[0]
+		}
+	}
+	try()
+
+	// Memory
+	memoryTotal := 0.0
+	memoryUsed := 0.0
+	memoryUsedPercent := 0.0
+	
+	try = func() {
+		memInfo, err := mem.VirtualMemory()
+		if err == nil {
+			memoryTotal = float64(memInfo.Total) / (1024 * 1024 * 1024) // Convert to GB
+			memoryUsed = float64(memInfo.Used) / (1024 * 1024 * 1024)   // Convert to GB
+			memoryUsedPercent = memInfo.UsedPercent
+		}
+	}
+	try()
+
+	// Disk
+	diskTotal := 0.0
+	diskFree := 0.0
+	diskUsedPercent := 0.0
+	
+	try = func() {
+		diskUsage, err := disk.Usage("/")
+		if err == nil {
+			diskTotal = float64(diskUsage.Total) / (1024 * 1024 * 1024) // Convert to GB
+			diskFree = float64(diskUsage.Free) / (1024 * 1024 * 1024)   // Convert to GB
+			diskUsedPercent = diskUsage.UsedPercent
+		}
+	}
+	try()
+
+	// Network
+	networkUpSpeed, networkDownSpeed := getNetworkSpeed()
+	
+	// Parse the network speeds to get numeric values
+	parseSpeed := func(speed string) float64 {
+		if speed == "Unknown" {
+			return 0.0
+		}
+		val, err := strconv.ParseFloat(strings.TrimSuffix(speed, "Mbps"), 64)
+		if err != nil {
+			return 0.0
+		}
+		return val
+	}
+	
+	networkUp := parseSpeed(networkUpSpeed)
+	networkDown := parseSpeed(networkDownSpeed)
+
+	// Create hardware stats JSON response
+	return c.JSON(fiber.Map{
+		"cpu": fiber.Map{
+			"cores": cpuCount,
+			"model": cpuModel,
+			"usage": cpuUsage,
+		},
+		"memory": fiber.Map{
+			"total": memoryTotal,
+			"used": memoryUsed,
+			"usedPercent": memoryUsedPercent,
+		},
+		"disk": fiber.Map{
+			"total": diskTotal,
+			"free": diskFree,
+			"usedPercent": diskUsedPercent,
+		},
+		"network": fiber.Map{
+			"upload": networkUp,
+			"download": networkDown,
+		},
+		"timestamp": time.Now().Unix(),
 	})
 }
