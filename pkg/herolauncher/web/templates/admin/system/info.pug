@@ -25,7 +25,7 @@ block content
                 td {{.system.hardware.disk}}
               tr
                 th(scope='row') Network
-                td {{.system.hardware.network}}
+                td(style='white-space: pre-line;') {{.system.hardware.network}}
       
       div
         article.software-info
@@ -38,20 +38,10 @@ block content
                 th(scope='row') OS
                 td {{.system.software.os}}
               tr
-                th(scope='row') Go Version
-                td {{.system.software.go_version}}
-              tr
                 th(scope='row') HeroLauncher
                 td {{.system.software.herolauncher}}
               tr
                 th(scope='row') Uptime
                 td {{.system.software.uptime}}
       
-      .actions
-        button.btn.btn-primary(type='button', onclick='refreshSystemInfo()')
-          i.icon.refresh
-          span Refresh
-        a(href='/admin/system/logs', 
-          class='btn btn-secondary',
-          title='View system logs')
-          | View Logs
+

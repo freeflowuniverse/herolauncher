@@ -1,12 +1,14 @@
 package herolauncher
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/executor"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
@@ -52,6 +54,7 @@ type HeroLauncher struct {
 	executorService *executor.Executor
 	packageManager  *packagemanager.PackageManager
 	config          Config
+	startTime       time.Time
 }
 
 // New creates a new instance of HeroLauncher with the provided configuration
@@ -108,6 +111,7 @@ func New(config Config) *HeroLauncher {
 		executorService: executorService,
 		packageManager:  packageManagerService,
 		config:          config,
+		startTime:       time.Now(),
 	}
 
 	// Initialize and register route handlers
@@ -122,13 +126,26 @@ func (hl *HeroLauncher) setupRoutes() {
 	executorHandler := routes.NewExecutorHandler(hl.executorService)
 	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
 	redisHandler := routes.NewRedisHandler(hl.redisServer)
-	adminHandler := routes.NewAdminHandler()
+	// Pass HeroLauncher as an UptimeProvider
+	adminHandler := routes.NewAdminHandler(hl)
 
 	// Register routes
 	executorHandler.RegisterRoutes(hl.app)
 	packageManagerHandler.RegisterRoutes(hl.app)
 	redisHandler.RegisterRoutes(hl.app)
 	adminHandler.RegisterRoutes(hl.app)
+}
+
+// GetUptime returns the uptime of the HeroLauncher server as a formatted string
+func (hl *HeroLauncher) GetUptime() string {
+	// Calculate uptime based on the server's start time
+	uptimeDuration := time.Since(hl.startTime)
+	
+	// Extract days and hours for a more readable format
+	days := int(uptimeDuration.Hours() / 24)
+	hours := int(uptimeDuration.Hours()) % 24
+	
+	return fmt.Sprintf("%d days, %d hours", days, hours)
 }
 
 // Start starts the HeroLauncher server

@@ -13,12 +13,21 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
+// UptimeProvider defines an interface for getting system uptime
+type UptimeProvider interface {
+	GetUptime() string
+}
+
 // AdminHandler handles admin-related routes
-type AdminHandler struct{}
+type AdminHandler struct{
+	uptimeProvider UptimeProvider
+}
 
 // NewAdminHandler creates a new AdminHandler
-func NewAdminHandler() *AdminHandler {
-	return &AdminHandler{}
+func NewAdminHandler(uptimeProvider UptimeProvider) *AdminHandler {
+	return &AdminHandler{
+		uptimeProvider: uptimeProvider,
+	}
 }
 
 // RegisterRoutes registers all admin routes
@@ -116,7 +125,8 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 	try()
 
 	// Network
-	networkSpeed := "Unknown"
+	networkUpSpeed := "Unknown"
+	networkDownSpeed := "Unknown"
 	try = func() {
 		netInfo, err := net.IOCounters(false)
 		if err == nil && len(netInfo) > 0 {
@@ -126,12 +136,13 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 			if bytesRecv > 0 || bytesSent > 0 {
 				recvMbps := float64(bytesRecv) * 8 / 1000000
 				sentMbps := float64(bytesSent) * 8 / 1000000
-				networkSpeed = fmt.Sprintf("Up: %.2fMbps, Down: %.2fMbps", sentMbps, recvMbps)
+				networkUpSpeed = fmt.Sprintf("%.2fMbps", sentMbps)
+				networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
 			}
 		}
 	}
 	try()
-	networkInfo = fmt.Sprintf("1Gbps (%s)", networkSpeed)
+	networkInfo = fmt.Sprintf("Up: %s\nDown: %s", networkUpSpeed, networkDownSpeed)
 
 	// Software information
 	// OS and Uptime
@@ -160,8 +171,11 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 	// HeroLauncher version
 	heroLauncherVersion := "v0.1.0" // This should be fetched from a version constant
 
-	// If uptime couldn't be retrieved, use a default value
-	if uptimeInfo == "Unknown" {
+	// Always use the uptimeProvider when available
+	if h.uptimeProvider != nil {
+		uptimeInfo = h.uptimeProvider.GetUptime()
+	} else if uptimeInfo == "Unknown" {
+		// If uptimeProvider is not available and system uptime couldn't be retrieved, use a default value
 		// Calculate a simulated uptime based on current time
 		startTime := time.Now().Add(-72 * time.Hour) // Simulate 3 days uptime
 		uptimeDuration := time.Since(startTime)
