@@ -1,0 +1,118 @@
+h4(style="margin-bottom: 10px;") Network Traffic
+div#network-chart(style="width: 100%; height: 300px; margin-top: 10px;")
+
+script.
+  // Network chart initialization and update functions
+  document.addEventListener('DOMContentLoaded', function() {
+    // Background color for charts
+    var chartBgColor = '#1e1e2f';
+    
+    // Initialize network chart
+    var networkChartDom = document.getElementById('network-chart');
+    var networkChart = echarts.init(networkChartDom, {renderer: 'canvas', useDirtyRect: false, backgroundColor: chartBgColor});
+    var networkOption = {
+      title: {
+        text: 'Network Traffic',
+        left: 'center',
+        textStyle: {
+          color: '#fff'
+        }
+      },
+      tooltip: {
+        trigger: 'axis'
+      },
+      legend: {
+        data: ['Upload', 'Download'],
+        textStyle: {
+          color: '#fff'
+        },
+        bottom: 10
+      },
+      xAxis: {
+        type: 'category',
+        data: [],
+        axisLabel: {
+          color: '#fff'
+        }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#fff',
+          formatter: '{value} KB/s'
+        }
+      },
+      series: [
+        {
+          name: 'Upload',
+          type: 'line',
+          data: []
+        },
+        {
+          name: 'Download',
+          type: 'line',
+          data: []
+        }
+      ]
+    };
+    networkChart.setOption(networkOption);
+    
+    // Data for network chart
+    var timestamps = [];
+    var uploadData = [];
+    var downloadData = [];
+    
+    // Function to update network chart
+    window.updateNetworkChart = function(upSpeed, downSpeed) {
+      // Convert speeds to KB/s for consistent units
+      var upKBps = convertToKBps(upSpeed);
+      var downKBps = convertToKBps(downSpeed);
+      
+      // Add current timestamp
+      var now = new Date();
+      var timeString = now.getHours() + ':' + 
+                      (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes()) + ':' + 
+                      (now.getSeconds() < 10 ? '0' + now.getSeconds() : now.getSeconds());
+      
+      // Update data arrays
+      timestamps.push(timeString);
+      uploadData.push(upKBps);
+      downloadData.push(downKBps);
+      
+      // Keep only the last 10 data points
+      if (timestamps.length > 10) {
+        timestamps.shift();
+        uploadData.shift();
+        downloadData.shift();
+      }
+      
+      // Update chart option
+      networkOption.xAxis.data = timestamps;
+      networkOption.series[0].data = uploadData;
+      networkOption.series[1].data = downloadData;
+      
+      // Apply updated option
+      networkChart.setOption(networkOption);
+    };
+    
+    // Helper function to convert network speeds to KB/s
+    function convertToKBps(speedString) {
+      var value = parseFloat(speedString);
+      var unit = speedString.replace(/[\d.]/g, '');
+      
+      if (unit === 'Mbps') {
+        return value * 125; // 1 Mbps = 125 KB/s
+      } else if (unit === 'Kbps') {
+        return value / 8; // 1 Kbps = 0.125 KB/s
+      } else if (unit === 'Gbps') {
+        return value * 125000; // 1 Gbps = 125000 KB/s
+      } else {
+        return 0;
+      }
+    }
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+      networkChart && networkChart.resize();
+    });
+  });

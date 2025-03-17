@@ -2,7 +2,10 @@ package routes
 
 import (
 	"fmt"
+	"math"
+	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +16,7 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 // UptimeProvider defines an interface for getting system uptime
@@ -24,7 +28,7 @@ type UptimeProvider interface {
 func getNetworkSpeed() (string, string) {
 	networkUpSpeed := "Unknown"
 	networkDownSpeed := "Unknown"
-	
+
 	// Get initial counters
 	initNetInfo, err := net.IOCounters(false)
 	if err == nil && len(initNetInfo) > 0 {
@@ -50,7 +54,7 @@ func getNetworkSpeed() (string, string) {
 			networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
 		}
 	}
-	
+
 	return networkUpSpeed, networkDownSpeed
 }
 
@@ -83,11 +87,14 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 	// System routes
 	admin.Get("/system/info", h.getSystemInfo)
 	admin.Get("/system/hardware-stats", h.getHardwareStats)
+	admin.Get("/system/processes", h.getProcesses)
+	admin.Get("/system/processes-data", h.getProcessesData)
 	admin.Get("/system/logs", h.getSystemLogs)
 	admin.Get("/system/logs-test", h.getSystemLogsTest)
-	
+
 	// API endpoints
 	admin.Get("/api/hardware-stats", h.getHardwareStatsJSON)
+	admin.Get("/api/process-stats", h.getProcessStatsJSON)
 	admin.Get("/system/settings", h.getSystemSettings)
 
 	// Redirect root to admin
@@ -224,8 +231,6 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 		"uptime":       uptimeInfo,
 	}
 
-
-
 	print(hardware)
 	print(software)
 	return c.Render("admin/system/info", fiber.Map{
@@ -339,22 +344,124 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 	})
 }
 
+// getProcessStatsJSON returns process statistics in JSON format for API consumption
+func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
+	// Get process information
+	processes, err := process.Processes()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get process information",
+		})
+	}
+
+	// Process data to return - pre-allocate for efficiency
+	processStats := make([]fiber.Map, 0, len(processes))
+
+	// Current process ID
+	currentPid := int32(os.Getpid())
+
+	// Get stats for each process
+	for _, p := range processes {
+		// Skip processes we can't access
+		name, err := p.Name()
+		if err != nil {
+			continue
+		}
+
+		// Get memory info
+		memInfo, err := p.MemoryInfo()
+		if err != nil {
+			continue
+		}
+
+		// Get CPU percent
+		cpuPercent, err := p.CPUPercent()
+		if err != nil {
+			continue
+		}
+
+		// Skip processes with very minimal CPU and memory usage to reduce data size
+		// Using lower thresholds to include more processes
+		if cpuPercent < 0.01 && float64(memInfo.RSS)/(1024*1024) < 1 {
+			continue
+		}
+
+		// Get process status
+		var status string = "unknown"
+		statusSlice, err := p.Status()
+		if err == nil && len(statusSlice) > 0 {
+			status = statusSlice[0]
+		}
+
+		// Get process creation time
+		createTime, err := p.CreateTime()
+		if err != nil {
+			createTime = 0
+		}
+
+		// Get command line - only if needed
+		cmdline := ""
+		if p.Pid == currentPid {
+			cmdline, _ = p.Cmdline()
+		}
+
+		// Calculate memory in MB and round to 1 decimal place
+		memoryMB := math.Round(float64(memInfo.RSS)/(1024*1024)*10) / 10
+
+		// Round CPU percent to 1 decimal place
+		cpuPercent = math.Round(cpuPercent*10) / 10
+
+		// Check if this is the current process
+		isCurrent := p.Pid == currentPid
+
+		// Add process stats
+		processStats = append(processStats, fiber.Map{
+			"pid":         p.Pid,
+			"name":        name,
+			"status":      status,
+			"cpu_percent": cpuPercent,
+			"memory_mb":   memoryMB,
+			"memory_rss":  memInfo.RSS,
+			"memory_vms":  memInfo.VMS,
+			"create_time": createTime,
+			"cmdline":     cmdline,
+			"is_current":  isCurrent,
+		})
+	}
+
+	// Sort processes by CPU usage (descending)
+	sort.Slice(processStats, func(i, j int) bool {
+		return processStats[i]["cpu_percent"].(float64) > processStats[j]["cpu_percent"].(float64)
+	})
+
+	// Limit to top 30 processes to reduce payload size while showing more processes
+	if len(processStats) > 30 {
+		processStats = processStats[:30]
+	}
+
+	// Return the process stats
+	return c.JSON(fiber.Map{
+		"processes": processStats,
+		"timestamp": time.Now().Unix(),
+	})
+}
+
 // getHardwareStatsJSON returns hardware stats in JSON format for API consumption
 func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	// CPU - use runtime.NumCPU() as a fallback if gopsutil fails
 	cpuCount := runtime.NumCPU()
 	cpuModel := "Unknown"
-	
+
 	// CPU usage percentage
 	cpuUsage := 0.0
-	
+
 	// Try to get CPU info, but don't fail if it's not available
 	try := func() {
 		info, err := cpu.Info()
 		if err == nil && len(info) > 0 {
 			cpuModel = info[0].ModelName
 		}
-		
+
 		// Get CPU usage percentage
 		percentages, err := cpu.Percent(0, false)
 		if err == nil && len(percentages) > 0 {
@@ -367,7 +474,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	memoryTotal := 0.0
 	memoryUsed := 0.0
 	memoryUsedPercent := 0.0
-	
+
 	try = func() {
 		memInfo, err := mem.VirtualMemory()
 		if err == nil {
@@ -382,7 +489,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	diskTotal := 0.0
 	diskFree := 0.0
 	diskUsedPercent := 0.0
-	
+
 	try = func() {
 		diskUsage, err := disk.Usage("/")
 		if err == nil {
@@ -395,7 +502,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 
 	// Network
 	networkUpSpeed, networkDownSpeed := getNetworkSpeed()
-	
+
 	// Parse the network speeds to get numeric values
 	parseSpeed := func(speed string) float64 {
 		if speed == "Unknown" {
@@ -407,7 +514,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 		}
 		return val
 	}
-	
+
 	networkUp := parseSpeed(networkUpSpeed)
 	networkDown := parseSpeed(networkDownSpeed)
 
@@ -419,19 +526,121 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 			"usage": cpuUsage,
 		},
 		"memory": fiber.Map{
-			"total": memoryTotal,
-			"used": memoryUsed,
+			"total":       memoryTotal,
+			"used":        memoryUsed,
 			"usedPercent": memoryUsedPercent,
 		},
 		"disk": fiber.Map{
-			"total": diskTotal,
-			"free": diskFree,
+			"total":       diskTotal,
+			"free":        diskFree,
 			"usedPercent": diskUsedPercent,
 		},
 		"network": fiber.Map{
-			"upload": networkUp,
+			"upload":   networkUp,
 			"download": networkDown,
 		},
 		"timestamp": time.Now().Unix(),
+	})
+}
+
+// getProcesses renders the processes page without waiting for process data
+func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
+	// Initialize with an empty processes array to ensure the variable exists
+	return c.Render("admin/system/processes", fiber.Map{
+		"processes": []fiber.Map{},
+	})
+}
+
+// getProcessesData returns the HTML fragment for processes data
+func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
+	// Get process information
+	processes, err := process.Processes()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process information")
+	}
+
+	// Process data to return
+	processStats := make([]fiber.Map, 0, len(processes))
+
+	// Current process ID
+	currentPid := int32(os.Getpid())
+
+	// Get stats for each process
+	for _, p := range processes {
+		// Skip processes we can't access
+		name, err := p.Name()
+		if err != nil {
+			continue
+		}
+
+		// Get memory info
+		memInfo, err := p.MemoryInfo()
+		if err != nil {
+			continue
+		}
+
+		// Get CPU percent
+		cpuPercent, err := p.CPUPercent()
+		if err != nil {
+			continue
+		}
+
+		// Skip processes with very minimal CPU and memory usage to reduce data size
+		if cpuPercent < 0.01 && float64(memInfo.RSS)/(1024*1024) < 1 {
+			continue
+		}
+
+		// Get process status
+		var status string = "unknown"
+		statusSlice, err := p.Status()
+		if err == nil && len(statusSlice) > 0 {
+			status = statusSlice[0]
+		}
+
+		// Get process creation time
+		createTime, err := p.CreateTime()
+		if err != nil {
+			createTime = 0
+		}
+
+		// Format creation time as string
+		var createTimeStr string
+		if createTime > 0 {
+			createTimeStr = time.Unix(createTime/1000, 0).Format("2006-01-02 15:04:05")
+		} else {
+			createTimeStr = "N/A"
+		}
+
+		// Calculate memory in MB and round to 1 decimal place
+		memoryMB := math.Round(float64(memInfo.RSS)/(1024*1024)*10) / 10
+
+		// Round CPU percent to 1 decimal place
+		cpuPercent = math.Round(cpuPercent*10) / 10
+
+		// Check if this is the current process
+		isCurrent := p.Pid == currentPid
+
+		// Add process stats
+		processStats = append(processStats, fiber.Map{
+			"pid":             p.Pid,
+			"name":            name,
+			"status":          status,
+			"cpu_percent":     cpuPercent,
+			"memory_mb":       memoryMB,
+			"create_time_str": createTimeStr,
+			"is_current":      isCurrent,
+		})
+	}
+
+	// Sort processes by CPU usage (descending)
+	sort.Slice(processStats, func(i, j int) bool {
+		return processStats[i]["cpu_percent"].(float64) > processStats[j]["cpu_percent"].(float64)
+	})
+
+	// Return only the table fragment with process data
+	return c.Render("admin/system/processes_table", fiber.Map{
+		"processes": processStats,
+		"title": "System Processes", // Adding title to ensure variable scope is working
+		"layout": "", // Disable layout for partial template
 	})
 }

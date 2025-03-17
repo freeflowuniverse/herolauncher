@@ -1,0 +1,22 @@
+extends ../layout
+
+block content
+  article.processes-info
+    header
+      h2.title System Processes
+      p(class='description text-muted') Overview of running processes with CPU and memory usage
+    
+    .grid(style="display: grid; grid-template-columns: 1fr; gap: 1rem;")
+      div
+        article.processes-table
+          header
+            h3#processes-title Running Processes
+            p.refresh-status
+              // Refresh button with loading indicator
+              a(href="/admin/system/processes-data" up-target=".processes-table-content" up-transition="cross-fade")
+                | Refresh
+                span.loading-indicator(up-show-for="up:fragment:loading") &nbsp;Loading...
+          
+          // Table with process information that updates every 5 seconds
+          .processes-table-content(up-poll="/admin/system/processes-data" up-interval="5000")
+            | {{template "admin/system/processes_table" .}}

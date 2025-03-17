@@ -36,10 +36,16 @@ type Config struct {
 func DefaultConfig() Config {
 	// Get the absolute path to the project root
 	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := filepath.Join(filepath.Dir(filename), "../..") // go up two levels from factory.go
+	projectRoot := filepath.Join(filepath.Dir(filename), "../..")
+	
+	// Check for PORT environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9020" // Default port if not specified
+	}
 
 	return Config{
-		Port:            "9020",
+		Port:            port,
 		RedisTCPPort:    "6379",
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
