@@ -19,7 +19,7 @@ type UptimeProvider interface {
 }
 
 // AdminHandler handles admin-related routes
-type AdminHandler struct{
+type AdminHandler struct {
 	uptimeProvider UptimeProvider
 }
 
@@ -46,6 +46,7 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 
 	// System routes
 	admin.Get("/system/info", h.getSystemInfo)
+	admin.Get("/system/hardware-stats", h.getHardwareStats)
 	admin.Get("/system/logs", h.getSystemLogs)
 	admin.Get("/system/logs-test", h.getSystemLogsTest)
 	admin.Get("/system/settings", h.getSystemSettings)
@@ -200,6 +201,8 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 		"uptime":       uptimeInfo,
 	}
 
+
+
 	print(hardware)
 	print(software)
 	return c.Render("admin/system/info", fiber.Map{
@@ -248,5 +251,83 @@ func (h *AdminHandler) getSystemSettings(c *fiber.Ctx) error {
 	return c.Render("admin/system/settings", fiber.Map{
 		"title":    "System Settings",
 		"settings": settings,
+	})
+}
+
+// getHardwareStats returns only the hardware stats for Unpoly polling
+func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
+	// Initialize default values
+	cpuInfo := "Unknown"
+	memoryInfo := "Unknown"
+	diskInfo := "Unknown"
+	networkInfo := "Unknown"
+
+	// Hardware information
+	// CPU - use runtime.NumCPU() as a fallback if gopsutil fails
+	cpuCount := runtime.NumCPU()
+	cpuModel := "Unknown"
+
+	// Try to get CPU info, but don't fail if it's not available
+	try := func() {
+		info, err := cpu.Info()
+		if err == nil && len(info) > 0 {
+			cpuModel = info[0].ModelName
+		}
+	}
+	try() // Wrap in function to avoid error propagation
+	cpuInfo = fmt.Sprintf("%d cores (%s)", cpuCount, cpuModel)
+
+	// Memory
+	try = func() {
+		memInfo, err := mem.VirtualMemory()
+		if err == nil {
+			memoryTotal := float64(memInfo.Total) / (1024 * 1024 * 1024) // Convert to GB
+			memoryUsed := float64(memInfo.Used) / (1024 * 1024 * 1024)   // Convert to GB
+			memoryInfo = fmt.Sprintf("%.1fGB (%.1fGB used)", memoryTotal, memoryUsed)
+		}
+	}
+	try()
+
+	// Disk
+	try = func() {
+		diskUsage, err := disk.Usage("/")
+		if err == nil {
+			diskTotal := float64(diskUsage.Total) / (1024 * 1024 * 1024) // Convert to GB
+			diskFree := float64(diskUsage.Free) / (1024 * 1024 * 1024)   // Convert to GB
+			diskInfo = fmt.Sprintf("%.0fGB (%.0fGB free)", diskTotal, diskFree)
+		}
+	}
+	try()
+
+	// Network
+	networkUpSpeed := "Unknown"
+	networkDownSpeed := "Unknown"
+	try = func() {
+		netInfo, err := net.IOCounters(false)
+		if err == nil && len(netInfo) > 0 {
+			bytesRecv := netInfo[0].BytesRecv
+			bytesSent := netInfo[0].BytesSent
+
+			if bytesRecv > 0 || bytesSent > 0 {
+				recvMbps := float64(bytesRecv) * 8 / 1000000
+				sentMbps := float64(bytesSent) * 8 / 1000000
+				networkUpSpeed = fmt.Sprintf("%.2fMbps", sentMbps)
+				networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
+			}
+		}
+	}
+	try()
+	networkInfo = fmt.Sprintf("Up: %s\nDown: %s", networkUpSpeed, networkDownSpeed)
+
+	// Create hardware info map
+	hardware := fiber.Map{
+		"cpu":     cpuInfo,
+		"memory":  memoryInfo,
+		"disk":    diskInfo,
+		"network": networkInfo,
+	}
+
+	return c.Render("admin/system/hardware_stats", fiber.Map{
+		"hardware": hardware,
 	})
 }

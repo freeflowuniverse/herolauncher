@@ -140,11 +140,11 @@ func (hl *HeroLauncher) setupRoutes() {
 func (hl *HeroLauncher) GetUptime() string {
 	// Calculate uptime based on the server's start time
 	uptimeDuration := time.Since(hl.startTime)
-	
+
 	// Extract days and hours for a more readable format
 	days := int(uptimeDuration.Hours() / 24)
 	hours := int(uptimeDuration.Hours()) % 24
-	
+
 	return fmt.Sprintf("%d days, %d hours", days, hours)
 }
 
