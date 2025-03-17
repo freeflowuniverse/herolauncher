@@ -3,18 +3,18 @@ package routes
 import (
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/api"
-	"github.com/freeflowuniverse/herolauncher/pkg/redis"
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
+	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
 	"github.com/gofiber/fiber/v2"
 )
 
 // RedisHandler handles Redis-related API endpoints
 type RedisHandler struct {
-	redisServer *redis.Server
+	redisServer *redisserver.Server
 }
 
 // NewRedisHandler creates a new Redis handler
-func NewRedisHandler(server *redis.Server) *RedisHandler {
+func NewRedisHandler(server *redisserver.Server) *RedisHandler {
 	return &RedisHandler{
 		redisServer: server,
 	}

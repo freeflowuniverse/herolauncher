@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/freeflowuniverse/herolauncher/api"
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
 	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
 	"github.com/gofiber/fiber/v2"
 )
