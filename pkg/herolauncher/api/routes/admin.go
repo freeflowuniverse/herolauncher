@@ -18,6 +18,40 @@ type UptimeProvider interface {
 	GetUptime() string
 }
 
+// getNetworkSpeed returns the current network speed in Mbps
+func getNetworkSpeed() (string, string) {
+	networkUpSpeed := "Unknown"
+	networkDownSpeed := "Unknown"
+	
+	// Get initial counters
+	initNetInfo, err := net.IOCounters(false)
+	if err == nil && len(initNetInfo) > 0 {
+		initBytesRecv := initNetInfo[0].BytesRecv
+		initBytesSent := initNetInfo[0].BytesSent
+
+		// Wait a short time to measure throughput
+		time.Sleep(200 * time.Millisecond)
+
+		// Get updated counters
+		updatedNetInfo, err := net.IOCounters(false)
+		if err == nil && len(updatedNetInfo) > 0 {
+			// Calculate bytes transferred during the interval
+			bytesRecvDelta := updatedNetInfo[0].BytesRecv - initBytesRecv
+			bytesSentDelta := updatedNetInfo[0].BytesSent - initBytesSent
+
+			// Convert to Mbps (megabits per second)
+			// Multiply by 8 to convert bytes to bits, divide by time in seconds (0.2), then by 1,000,000 for Mbps
+			recvMbps := float64(bytesRecvDelta) * 8 / 0.2 / 1000000
+			sentMbps := float64(bytesSentDelta) * 8 / 0.2 / 1000000
+
+			networkUpSpeed = fmt.Sprintf("%.2fMbps", sentMbps)
+			networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
+		}
+	}
+	
+	return networkUpSpeed, networkDownSpeed
+}
+
 // AdminHandler handles admin-related routes
 type AdminHandler struct {
 	uptimeProvider UptimeProvider
@@ -126,23 +160,7 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 	try()
 
 	// Network
-	networkUpSpeed := "Unknown"
-	networkDownSpeed := "Unknown"
-	try = func() {
-		netInfo, err := net.IOCounters(false)
-		if err == nil && len(netInfo) > 0 {
-			bytesRecv := netInfo[0].BytesRecv
-			bytesSent := netInfo[0].BytesSent
-
-			if bytesRecv > 0 || bytesSent > 0 {
-				recvMbps := float64(bytesRecv) * 8 / 1000000
-				sentMbps := float64(bytesSent) * 8 / 1000000
-				networkUpSpeed = fmt.Sprintf("%.2fMbps", sentMbps)
-				networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
-			}
-		}
-	}
-	try()
+	networkUpSpeed, networkDownSpeed := getNetworkSpeed()
 	networkInfo = fmt.Sprintf("Up: %s\nDown: %s", networkUpSpeed, networkDownSpeed)
 
 	// Software information
@@ -300,23 +318,7 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 	try()
 
 	// Network
-	networkUpSpeed := "Unknown"
-	networkDownSpeed := "Unknown"
-	try = func() {
-		netInfo, err := net.IOCounters(false)
-		if err == nil && len(netInfo) > 0 {
-			bytesRecv := netInfo[0].BytesRecv
-			bytesSent := netInfo[0].BytesSent
-
-			if bytesRecv > 0 || bytesSent > 0 {
-				recvMbps := float64(bytesRecv) * 8 / 1000000
-				sentMbps := float64(bytesSent) * 8 / 1000000
-				networkUpSpeed = fmt.Sprintf("%.2fMbps", sentMbps)
-				networkDownSpeed = fmt.Sprintf("%.2fMbps", recvMbps)
-			}
-		}
-	}
-	try()
+	networkUpSpeed, networkDownSpeed := getNetworkSpeed()
 	networkInfo = fmt.Sprintf("Up: %s\nDown: %s", networkUpSpeed, networkDownSpeed)
 
 	// Create hardware info map
