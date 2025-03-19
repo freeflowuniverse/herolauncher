@@ -1,0 +1,18 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title LiveKit Meet
+    link(rel="stylesheet", href="/css/globals.css")
+    link(rel="stylesheet", href="/css/home.css")
+    block styles
+  body
+    block content
+    footer(data-lk-theme="default")
+      | Hosted on 
+      a(href="https://livekit.io/cloud?ref=meet", rel="noopener") LiveKit Cloud
+      |. Source code on 
+      a(href="https://github.com/livekit/meet?ref=meet", rel="noopener") GitHub
+      |.
+    block scripts

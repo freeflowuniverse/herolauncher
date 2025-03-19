@@ -1,0 +1,79 @@
+extends layout
+
+block styles
+  link(rel="stylesheet", href="/css/room.css")
+
+block content
+  main(data-lk-theme="default", style="height: 100%;")
+    #pre-join-container(style="display: grid; place-items: center; height: 100%;")
+      .pre-join-box
+        h2 Join Meeting
+        form#pre-join-form
+          .form-group
+            label(for="username") Your Name
+            input#username(type="text", required)
+          
+          .form-group
+            .device-options
+              .device-option
+                input#video-enabled(type="checkbox", checked)
+                label(for="video-enabled") Enable Video
+              .device-option
+                input#audio-enabled(type="checkbox", checked)
+                label(for="audio-enabled") Enable Audio
+          
+          .form-group
+            button.lk-button(type="submit") Join
+
+    #conference-container(style="display: none; height: 100%;")
+      .video-conference
+        .participants-area
+          #local-participant.participant-tile
+            .video-container
+              video#local-video(autoplay, muted, playsinline)
+            .participant-info
+              .participant-name Local (You)
+          
+          #remote-participants.remote-participants
+        
+        .controls-area
+          button#toggle-video.control-button
+            span.icon 📹
+            span.label Toggle Video
+          
+          button#toggle-audio.control-button
+            span.icon 🎤
+            span.label Toggle Audio
+          
+          button#share-screen.control-button
+            span.icon 📊
+            span.label Share Screen
+          
+          button#toggle-chat.control-button
+            span.icon 💬
+            span.label Chat
+          
+          button#leave-room.control-button.danger
+            span.icon 🚪
+            span.label Leave
+        
+        #chat-panel.chat-panel(style="display: none;")
+          .chat-header
+            h3 Chat
+            button#close-chat ✕
+          .chat-messages#chat-messages
+          .chat-input
+            form#chat-form
+              input#chat-message(type="text", placeholder="Type a message...")
+              button(type="submit") Send
+
+block scripts
+  script.
+    // Pass server-side variables to client-side JavaScript
+    window.ROOM_NAME = "#{.roomName}";
+    window.REGION = "";
+    window.HQ = false;
+    window.CODEC = "";
+  script(src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.js")
+  script(src="/js/utils.js")
+  script(src="/js/room.js")

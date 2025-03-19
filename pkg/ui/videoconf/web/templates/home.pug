@@ -1,0 +1,35 @@
+doctype html
+html
+  head
+    title Video Conference
+    link(rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css")
+    link(rel="stylesheet" href="/css/style.css")
+  body
+    main.container.main
+      section.grid
+        div
+          h1 Welcome to Video Conference
+          p Connect with others through high-quality video conferencing
+      
+        div
+          article
+            h2 Create a Room
+            form(action="/api/room" method="post")
+              div
+                label(for="name") Name
+                input(type="text" id="name" name="name")
+              div
+                label(for="maxParticipants") Max Participants
+                input(type="text" id="maxParticipants" name="maxParticipants")
+              div
+                button(type="submit") Create Room
+      
+      div
+        h2 Rooms
+        
+      | {{range .rooms}}
+        article
+          h3 {{.name}}
+          p {{.sid}}
+          a(href="/rooms/{{.sid}}") Join Room
+      | {{end}}
