@@ -1,0 +1,101 @@
+extends ../layout
+
+block content
+  article
+    header.flex-container
+      div
+        h2 System Logs
+        p View and filter system logs
+      div
+        a(href="#", role="button", class="outline") Export Logs
+
+    // Log Controls - Improved horizontal layout with better alignment
+    article.filter-controls
+      form.log-controls
+        .grid.filter-grid
+          div.filter-item
+            label(for="log-level") Log Level
+            select#log-level
+              option(value="all") All Levels
+              option(value="info") Info
+              option(value="warning") Warning
+              option(value="error") Error
+              option(value="debug") Debug
+          
+          div.filter-item
+            label(for="log-source") Log Source
+            select#log-source
+              option(value="all") All Sources
+              option(value="system") System
+              option(value="redis") Redis
+              option(value="executor") Executor
+              option(value="packagemanager") Package Manager
+          
+          div.filter-item
+            label(for="log-date") Date Range
+            input#log-date(type="date")
+          
+          div.filter-button
+            button.filter-apply(type="submit") Apply Filters
+    
+    // Log Output - Structured format
+    article.log-container
+      header
+        h3 Log Output
+      
+      .log-table
+        table
+          thead
+            tr
+              th Timestamp
+              th Level
+              th Source
+              th Message
+          tbody
+            tr
+              td 2025-03-14T06:15:22
+              td.log-info INFO
+              td SYSTEM
+              td Server started on port 9001
+            tr
+              td 2025-03-14T06:15:23
+              td.log-info INFO
+              td REDIS
+              td Redis server initialized
+            tr
+              td 2025-03-14T06:15:24
+              td.log-info INFO
+              td EXECUTOR
+              td Executor service ready
+            tr
+              td 2025-03-14T06:15:25
+              td.log-info INFO
+              td PACKAGEMANAGER
+              td Package manager initialized
+            tr
+              td 2025-03-14T06:16:30
+              td.log-info INFO
+              td SYSTEM
+              td New client connection from 127.0.0.1
+            tr
+              td 2025-03-14T06:17:45
+              td.log-warning WARNING
+              td REDIS
+              td High memory usage detected (75%)
+            tr
+              td 2025-03-14T06:18:12
+              td.log-error ERROR
+              td EXECUTOR
+              td Failed to execute command: permission denied
+            tr
+              td 2025-03-14T06:20:05
+              td.log-info INFO
+              td PACKAGEMANAGER
+              td Package 'web-ui' installed successfully
+      
+      .pagination
+        div.pagination-info
+          span Showing 1-8 of 124 logs
+        div.pagination-controls
+          a(href="#", role="button", class="outline secondary pagination-btn") ← Previous
+          a(href="#", role="button", class="outline secondary pagination-btn") Next →

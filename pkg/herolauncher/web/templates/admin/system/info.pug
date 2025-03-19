@@ -1,0 +1,58 @@
+extends ../layout
+
+block content
+  article.system-info
+    header
+      h2.title System Information
+      p(class='description text-muted') Overview of system resources and configuration
+    
+    .grid(style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;")
+      div
+        article.hardware-info
+          header
+            h3#hardware-title Hardware
+          
+          table.hardware-stats(class="table table-striped" up-poll="/admin/system/hardware-stats" up-target=".hardware-stats" up-interval="1000")
+            tbody
+              tr
+                th(scope='row') CPU
+                td {{.system.hardware.cpu}}
+              tr
+                th(scope='row') Memory
+                td {{.system.hardware.memory}}
+              tr
+                th(scope='row') Disk
+                td {{.system.hardware.disk}}
+              tr
+                th(scope='row') Network
+                td(style='white-space: pre-line;') {{.system.hardware.network}}
+          
+          // Include network chart partial
+          include partials/__network_chart
+      
+      div
+        article.software-info
+          header
+            h3#software-title Software
+          
+          table(class="table table-bordered" data-type="software-info")
+            tbody
+              tr
+                th(scope='row') OS
+                td {{.system.software.os}}
+              tr
+                th(scope='row') HeroLauncher
+                td {{.system.software.herolauncher}}
+              tr
+                th(scope='row') Uptime
+                td {{.system.software.uptime}}
+          
+          // Include CPU and Memory chart partials
+          include partials/__cpu_chart
+          include partials/__memory_chart
+
+block scripts
+  script(src='/js/echarts/echarts.min.js')
+  
+  // Include stats fetcher partial
+  include partials/__stats_fetcher

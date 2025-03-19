@@ -1,0 +1,24 @@
+table.processes-stats(class="table table-striped")
+  thead
+    tr
+      th(scope='col') PID
+      th(scope='col') Name
+      th(scope='col') Status
+      th(scope='col') CPU (%)
+      th(scope='col') Memory (MB)
+      th(scope='col') Created
+  tbody
+    | {{if .processes}}
+    | {{range .processes}}
+    tr(class="{{if .is_current}}table-primary{{end}}")
+      td {{.pid}}
+      td {{.name}}
+      td {{.status}}
+      td {{printf "%.1f%%" .cpu_percent}}
+      td {{printf "%.1f MB" .memory_mb}}
+      td {{.create_time_str}}
+    | {{end}}
+    | {{else}}
+    tr
+      td(colspan="6") Loading process data...
+    | {{end}}
