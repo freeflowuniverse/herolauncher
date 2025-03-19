@@ -69,6 +69,14 @@ func New(config Config) *VideoConf {
 		return template.HTML(s)
 	})
 
+	// Add function to format timestamps
+	engine.AddFunc("formatTime", func(timestamp int64) string {
+		// Convert Unix timestamp (seconds) to time.Time
+		t := time.Unix(timestamp, 0)
+		// Format the time in a human-readable format
+		return t.Format("Jan 02, 2006 15:04:05")
+	})
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		Views: engine,
@@ -126,30 +134,19 @@ func (vc *VideoConf) SetupRoutes() {
 
 	// Home page
 	vc.app.Get("/", func(c *fiber.Ctx) error {
-		var roomsList []fiber.Map
+		roomClient := lksdk.NewRoomServiceClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
+		res, err := roomClient.ListRooms(context.Background(), &livekit.ListRoomsRequest{})
+		log.Printf("Response listing rooms: %v", res)
 
-		// If LiveKit client is available, fetch real rooms
-		if vc.livekit != nil {
-			rooms, err := vc.livekit.ListRooms()
-			if err != nil {
-				log.Printf("Error listing rooms: %v", err)
-			} else {
-				for _, room := range rooms {
-					// We don't have ListParticipants in our minimal client
-					// Just show 0 participants for now
-					roomsList = append(roomsList, fiber.Map{
-						"ID":               room.Name,
-						"Name":             room.Name,
-						"ParticipantCount": 0,
-						"CreatedAt":        room.CreationTime.Format("2006-01-02 15:04"),
-					})
-				}
-			}
+		if err != nil {
+			log.Printf("Error listing rooms: %v", err)
 		}
+
+		log.Printf(" listing rooms: %v", res.Rooms)
 
 		return c.Render("home", fiber.Map{
 			"title": "Video Conference",
-			"rooms": roomsList,
+			"rooms": res.Rooms,
 		})
 	})
 
@@ -193,16 +190,7 @@ func (vc *VideoConf) SetupRoutes() {
 			hostURL = "http://" + strings.TrimPrefix(hostURL, "ws://")
 		}
 
-		apiKey := vc.apiKey
-		apiSecret := vc.apiSecret
-
-		if apiKey == "" || apiSecret == "" {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "LiveKit API key or secret not set",
-			})
-		}
-
-		roomClient := lksdk.NewRoomServiceClient(hostURL, apiKey, apiSecret)
+		roomClient := lksdk.NewRoomServiceClient(hostURL, vc.apiKey, vc.apiSecret)
 
 		var req CreateRoomRequest
 		if err := c.BodyParser(&req); err != nil {

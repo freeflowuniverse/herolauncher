@@ -2,3 +2,79 @@
 .main {
   margin-top: 2rem;
 }
+
+/* Room Cards */
+.room-card {
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.room-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.room-header h3 {
+  margin: 0;
+  color: var(--primary);
+}
+
+.room-id {
+  font-size: 0.8rem;
+  color: var(--muted-color);
+  font-family: monospace;
+}
+
+.room-details {
+  margin-bottom: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--muted-border-color);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: var(--h3-color);
+}
+
+.detail-value {
+  color: var(--h4-color);
+}
+
+.recording-active {
+  background-color: rgba(255, 59, 48, 0.1);
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+}
+
+.recording-active .detail-value {
+  color: #ff3b30;
+  font-weight: bold;
+}
+
+.room-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.room-actions .button {
+  margin: 0;
+}

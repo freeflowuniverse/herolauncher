@@ -28,8 +28,32 @@ html
         h2 Rooms
         
       | {{range .rooms}}
-        article
-          h3 {{.name}}
-          p {{.sid}}
-          a(href="/rooms/{{.sid}}") Join Room
+      article.room-card
+        div.room-header
+          h3 {{.Name}}
+          span.room-id ID: {{.Sid}}
+        
+        div.room-details
+          div.detail-row
+            span.detail-label Participants:
+            span.detail-value {{.NumParticipants}}{{if .MaxParticipants}} / {{.MaxParticipants}}{{end}}
+          
+          div.detail-row
+            span.detail-label Created:
+            span.detail-value {{if .CreationTime}}{{formatTime .CreationTime}}{{else}}Unknown{{end}}
+          
+          | {{if .ActiveRecording}}
+          div.detail-row.recording-active
+            span.detail-label Recording:
+            span.detail-value Active
+          | {{end}}
+          
+          | {{if .Metadata}}
+          div.detail-row
+            span.detail-label Metadata:
+            span.detail-value {{.Metadata}}
+          | {{end}}
+        
+        div.room-actions
+          a.button.primary(href="/rooms/{{.Sid}}") Join Room
       | {{end}}
