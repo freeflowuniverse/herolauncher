@@ -3,6 +3,7 @@ package vfsdb
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs"
@@ -209,6 +210,20 @@ func (fs *DatabaseVFS) FileConcatenate(path string, data []byte) error {
 
 // FileDelete deletes a file at the specified path
 func (fs *DatabaseVFS) FileDelete(path string) error {
+	log.Printf("VFSDB DEBUG: FileDelete called for path '%s'", path)
+	
+	// Check if the file exists and get its metadata for logging
+	entry, err := fs.getEntry(path)
+	if err != nil {
+		log.Printf("VFSDB DEBUG: FileDelete - File '%s' not found: %v", path, err)
+		return err
+	}
+	
+	// Log file metadata for debugging permission issues
+	metadata := entry.GetMetadata()
+	log.Printf("VFSDB DEBUG: FileDelete - File '%s' metadata - Mode: %o, Owner: %s, Group: %s", 
+		path, metadata.Mode, metadata.Owner, metadata.Group)
+	
 	return fs.Delete(path)
 }
 
@@ -255,6 +270,25 @@ func (fs *DatabaseVFS) DirList(path string) ([]vfs.FSEntry, error) {
 
 // DirDelete deletes a directory at the specified path
 func (fs *DatabaseVFS) DirDelete(path string) error {
+	log.Printf("VFSDB DEBUG: DirDelete called for path '%s'", path)
+	
+	// Check if the directory exists and get its metadata for logging
+	dir, err := fs.getDirectory(path)
+	if err != nil {
+		log.Printf("VFSDB DEBUG: DirDelete - Directory '%s' not found: %v", path, err)
+		return err
+	}
+	
+	// Log directory metadata for debugging permission issues
+	metadata := dir.GetMetadata()
+	log.Printf("VFSDB DEBUG: DirDelete - Directory '%s' metadata - Mode: %o, Owner: %s, Group: %s", 
+		path, metadata.Mode, metadata.Owner, metadata.Group)
+	
+	// Check if directory is empty
+	if len(dir.children) > 0 {
+		log.Printf("VFSDB DEBUG: DirDelete - Directory '%s' is not empty, has %d children", path, len(dir.children))
+	}
+	
 	return fs.Delete(path)
 }
 
@@ -435,7 +469,9 @@ func (fs *DatabaseVFS) Move(srcPath, dstPath string) (vfs.FSEntry, error) {
 
 // Delete deletes a filesystem entry
 func (fs *DatabaseVFS) Delete(path string) error {
+	log.Printf("VFSDB DEBUG: Delete called for path '%s'", path)
 	if path == "/" || path == "" || path == "." {
+		log.Printf("VFSDB DEBUG: Cannot delete root path '%s'", path)
 		return errors.New("cannot delete root")
 	}
 	
@@ -443,13 +479,24 @@ func (fs *DatabaseVFS) Delete(path string) error {
 	
 	parentPath := vfs.PathDir(path)
 	name := vfs.PathBase(path)
+	log.Printf("VFSDB DEBUG: Parsed path '%s' into parent '%s' and name '%s'", path, parentPath, name)
 	
+	log.Printf("VFSDB DEBUG: Getting parent directory '%s'", parentPath)
 	parent, err := fs.getDirectory(parentPath)
 	if err != nil {
+		log.Printf("VFSDB DEBUG: Failed to get parent directory '%s': %v", parentPath, err)
 		return err
 	}
+	log.Printf("VFSDB DEBUG: Successfully got parent directory '%s'", parentPath)
 	
-	return fs.directoryRm(parent, name)
+	log.Printf("VFSDB DEBUG: Calling directoryRm to remove '%s' from parent '%s'", name, parentPath)
+	err = fs.directoryRm(parent, name)
+	if err != nil {
+		log.Printf("VFSDB DEBUG: directoryRm failed for '%s': %v", name, err)
+	} else {
+		log.Printf("VFSDB DEBUG: Successfully deleted '%s'", path)
+	}
+	return err
 }
 
 // Destroy cleans up resources
