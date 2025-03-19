@@ -4,8 +4,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const conferenceContainer = document.getElementById('conference-container');
     const preJoinForm = document.getElementById('pre-join-form');
     const usernameInput = document.getElementById('username');
-    const videoEnabledCheckbox = document.getElementById('video-enabled');
-    const audioEnabledCheckbox = document.getElementById('audio-enabled');
+    const previewVideo = document.getElementById('preview-video');
+    const cameraOffPlaceholder = document.querySelector('.camera-off-placeholder');
+    const toggleVideoPreviewBtn = document.getElementById('toggle-video-preview');
+    const toggleAudioPreviewBtn = document.getElementById('toggle-audio-preview');
+    const videoDeviceSelect = document.getElementById('video-device-select');
+    const audioDeviceSelect = document.getElementById('audio-device-select');
     const localVideo = document.getElementById('local-video');
     const remoteParticipants = document.getElementById('remote-participants');
     const toggleVideoBtn = document.getElementById('toggle-video');
@@ -30,6 +34,414 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     let room;
     let localParticipant;
+    let previewTracks = {
+      video: null,
+      audio: null
+    };
+    
+    // State for device selection
+    let videoEnabled = true;
+    let audioEnabled = true;
+    let selectedVideoDeviceId = '';
+    let selectedAudioDeviceId = '';
+    
+    // Detect Firefox browser globally for use in multiple functions
+    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+    console.log('Browser detected:', isFirefox ? 'Firefox' : 'Other');
+    
+    // Request permissions and initialize device selection
+    async function initializeDeviceSelections() {
+      try {
+        // First, explicitly request permissions to get labeled devices
+        let stream = null;
+        try {
+          // Request permissions differently based on browser
+          if (isFirefox) {
+            // Firefox: Request video and audio separately to avoid issues
+            try {
+              const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+              if (videoStream) {
+                stream = videoStream;
+                console.log('Successfully got video permission in Firefox');
+              }
+            } catch (videoError) {
+              console.warn('Firefox video permission error:', videoError);
+              videoEnabled = false;
+            }
+            
+            try {
+              const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              if (audioStream) {
+                // If we already have a stream with video tracks, add the audio tracks
+                if (stream) {
+                  audioStream.getAudioTracks().forEach(track => {
+                    stream.addTrack(track);
+                  });
+                } else {
+                  stream = audioStream;
+                }
+                console.log('Successfully got audio permission in Firefox');
+              }
+            } catch (audioError) {
+              console.warn('Firefox audio permission error:', audioError);
+              audioEnabled = false;
+            }
+          } else {
+            // Other browsers: Request both permissions at once
+            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            console.log('Successfully got media permissions');
+          }
+        } catch (permissionError) {
+          console.warn('Permission error:', permissionError);
+          // Continue anyway, as we can still list devices, just without labels
+        }
+        
+        // Get available media devices
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        console.log('Available devices:', devices);
+        
+        // Using the globally defined isFirefox variable
+        console.log('Using Firefox-specific device enumeration:', isFirefox);
+        
+        // Filter video devices
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        videoDeviceSelect.innerHTML = '';
+        
+        if (videoDevices.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.text = 'No cameras found';
+          videoDeviceSelect.appendChild(option);
+          videoEnabled = false;
+          toggleVideoPreviewBtn.classList.add('disabled');
+        } else {
+          // Check if we have labels (permissions granted)
+          const hasLabels = videoDevices.some(device => device.label && device.label.length > 0);
+          console.log('Has video device labels:', hasLabels);
+          
+          // If Firefox and no labels, we might need to request permissions differently
+          if (isFirefox && !hasLabels) {
+            console.log('Firefox detected without camera labels, may need explicit permissions');
+          }
+          
+          videoDevices.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            
+            // Use a more descriptive fallback for Firefox when labels aren't available
+            if (device.label) {
+              option.text = device.label;
+            } else if (isFirefox) {
+              // In Firefox, provide more descriptive fallbacks
+              if (index === 0) {
+                option.text = 'Default Camera';
+              } else {
+                option.text = `Camera ${index + 1}`;
+              }
+            } else {
+              option.text = `Camera ${index + 1}`;
+            }
+            
+            videoDeviceSelect.appendChild(option);
+          });
+          
+          if (videoDevices.length > 0) {
+            selectedVideoDeviceId = videoDevices[0].deviceId;
+          }
+        }
+        
+        // Filter audio devices
+        const audioDevices = devices.filter(device => device.kind === 'audioinput');
+        audioDeviceSelect.innerHTML = '';
+        
+        if (audioDevices.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.text = 'No microphones found';
+          audioDeviceSelect.appendChild(option);
+          audioEnabled = false;
+          toggleAudioPreviewBtn.classList.add('disabled');
+        } else {
+          // Check if we have labels (permissions granted)
+          const hasLabels = audioDevices.some(device => device.label && device.label.length > 0);
+          console.log('Has audio device labels:', hasLabels);
+          
+          // If Firefox and no labels, we might need to request permissions differently
+          if (isFirefox && !hasLabels) {
+            console.log('Firefox detected without microphone labels, may need explicit permissions');
+          }
+          
+          audioDevices.forEach((device, index) => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            
+            // Use a more descriptive fallback for Firefox when labels aren't available
+            if (device.label) {
+              option.text = device.label;
+            } else if (isFirefox) {
+              // In Firefox, provide more descriptive fallbacks
+              if (index === 0) {
+                option.text = 'Default Microphone';
+              } else {
+                option.text = `Microphone ${index + 1}`;
+              }
+            } else {
+              option.text = `Microphone ${index + 1}`;
+            }
+            
+            audioDeviceSelect.appendChild(option);
+          });
+          
+          if (audioDevices.length > 0) {
+            selectedAudioDeviceId = audioDevices[0].deviceId;
+          }
+        }
+        
+        // If we got a stream during permission request, stop all tracks
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Start preview with selected devices
+        if (videoEnabled) {
+          await startVideoPreview();
+        } else {
+          // Show placeholder if video is disabled
+          previewVideo.style.display = 'none';
+          cameraOffPlaceholder.style.display = 'flex';
+        }
+        
+        if (audioEnabled) {
+          await startAudioPreview();
+        }
+      } catch (error) {
+        console.error('Error initializing device selections:', error);
+        // Show error message to user
+        alert('Error accessing media devices. Please ensure you have granted camera and microphone permissions.');
+      }
+    }
+    
+    // Start video preview
+    async function startVideoPreview() {
+      if (!videoEnabled) {
+        if (previewTracks.video) {
+          previewTracks.video.stop();
+          previewTracks.video = null;
+        }
+        previewVideo.srcObject = null;
+        previewVideo.style.display = 'none';
+        cameraOffPlaceholder.style.display = 'flex';
+        return;
+      }
+      
+      try {
+        // Stop any existing preview
+        if (previewTracks.video) {
+          previewTracks.video.stop();
+        }
+        
+        // Using the globally defined isFirefox variable
+        console.log('Using Firefox-specific video preview:', isFirefox);
+        
+        // First try to get user media directly to ensure permissions
+        try {
+          // Firefox requires different constraints format to avoid errors
+          let constraints;
+          if (isFirefox) {
+            // Firefox-specific approach - simpler constraints
+            constraints = { video: true };
+            if (selectedVideoDeviceId) {
+              constraints.video = { deviceId: { exact: selectedVideoDeviceId } };
+            }
+            console.log('Using Firefox-specific video constraints:', constraints);
+          } else {
+            constraints = { 
+              video: { deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined } 
+            };
+          }
+          
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          // Stop the stream immediately, we just needed it for permissions
+          stream.getTracks().forEach(track => track.stop());
+          console.log('Successfully got video permissions');
+        } catch (permError) {
+          console.warn('Permission error for video:', permError);
+          // If permission denied, update UI and return
+          if (permError.name === 'NotAllowedError') {
+            videoEnabled = false;
+            toggleVideoPreviewBtn.classList.add('disabled');
+            previewVideo.style.display = 'none';
+            cameraOffPlaceholder.style.display = 'flex';
+            alert('Camera access was denied. Please allow camera access and try again.');
+            return;
+          }
+        }
+        
+        // Create video track with selected device
+        const videoTrack = await LivekitClient.createLocalVideoTrack({
+          deviceId: selectedVideoDeviceId,
+          resolution: LivekitClient.VideoPresets.h720
+        });
+        
+        previewTracks.video = videoTrack;
+        
+        // Create MediaStream and attach to video element
+        const mediaStream = new MediaStream([videoTrack.mediaStreamTrack]);
+        previewVideo.srcObject = mediaStream;
+        previewVideo.style.display = 'block';
+        cameraOffPlaceholder.style.display = 'none';
+        
+        // Update UI
+        toggleVideoPreviewBtn.classList.toggle('disabled', !videoEnabled);
+        
+        // Refresh device list with labels now that we have permission
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        videoDeviceSelect.innerHTML = '';
+        videoDevices.forEach(device => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${videoDeviceSelect.options.length + 1}`;
+          videoDeviceSelect.appendChild(option);
+        });
+        
+        // Reselect the current device
+        if (selectedVideoDeviceId) {
+          for (let i = 0; i < videoDeviceSelect.options.length; i++) {
+            if (videoDeviceSelect.options[i].value === selectedVideoDeviceId) {
+              videoDeviceSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error starting video preview:', error);
+        videoEnabled = false;
+        toggleVideoPreviewBtn.classList.add('disabled');
+        previewVideo.style.display = 'none';
+        cameraOffPlaceholder.style.display = 'flex';
+        alert(`Error accessing camera: ${error.message}. Please check your camera settings.`);
+      }
+    }
+    
+    // Start audio preview (we don't actually preview audio, just create the track)
+    async function startAudioPreview() {
+      if (!audioEnabled) {
+        if (previewTracks.audio) {
+          previewTracks.audio.stop();
+          previewTracks.audio = null;
+        }
+        return;
+      }
+      
+      try {
+        // Stop any existing preview
+        if (previewTracks.audio) {
+          previewTracks.audio.stop();
+        }
+        
+        // Using the globally defined isFirefox variable
+        console.log('Using Firefox-specific audio preview:', isFirefox);
+        
+        // First try to get user media directly to ensure permissions
+        try {
+          // Firefox requires different constraints format to avoid errors
+          let constraints;
+          if (isFirefox) {
+            // Firefox-specific approach - simpler constraints
+            constraints = { audio: true };
+            if (selectedAudioDeviceId) {
+              constraints.audio = { deviceId: { exact: selectedAudioDeviceId } };
+            }
+            console.log('Using Firefox-specific audio constraints:', constraints);
+          } else {
+            constraints = { 
+              audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined } 
+            };
+          }
+          
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          // Stop the stream immediately, we just needed it for permissions
+          stream.getTracks().forEach(track => track.stop());
+          console.log('Successfully got audio permissions');
+        } catch (permError) {
+          console.warn('Permission error for audio:', permError);
+          // If permission denied, update UI and return
+          if (permError.name === 'NotAllowedError') {
+            audioEnabled = false;
+            toggleAudioPreviewBtn.classList.add('disabled');
+            alert('Microphone access was denied. Please allow microphone access and try again.');
+            return;
+          }
+        }
+        
+        // Create audio track with selected device
+        const audioTrack = await LivekitClient.createLocalAudioTrack({
+          deviceId: selectedAudioDeviceId
+        });
+        
+        previewTracks.audio = audioTrack;
+        
+        // Update UI
+        toggleAudioPreviewBtn.classList.toggle('disabled', !audioEnabled);
+        
+        // Refresh device list with labels now that we have permission
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioDevices = devices.filter(device => device.kind === 'audioinput');
+        audioDeviceSelect.innerHTML = '';
+        audioDevices.forEach(device => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Microphone ${audioDeviceSelect.options.length + 1}`;
+          audioDeviceSelect.appendChild(option);
+        });
+        
+        // Reselect the current device
+        if (selectedAudioDeviceId) {
+          for (let i = 0; i < audioDeviceSelect.options.length; i++) {
+            if (audioDeviceSelect.options[i].value === selectedAudioDeviceId) {
+              audioDeviceSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error starting audio preview:', error);
+        audioEnabled = false;
+        toggleAudioPreviewBtn.classList.add('disabled');
+        alert(`Error accessing microphone: ${error.message}. Please check your microphone settings.`);
+      }
+    }
+    
+    // Event listeners for device controls
+    toggleVideoPreviewBtn.addEventListener('click', () => {
+      videoEnabled = !videoEnabled;
+      toggleVideoPreviewBtn.classList.toggle('disabled', !videoEnabled);
+      startVideoPreview();
+    });
+    
+    toggleAudioPreviewBtn.addEventListener('click', () => {
+      audioEnabled = !audioEnabled;
+      toggleAudioPreviewBtn.classList.toggle('disabled', !audioEnabled);
+      startAudioPreview();
+    });
+    
+    videoDeviceSelect.addEventListener('change', (event) => {
+      selectedVideoDeviceId = event.target.value;
+      if (videoEnabled) {
+        startVideoPreview();
+      }
+    });
+    
+    audioDeviceSelect.addEventListener('change', (event) => {
+      selectedAudioDeviceId = event.target.value;
+      if (audioEnabled) {
+        startAudioPreview();
+      }
+    });
+    
+    // Initialize device selections when page loads
+    await initializeDeviceSelections();
     
     // Handle pre-join form submission
     preJoinForm.addEventListener('submit', async (event) => {
@@ -38,10 +450,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const username = usernameInput.value.trim();
       if (!username) return;
       
-      const videoEnabled = videoEnabledCheckbox.checked;
-      const audioEnabled = audioEnabledCheckbox.checked;
-      
       try {
+        // Stop preview tracks
+        if (previewTracks.video) {
+          previewTracks.video.stop();
+        }
+        if (previewTracks.audio) {
+          previewTracks.audio.stop();
+        }
+        
         // Get connection details from server
         const url = new URL('/api/connection-details', window.location.origin);
         url.searchParams.append('roomName', roomName);
@@ -68,7 +485,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Connect to LiveKit room
         await connectToRoom(connectionDetails, {
           videoEnabled,
-          audioEnabled
+          audioEnabled,
+          videoDeviceId: selectedVideoDeviceId,
+          audioDeviceId: selectedAudioDeviceId
         });
         
         // Show conference UI
@@ -90,7 +509,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           adaptiveStream: true,
           dynacast: true,
           videoCaptureDefaults: {
+            deviceId: userChoices.videoDeviceId,
             resolution: hq ? LivekitClient.VideoPresets.h2160 : LivekitClient.VideoPresets.h720
+          },
+          audioCaptureDefaults: {
+            deviceId: userChoices.audioDeviceId
           },
           publishDefaults: {
             simulcast: true,
@@ -162,9 +585,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Debug: Setting media state based on user choices:', 
           userChoices ? `video: ${userChoices.videoEnabled}, audio: ${userChoices.audioEnabled}` : 'undefined');
         try {
-          // Detect Firefox browser
-          const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-          console.log('Debug: Browser detected:', isFirefox ? 'Firefox' : 'Other');
+          // Using the globally defined isFirefox variable
+          console.log('Debug: Using Firefox-specific room connection:', isFirefox);
           
           if (userChoices.videoEnabled) {
             console.log('Debug: Enabling camera and microphone');
@@ -173,22 +595,74 @@ document.addEventListener('DOMContentLoaded', async () => {
               // Firefox-specific approach
               console.log('Debug: Using Firefox-specific media approach');
               try {
-                // First try to enable camera with specific constraints for Firefox
-                await localParticipant.setCameraEnabled(true, {
-                  resolution: LivekitClient.VideoPresets.h720,
-                  facingMode: 'user'
+                // For Firefox, we need a different approach to avoid "object not found" errors
+                console.log('Debug: Firefox - attempting to enable camera with simplified approach');
+                
+                // First, create a local track manually with minimal constraints
+                const videoTrack = await LivekitClient.createLocalVideoTrack({
+                  deviceId: userChoices.videoDeviceId,
+                  resolution: LivekitClient.VideoPresets.h360, // Lower resolution for Firefox
+                  // Avoid using facingMode with deviceId as it can cause conflicts
+                  facingMode: userChoices.videoDeviceId ? undefined : 'user'
                 });
-                console.log('Debug: Camera enabled successfully on Firefox');
+                
+                // Then publish the track manually
+                if (videoTrack) {
+                  await localParticipant.publishTrack(videoTrack, {
+                    simulcast: true,
+                    simulcastLayers: [LivekitClient.VideoPresets.h360, LivekitClient.VideoPresets.h180]
+                  });
+                  console.log('Debug: Camera track published successfully on Firefox');
+                }
               } catch (cameraError) {
                 console.error('Debug: Firefox camera error:', cameraError);
+                // Provide a more helpful error message
+                if (cameraError.message.includes('can not be found here')) {
+                  alert('Firefox camera error: Unable to access camera. Please ensure camera permissions are granted in Firefox settings and try again.');
+                } else {
+                  alert(`Firefox camera error: ${cameraError.message}. Please check your camera permissions.`);
+                }
               }
               
               try {
-                // Then enable microphone separately
-                await localParticipant.setMicrophoneEnabled(true);
-                console.log('Debug: Microphone enabled successfully on Firefox');
+                // For Firefox, use a more direct approach to audio
+                console.log('Debug: Firefox - using simplified audio approach');
+                
+                // Try to enable microphone directly through the room API
+                try {
+                  await localParticipant.setMicrophoneEnabled(true);
+                  console.log('Debug: Firefox microphone enabled via setMicrophoneEnabled');
+                } catch (directError) {
+                  console.warn('Debug: Firefox direct microphone enable failed:', directError);
+                  console.log('Debug: Falling back to manual audio track creation');
+                  
+                  // Fall back to manual track creation with very minimal constraints
+                  const audioTrack = await LivekitClient.createLocalAudioTrack({
+                    // No deviceId or other constraints that might cause issues
+                  });
+                  
+                  if (audioTrack) {
+                    await localParticipant.publishTrack(audioTrack);
+                    console.log('Debug: Microphone track published successfully via fallback');
+                  } else {
+                    throw new Error('Failed to create audio track');
+                  }
+                }
               } catch (micError) {
                 console.error('Debug: Firefox microphone error:', micError);
+                
+                // Don't show an alert for microphone errors in Firefox
+                // This allows the user to continue with just video if audio fails
+                console.warn('Continuing without microphone in Firefox');
+                
+                // Instead of alerting, just log the error
+                if (micError.message.includes('can not be found here')) {
+                  console.warn('Firefox microphone error: Unable to access microphone');
+                } else if (micError.message.includes('permission denied') || micError.message.includes('Permission denied')) {
+                  console.warn('Microphone access was denied in Firefox');
+                } else {
+                  console.warn(`Firefox microphone error: ${micError.message}`);
+                }
               }
             } else {
               // Standard approach for other browsers
