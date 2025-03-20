@@ -53,19 +53,18 @@ jobs:
         echo "Test Summary:"
         echo "$TEST_RESULTS"
         
-        # Set output variables for use in other steps
-        echo "failed_tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+        # We're not using output variables anymore
         
         # Fail the workflow if any tests failed
         if [ "$FAILED_TESTS" -gt 0 ]; then
-          echo "::error::$FAILED_TESTS tests failed!"
+          echo "ERROR: $FAILED_TESTS tests failed!"
           exit 1
         else
-          echo "::notice::All tests passed successfully!"
+          echo "SUCCESS: All tests passed successfully!"
         fi
     
-    - name: Upload test results
-      uses: actions/upload-artifact@v2
-      with:
-        name: test-results
-        path: test-results/
+    # Instead of uploading artifacts, we'll just save the test results to a file
+    - name: Save test results
+      run: |
+        echo "Test results saved to test-results/ directory"
+        ls -la test-results/
