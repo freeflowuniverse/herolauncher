@@ -1,5 +1,7 @@
 # HeroLauncher
 
+![Go Tests](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml/badge.svg)
+
 HeroLauncher is a comprehensive launcher application written in V language with multiple modules:
 
 - **Installer Module**: Handles installation of dependencies and components
@@ -92,8 +94,14 @@ http://localhost:9001/openapi.json
 ### Running Tests
 
 ```bash
-vtest ~/code/github/freeflowuniverse/herolauncher
+# Run all tests
+./test.sh
+
+# Run tests with debug output
+./test.sh --debug
 ```
+
+The test script will run all Go tests in the project and display a summary of the results at the end. You can exclude specific packages by uncommenting them in the `EXCLUDED_MODULES` array in the test.sh file.
 
 ## License
 

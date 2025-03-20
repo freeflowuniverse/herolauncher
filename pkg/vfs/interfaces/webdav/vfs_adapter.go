@@ -26,7 +26,7 @@ func NewVFSAdapter(vfsImpl vfs.VFSImplementation) *VFSAdapter {
 
 // Mkdir creates a directory
 func (a *VFSAdapter) Mkdir(ctx context.Context, name string, perm os.FileMode) error {
-	name = normalizePath(name)
+	name = normalizeAdapterPath(name)
 
 	// Check if the directory already exists
 	if a.vfsImpl.Exists(name) {
@@ -55,9 +55,12 @@ func (a *VFSAdapter) Mkdir(ctx context.Context, name string, perm os.FileMode) e
 	return err
 }
 
+// Define O_DIRECTORY constant since it's not available in the os package
+const O_DIRECTORY = 0x10000 // Value doesn't matter as we only use it for flag checks
+
 // OpenFile opens a file with the given flags
 func (a *VFSAdapter) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (webdav.File, error) {
-	name = normalizePath(name)
+	name = normalizeAdapterPath(name)
 
 	// Handle directory creation for O_CREATE flag
 	if flag&os.O_CREATE != 0 {
@@ -93,7 +96,7 @@ func (a *VFSAdapter) OpenFile(ctx context.Context, name string, flag int, perm o
 		// Create the file if it doesn't exist
 		if !exists {
 			// For directories, use Mkdir
-			if flag&os.O_DIRECTORY != 0 {
+			if flag&O_DIRECTORY != 0 {
 				err := a.Mkdir(ctx, name, perm)
 				if err != nil {
 					return nil, err
@@ -134,7 +137,7 @@ func (a *VFSAdapter) OpenFile(ctx context.Context, name string, flag int, perm o
 
 // RemoveAll removes a file or directory
 func (a *VFSAdapter) RemoveAll(ctx context.Context, name string) error {
-	name = normalizePath(name)
+	name = normalizeAdapterPath(name)
 
 	if !a.vfsImpl.Exists(name) {
 		return os.ErrNotExist
@@ -145,7 +148,7 @@ func (a *VFSAdapter) RemoveAll(ctx context.Context, name string) error {
 
 // Stat returns file info
 func (a *VFSAdapter) Stat(ctx context.Context, name string) (os.FileInfo, error) {
-	name = normalizePath(name)
+	name = normalizeAdapterPath(name)
 
 	if !a.vfsImpl.Exists(name) {
 		return nil, os.ErrNotExist
@@ -156,11 +159,12 @@ func (a *VFSAdapter) Stat(ctx context.Context, name string) (os.FileInfo, error)
 		return nil, err
 	}
 
+	metadata := entry.GetMetadata()
 	return &vfsFileInfo{
 		name:    filepath.Base(name),
-		size:    entry.Size(),
+		size:    int64(metadata.Size),
 		mode:    getFileMode(entry),
-		modTime: entry.ModTime(),
+		modTime: time.Unix(metadata.ModifiedAt, 0),
 		isDir:   entry.IsDir(),
 	}, nil
 }
@@ -269,18 +273,19 @@ func (f *vfsFile) Readdir(count int) ([]os.FileInfo, error) {
 
 	// Lazy load directory entries if not already loaded
 	if f.dirEnts == nil {
-		entries, err := f.vfsImpl.List(f.name)
+		entries, err := f.vfsImpl.DirList(f.name)
 		if err != nil {
 			return nil, err
 		}
 
 		f.dirEnts = make([]os.FileInfo, 0, len(entries))
 		for _, entry := range entries {
+			metadata := entry.GetMetadata()
 			f.dirEnts = append(f.dirEnts, &vfsFileInfo{
-				name:    entry.Name(),
-				size:    entry.Size(),
+				name:    metadata.Name,
+				size:    int64(metadata.Size),
 				mode:    getFileMode(entry),
-				modTime: entry.ModTime(),
+				modTime: time.Unix(metadata.ModifiedAt, 0),
 				isDir:   entry.IsDir(),
 			})
 		}
@@ -313,11 +318,12 @@ func (f *vfsFile) Stat() (os.FileInfo, error) {
 		return nil, err
 	}
 
+	metadata := entry.GetMetadata()
 	return &vfsFileInfo{
 		name:    filepath.Base(f.name),
-		size:    entry.Size(),
+		size:    int64(metadata.Size),
 		mode:    getFileMode(entry),
-		modTime: entry.ModTime(),
+		modTime: time.Unix(metadata.ModifiedAt, 0),
 		isDir:   entry.IsDir(),
 	}, nil
 }
@@ -394,8 +400,8 @@ func (fi *vfsFileInfo) Sys() interface{}   { return nil }
 
 // Helper functions
 
-// normalizePath ensures the path is properly formatted for VFS operations
-func normalizePath(path string) string {
+// normalizeAdapterPath ensures the path is properly formatted for VFS operations
+func normalizeAdapterPath(path string) string {
 	// Remove trailing slashes except for root
 	if path != "/" && strings.HasSuffix(path, "/") {
 		path = path[:len(path)-1]
