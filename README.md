@@ -1,5 +1,10 @@
 # HeroLauncher
 
+[![Go Tests](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml)
+[![Go CI](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-ci.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-ci.yml)
+[![Docker](https://github.com/freeflowuniverse/herolauncher/actions/workflows/docker.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/docker.yml)
+[![Release](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml)
+
 HeroLauncher is a comprehensive launcher application written in V language with multiple modules:
 
 - **Installer Module**: Handles installation of dependencies and components
@@ -92,8 +97,47 @@ http://localhost:9001/openapi.json
 ### Running Tests
 
 ```bash
-vtest ~/code/github/freeflowuniverse/herolauncher
+# Run all tests
+./test.sh
+
+# Run tests with debug output
+./test.sh --debug
 ```
+
+The test script will run all Go tests in the project and display a summary of the results at the end. You can exclude specific packages by uncommenting them in the `EXCLUDED_MODULES` array in the test.sh file.
+
+### Continuous Integration and Deployment
+
+This project uses GitHub Actions for CI/CD:
+
+- **Go Tests**: Runs all tests using the test.sh script on every push and pull request
+- **Go CI**: Performs linting, builds with multiple Go versions, and generates code coverage reports
+- **Docker**: Builds and pushes Docker images on pushes to main/master and on tag releases
+- **Release**: Automatically creates GitHub releases with binaries for multiple platforms when a tag is pushed
+
+To create a new release:
+
+```bash
+# Tag a new version
+git tag v1.0.0
+
+# Push the tag to trigger the release workflow
+git push origin v1.0.0
+```
+
+#### Docker
+
+A Docker image is automatically built and pushed to Docker Hub on each push to main/master and on tag releases. To use the Docker image:
+
+```bash
+# Pull the latest image
+docker pull username/herolauncher:latest
+
+# Run the container
+docker run -p 9001:9001 username/herolauncher:latest
+```
+
+Replace `username` with the actual Docker Hub username configured in the repository secrets.
 
 ## License
 

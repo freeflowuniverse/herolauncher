@@ -28,7 +28,7 @@ func init() {
 
 // DocTree represents a manager for multiple collections
 type DocTree struct {
-	Collections map[string]*Collection
+	Collections       map[string]*Collection
 	defaultCollection string
 	// For backward compatibility
 	Name string
@@ -42,45 +42,60 @@ func New(args ...string) (*DocTree, error) {
 	dt := &DocTree{
 		Collections: make(map[string]*Collection),
 	}
-	
+
 	// Set the global currentDocTree variable
-	currentDocTree = dt
+	// This ensures that all DocTree instances can access each other's collections
+	if currentDocTree == nil {
+		currentDocTree = dt
+	}
 
 	// For backward compatibility with existing code
 	if len(args) == 2 {
 		path, name := args[0], args[1]
 		// Apply namefix for compatibility with tests
 		nameFixed := tools.NameFix(name)
-		
+
 		// Use the fixed name for the collection
 		_, err := dt.AddCollection(path, nameFixed)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize DocTree: %w", err)
 		}
-		
+
 		// For backward compatibility
 		dt.defaultCollection = nameFixed
 		dt.Path = path
 		dt.Name = nameFixed
+
+		// Register this collection in the global currentDocTree as well
+		// This ensures that includes can find collections across different DocTree instances
+		if currentDocTree != dt && !containsCollection(currentDocTree.Collections, nameFixed) {
+			currentDocTree.Collections[nameFixed] = dt.Collections[nameFixed]
+		}
 	}
 
 	return dt, nil
+}
+
+// Helper function to check if a collection exists in a map
+func containsCollection(collections map[string]*Collection, name string) bool {
+	_, exists := collections[name]
+	return exists
 }
 
 // AddCollection adds a new collection to the DocTree
 func (dt *DocTree) AddCollection(path string, name string) (*Collection, error) {
 	// Create a new collection
 	collection := NewCollection(path, name)
-	
+
 	// Scan the collection
 	err := collection.Scan()
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan collection: %w", err)
 	}
-	
+
 	// Add to the collections map
 	dt.Collections[collection.Name] = collection
-	
+
 	return collection, nil
 }
 
@@ -88,13 +103,13 @@ func (dt *DocTree) AddCollection(path string, name string) (*Collection, error) 
 func (dt *DocTree) GetCollection(name string) (*Collection, error) {
 	// For compatibility with tests, apply namefix
 	namefixed := tools.NameFix(name)
-	
+
 	// Check if the collection exists
 	collection, exists := dt.Collections[namefixed]
 	if !exists {
 		return nil, fmt.Errorf("collection not found: %s", name)
 	}
-	
+
 	return collection, nil
 }
 
@@ -102,20 +117,20 @@ func (dt *DocTree) GetCollection(name string) (*Collection, error) {
 func (dt *DocTree) DeleteCollection(name string) error {
 	// For compatibility with tests, apply namefix
 	namefixed := tools.NameFix(name)
-	
+
 	// Check if the collection exists
 	_, exists := dt.Collections[namefixed]
 	if !exists {
 		return fmt.Errorf("collection not found: %s", name)
 	}
-	
+
 	// Delete from Redis
 	collectionKey := fmt.Sprintf("collections:%s", namefixed)
 	redisClient.Del(ctx, collectionKey)
-	
+
 	// Remove from the collections map
 	delete(dt.Collections, namefixed)
-	
+
 	return nil
 }
 
@@ -132,7 +147,7 @@ func (dt *DocTree) ListCollections() []string {
 // For backward compatibility, if only one argument is provided, it uses the default collection
 func (dt *DocTree) PageGet(args ...string) (string, error) {
 	var collectionName, pageName string
-	
+
 	if len(args) == 1 {
 		// Backward compatibility mode
 		if dt.defaultCollection == "" {
@@ -146,25 +161,34 @@ func (dt *DocTree) PageGet(args ...string) (string, error) {
 	} else {
 		return "", fmt.Errorf("invalid number of arguments")
 	}
-	
+
 	// Get the collection
 	collection, err := dt.GetCollection(collectionName)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Set the current collection for include processing
 	currentCollection = collection
-	
-	// Get the page
-	return collection.PageGet(pageName)
+
+	// Get the page content
+	content, err := collection.PageGet(pageName)
+	if err != nil {
+		return "", err
+	}
+
+	// Process includes for PageGet as well
+	// This is needed for the tests that check the content directly
+	processedContent := processIncludes(content, collectionName, dt)
+
+	return processedContent, nil
 }
 
 // PageGetHtml gets a page by name from a specific collection and returns its HTML content
 // For backward compatibility, if only one argument is provided, it uses the default collection
 func (dt *DocTree) PageGetHtml(args ...string) (string, error) {
 	var collectionName, pageName string
-	
+
 	if len(args) == 1 {
 		// Backward compatibility mode
 		if dt.defaultCollection == "" {
@@ -178,13 +202,13 @@ func (dt *DocTree) PageGetHtml(args ...string) (string, error) {
 	} else {
 		return "", fmt.Errorf("invalid number of arguments")
 	}
-	
+
 	// Get the collection
 	collection, err := dt.GetCollection(collectionName)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Get the HTML
 	return collection.PageGetHtml(pageName)
 }
@@ -193,7 +217,7 @@ func (dt *DocTree) PageGetHtml(args ...string) (string, error) {
 // For backward compatibility, if only one argument is provided, it uses the default collection
 func (dt *DocTree) FileGetUrl(args ...string) (string, error) {
 	var collectionName, fileName string
-	
+
 	if len(args) == 1 {
 		// Backward compatibility mode
 		if dt.defaultCollection == "" {
@@ -207,13 +231,13 @@ func (dt *DocTree) FileGetUrl(args ...string) (string, error) {
 	} else {
 		return "", fmt.Errorf("invalid number of arguments")
 	}
-	
+
 	// Get the collection
 	collection, err := dt.GetCollection(collectionName)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Get the URL
 	return collection.FileGetUrl(fileName)
 }
@@ -237,8 +261,8 @@ func (dt *DocTree) PageGetPath(pageName string) (string, error) {
 // For backward compatibility
 func (dt *DocTree) Info() map[string]string {
 	return map[string]string{
-		"name": dt.Name,
-		"path": dt.Path,
+		"name":        dt.Name,
+		"path":        dt.Path,
 		"collections": fmt.Sprintf("%d", len(dt.Collections)),
 	}
 }

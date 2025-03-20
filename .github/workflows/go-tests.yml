@@ -1,0 +1,70 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [ '**' ]  # Run on all branches
+  pull_request:
+    branches: [ '**' ]  # Run on pull requests to any branch
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.21'  # Adjust this to match your project's Go version
+
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Make test script executable
+      run: chmod +x ./test.sh
+
+    - name: Run tests and check results
+      id: run-tests
+      run: |
+        # Create a directory for test results
+        mkdir -p test-results
+        
+        # Run the tests and capture the output
+        TEST_OUTPUT=$(./test.sh)
+        
+        # Save the full test output to a file
+        echo "$TEST_OUTPUT" > test-results/test-output.log
+        
+        # Display the full test output
+        echo "$TEST_OUTPUT"
+        
+        # Extract test results from the output
+        TEST_RESULTS=$(echo "$TEST_OUTPUT" | grep -A 3 "TEST SUMMARY" | tail -n 3)
+        FAILED_TESTS=$(echo "$TEST_RESULTS" | grep "Failed Tests:" | awk '{print $3}')
+        
+        # Save the test summary to a file
+        echo "Test Summary:" > test-results/test-summary.txt
+        echo "$TEST_RESULTS" >> test-results/test-summary.txt
+        
+        # Print the test summary
+        echo "Test Summary:"
+        echo "$TEST_RESULTS"
+        
+        # We're not using output variables anymore
+        
+        # Fail the workflow if any tests failed
+        if [ "$FAILED_TESTS" -gt 0 ]; then
+          echo "ERROR: $FAILED_TESTS tests failed!"
+          exit 1
+        else
+          echo "SUCCESS: All tests passed successfully!"
+        fi
+    
+    # Instead of uploading artifacts, we'll just save the test results to a file
+    - name: Save test results
+      run: |
+        echo "Test results saved to test-results/ directory"
+        ls -la test-results/
