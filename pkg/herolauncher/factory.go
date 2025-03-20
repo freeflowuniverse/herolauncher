@@ -15,6 +15,7 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api/routes"
 	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
+	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -132,8 +133,15 @@ func (hl *HeroLauncher) setupRoutes() {
 	executorHandler := routes.NewExecutorHandler(hl.executorService)
 	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
 	redisHandler := routes.NewRedisHandler(hl.redisServer)
-	// Pass HeroLauncher as an UptimeProvider
-	adminHandler := routes.NewAdminHandler(hl)
+	// Initialize StatsManager
+	statsManager, err := stats.NewStatsManagerWithDefaults()
+	if err != nil {
+		log.Printf("Warning: Failed to initialize StatsManager: %v\n", err)
+		statsManager = nil
+	}
+
+	// Pass HeroLauncher as an UptimeProvider and StatsManager
+	adminHandler := routes.NewAdminHandler(hl, statsManager)
 
 	// Register routes
 	executorHandler.RegisterRoutes(hl.app)

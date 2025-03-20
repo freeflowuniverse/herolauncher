@@ -20,12 +20,24 @@ type UptimeProvider interface {
 // AdminHandler handles admin-related routes
 type AdminHandler struct {
 	uptimeProvider UptimeProvider
+	statsManager   *stats.StatsManager
 }
 
 // NewAdminHandler creates a new AdminHandler
-func NewAdminHandler(uptimeProvider UptimeProvider) *AdminHandler {
+func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsManager) *AdminHandler {
+	// If statsManager is nil, create a new one with default settings
+	if statsManager == nil {
+		var err error
+		statsManager, err = stats.NewStatsManagerWithDefaults()
+		if err != nil {
+			// Log the error but continue with nil statsManager
+			fmt.Printf("Error creating StatsManager: %v\n", err)
+		}
+	}
+	
 	return &AdminHandler{
 		uptimeProvider: uptimeProvider,
+		statsManager:   statsManager,
 	}
 }
 
@@ -93,8 +105,14 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 	osInfo := "Unknown"
 	uptimeInfo := "Unknown"
 
-	// Get hardware stats from the stats package
-	hardwareStats := stats.GetHardwareStats()
+	// Get hardware stats from the StatsManager
+	var hardwareStats map[string]interface{}
+	if h.statsManager != nil {
+		hardwareStats = h.statsManager.GetHardwareStats()
+	} else {
+		// Fallback to direct function call if StatsManager is not available
+		hardwareStats = stats.GetHardwareStats()
+	}
 	
 	// Extract the formatted strings
 	cpuInfo = hardwareStats["cpu"].(string)
@@ -211,8 +229,14 @@ func (h *AdminHandler) getSystemSettings(c *fiber.Ctx) error {
 
 // getHardwareStats returns only the hardware stats for Unpoly polling
 func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
-	// Get hardware stats from the stats package
-	hardwareStats := stats.GetHardwareStats()
+	// Get hardware stats from the StatsManager
+	var hardwareStats map[string]interface{}
+	if h.statsManager != nil {
+		hardwareStats = h.statsManager.GetHardwareStats()
+	} else {
+		// Fallback to direct function call if StatsManager is not available
+		hardwareStats = stats.GetHardwareStats()
+	}
 	
 	// Convert to fiber.Map for template rendering
 	hardware := fiber.Map{}
@@ -227,8 +251,15 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 
 // getProcessStatsJSON returns process statistics in JSON format for API consumption
 func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
-	// Get process stats from the stats package (limit to top 30 processes)
-	processData, err := stats.GetProcessStats(30)
+	// Get process stats from the StatsManager (limit to top 30 processes)
+	var processData *stats.ProcessStats
+	var err error
+	if h.statsManager != nil {
+		processData, err = h.statsManager.GetProcessStats(30)
+	} else {
+		// Fallback to direct function call if StatsManager is not available
+		processData, err = stats.GetProcessStats(30)
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to get process stats: " + err.Error(),
@@ -258,8 +289,14 @@ func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
 
 // getHardwareStatsJSON returns hardware stats in JSON format for API consumption
 func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
-	// Get hardware stats from the stats package
-	hardwareStats := stats.GetHardwareStatsJSON()
+	// Get hardware stats from the StatsManager
+	var hardwareStats map[string]interface{}
+	if h.statsManager != nil {
+		hardwareStats = h.statsManager.GetHardwareStatsJSON()
+	} else {
+		// Fallback to direct function call if StatsManager is not available
+		hardwareStats = stats.GetHardwareStatsJSON()
+	}
 	
 	// Convert to fiber.Map for JSON response
 	response := fiber.Map{}
