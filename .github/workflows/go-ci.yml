@@ -19,13 +19,7 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      # Removed caching step for compatibility
 
       - name: Install golangci-lint
         run: |
@@ -51,13 +45,7 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: Cache Go modules
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      # Removed caching step for compatibility
 
       - name: Install dependencies
         run: go mod download
@@ -78,13 +66,7 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+      # Removed caching step for compatibility
 
       - name: Install dependencies
         run: go mod download

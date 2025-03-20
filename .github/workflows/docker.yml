@@ -1,0 +1,133 @@
+name: Docker
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker
+        run: |
+          # Ensure Docker is installed and running
+          docker --version
+
+      - name: Login to DockerHub
+        # Only run this step when pushing to main/master or when a tag is pushed
+        if: github.event_name != 'pull_request'
+        run: |
+          # Check if Docker Hub credentials are available
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            echo "Logged in to Docker Hub"
+          else
+            echo "Skipping Docker Hub login: credentials not provided"
+          fi
+
+      - name: Extract metadata for Docker
+        id: meta
+        run: |
+          # Extract version
+          VERSION=latest
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          elif [[ $GITHUB_REF == refs/heads/* ]]; then
+            VERSION=$(echo ${GITHUB_REF#refs/heads/} | sed -r 's#/+#-#g')
+          fi
+          
+          # Set image name
+          IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/herolauncher"
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            IMAGE_NAME="herolauncher"
+          fi
+          
+          # Set tags
+          TAGS="${IMAGE_NAME}:${VERSION}"
+          if [[ $VERSION == v* ]]; then
+            TAGS="${TAGS},${IMAGE_NAME}:latest"
+          fi
+          
+          # Output variables
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "TAGS=${TAGS}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${IMAGE_NAME}" >> $GITHUB_ENV
+          
+          # Display info
+          echo "Version: ${VERSION}"
+          echo "Image name: ${IMAGE_NAME}"
+          echo "Tags: ${TAGS}"
+
+      - name: Create Dockerfile if it doesn't exist
+        run: |
+          if [ ! -f "Dockerfile" ]; then
+            cat > Dockerfile << 'EOF'
+            # Build stage
+            FROM golang:1.21-alpine AS builder
+            
+            WORKDIR /app
+            
+            # Copy go.mod and go.sum files
+            COPY go.mod go.sum ./
+            
+            # Download dependencies
+            RUN go mod download
+            
+            # Copy source code
+            COPY . .
+            
+            # Build the application
+            RUN CGO_ENABLED=0 GOOS=linux go build -o herolauncher
+            
+            # Final stage
+            FROM alpine:latest
+            
+            WORKDIR /app
+            
+            # Copy the binary from the builder stage
+            COPY --from=builder /app/herolauncher .
+            
+            # Expose the port the app runs on
+            EXPOSE 9001
+            
+            # Command to run the application
+            CMD ["./herolauncher"]
+            EOF
+            
+            echo "Created Dockerfile"
+          else
+            echo "Dockerfile already exists"
+          fi
+
+      - name: Build Docker image
+        run: |
+          # Build the Docker image
+          docker build -t ${{ env.IMAGE_NAME }}:${{ env.VERSION }} .
+          
+          # Tag as latest if it's a version tag
+          if [[ ${{ env.VERSION }} == v* ]]; then
+            docker tag ${{ env.IMAGE_NAME }}:${{ env.VERSION }} ${{ env.IMAGE_NAME }}:latest
+          fi
+
+      - name: Push Docker image
+        # Only run this step when pushing to main/master or when a tag is pushed
+        if: github.event_name != 'pull_request'
+        run: |
+          # Check if Docker Hub credentials are available
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            # Push the Docker image with the appropriate tags
+            for tag in $(echo "${{ env.TAGS }}" | tr ',' ' '); do
+              docker push $tag
+            done
+            echo "Docker image pushed successfully"
+          else
+            echo "Skipping Docker push: DockerHub credentials not provided"
+          fi
