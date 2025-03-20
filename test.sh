@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Set architecture to 64-bit to avoid 32-bit compilation issues
+export GOARCH=amd64
+
 # Initialize debug flag to false
 DEBUG=false
 
