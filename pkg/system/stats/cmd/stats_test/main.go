@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
@@ -12,12 +13,36 @@ func main() {
 	fmt.Println("System Stats Test Program")
 	fmt.Println("========================")
 
+	// Create a new stats manager with Redis connection
+	config := &stats.Config{
+		RedisAddr:     "localhost:6379",
+		RedisPassword: "",
+		RedisDB:       0,
+		Debug:         false,
+		QueueSize:     100,
+		DefaultTimeout: 5 * time.Second,
+		ExpirationTimes: map[string]time.Duration{
+			"system":   30 * time.Second,  // System info expires after 30 seconds
+			"disk":     60 * time.Second,  // Disk info expires after 1 minute
+			"process":  15 * time.Second,  // Process info expires after 15 seconds
+			"network":  20 * time.Second,  // Network info expires after 20 seconds
+			"hardware": 60 * time.Second,  // Hardware stats expire after 1 minute
+		},
+	}
+	
+	manager, err := stats.NewStatsManager(config)
+	if err != nil {
+		fmt.Printf("Error creating stats manager: %v\n", err)
+		os.Exit(1)
+	}
+	defer manager.Close()
+
 	// DISK INFORMATION
 	fmt.Println("\n1. DISK INFORMATION")
 	fmt.Println("------------------")
 	
-	// Get all disk stats
-	diskStats, err := stats.GetDiskStats()
+	// Get all disk stats using the manager
+	diskStats, err := manager.GetDiskStats()
 	if err != nil {
 		fmt.Printf("Error getting disk stats: %v\n", err)
 	} else {
@@ -28,8 +53,8 @@ func main() {
 		}
 	}
 
-	// Get root disk info
-	rootDisk, err := stats.GetRootDiskInfo()
+	// Get root disk info using the manager
+	rootDisk, err := manager.GetRootDiskInfo()
 	if err != nil {
 		fmt.Printf("Error getting root disk info: %v\n", err)
 	} else {
@@ -38,14 +63,14 @@ func main() {
 	}
 
 	// Get formatted disk info
-	fmt.Printf("Formatted Disk Info: %s\n", stats.GetFormattedDiskInfo())
+	fmt.Printf("Formatted Disk Info: %s\n", manager.GetFormattedDiskInfo())
 
 	// SYSTEM INFORMATION
 	fmt.Println("\n2. SYSTEM INFORMATION")
 	fmt.Println("--------------------")
 	
-	// Get system info
-	sysInfo, err := stats.GetSystemInfo()
+	// Get system info using the manager
+	sysInfo, err := manager.GetSystemInfo()
 	if err != nil {
 		fmt.Printf("Error getting system info: %v\n", err)
 	} else {
@@ -64,9 +89,9 @@ func main() {
 		fmt.Printf("  Download Speed: %s\n", sysInfo.Network.DownloadSpeed)
 	}
 
-	// Get network speed directly
+	// Get network speed using the manager
 	fmt.Println("\nNetwork Speed Test:")
-	netSpeed := stats.GetNetworkSpeedResult()
+	netSpeed := manager.GetNetworkSpeedResult()
 	fmt.Printf("  Upload: %s\n", netSpeed.UploadSpeed)
 	fmt.Printf("  Download: %s\n", netSpeed.DownloadSpeed)
 
@@ -74,8 +99,8 @@ func main() {
 	fmt.Println("\n3. PROCESS INFORMATION")
 	fmt.Println("---------------------")
 	
-	// Get process stats
-	processStats, err := stats.GetProcessStats(5) // Get top 5 processes
+	// Get process stats using the manager
+	processStats, err := manager.GetProcessStats(5) // Get top 5 processes
 	if err != nil {
 		fmt.Printf("Error getting process stats: %v\n", err)
 	} else {
@@ -89,9 +114,9 @@ func main() {
 		}
 	}
 
-	// Get top processes directly
+	// Get top processes using the manager
 	fmt.Println("\nTop 3 Processes:")
-	topProcs, err := stats.GetTopProcesses(3)
+	topProcs, err := manager.GetTopProcesses(3)
 	if err != nil {
 		fmt.Printf("Error getting top processes: %v\n", err)
 	} else {
@@ -104,22 +129,22 @@ func main() {
 	fmt.Println("\n4. COMBINED STATS FUNCTIONS")
 	fmt.Println("--------------------------")
 	
-	// Hardware stats
+	// Hardware stats using the manager
 	fmt.Println("\nHardware Stats:")
-	hardwareStats := stats.GetHardwareStats()
+	hardwareStats := manager.GetHardwareStats()
 	for key, value := range hardwareStats {
 		fmt.Printf("  %s: %v\n", key, value)
 	}
 
-	// Hardware stats JSON
+	// Hardware stats JSON using the manager
 	fmt.Println("\nHardware Stats (JSON):")
-	hardwareJSON := stats.GetHardwareStatsJSON()
+	hardwareJSON := manager.GetHardwareStatsJSON()
 	prettyJSON, _ := json.MarshalIndent(hardwareJSON, "", "  ")
 	fmt.Println(string(prettyJSON))
 
-	// Process stats JSON
+	// Process stats JSON using the manager
 	fmt.Println("\nProcess Stats (JSON):")
-	processJSON := stats.GetProcessStatsJSON(3) // Top 3 processes
+	processJSON := manager.GetProcessStatsJSON(3) // Top 3 processes
 	prettyJSON, _ = json.MarshalIndent(processJSON, "", "  ")
 	fmt.Println(string(prettyJSON))
 
@@ -127,9 +152,44 @@ func main() {
 	fmt.Println("\nWaiting 2 seconds for another network speed measurement...")
 	time.Sleep(2 * time.Second)
 	
-	// Get updated network speed
-	updatedNetSpeed := stats.GetNetworkSpeedResult()
+	// Get updated network speed using the manager
+	updatedNetSpeed := manager.GetNetworkSpeedResult()
 	fmt.Println("\nUpdated Network Speed:")
 	fmt.Printf("  Upload: %s\n", updatedNetSpeed.UploadSpeed)
 	fmt.Printf("  Download: %s\n", updatedNetSpeed.DownloadSpeed)
+	
+	// CACHE MANAGEMENT
+	fmt.Println("\n5. CACHE MANAGEMENT")
+	fmt.Println("------------------")
+	
+	// Force update of system stats
+	fmt.Println("\nForcing update of system stats...")
+	err = manager.ForceUpdate("system")
+	if err != nil {
+		fmt.Printf("Error forcing update: %v\n", err)
+	} else {
+		fmt.Println("System stats updated successfully")
+	}
+	
+	// Get updated system info
+	updatedSysInfo, err := manager.GetSystemInfo()
+	if err != nil {
+		fmt.Printf("Error getting updated system info: %v\n", err)
+	} else {
+		fmt.Println("\nUpdated CPU Usage: " + fmt.Sprintf("%.1f%%", updatedSysInfo.CPU.UsagePercent))
+	}
+	
+	// Clear cache for disk stats
+	fmt.Println("\nClearing cache for disk stats...")
+	err = manager.ClearCache("disk")
+	if err != nil {
+		fmt.Printf("Error clearing cache: %v\n", err)
+	} else {
+		fmt.Println("Disk stats cache cleared successfully")
+	}
+	
+	// Toggle debug mode
+	fmt.Println("\nToggling debug mode (direct fetching without cache)...")
+	manager.Debug = !manager.Debug
+	fmt.Printf("Debug mode is now: %v\n", manager.Debug)
 }
