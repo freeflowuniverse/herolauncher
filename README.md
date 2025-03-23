@@ -114,6 +114,27 @@ This project uses GitHub Actions for CI/CD:
 - **Go Lint**: Performs linting using golangci-lint to ensure code quality
 - **Build**: Builds the application for multiple platforms (Linux Intel/ARM, macOS Intel/ARM, Windows) and makes the binaries available as artifacts
 
+### Downloading Binaries from CI
+
+The Build workflow creates binaries for multiple platforms and makes them available as artifacts. To download the binaries:
+
+1. Go to the [Actions](https://github.com/freeflowuniverse/herolauncher/actions) tab in the repository
+2. Click on the latest successful Build workflow run
+3. Scroll down to the Artifacts section
+4. Download the artifact for your platform:
+   - `herolauncher-linux-amd64.tar.gz` for Linux (Intel)
+   - `herolauncher-linux-arm64.tar.gz` for Linux (ARM)
+   - `herolauncher-darwin-amd64.tar.gz` for macOS (Intel)
+   - `herolauncher-darwin-arm64.tar.gz` for macOS (ARM)
+   - `herolauncher-windows-amd64.zip` for Windows
+5. Extract the archive to get the binaries
+6. The archive contains the following executables:
+   - `pmclient-[platform]`: Process Manager client
+   - `telnettest-[platform]`: Telnet test utility
+   - `webdavclient-[platform]`: WebDAV client
+   - `webdavserver-[platform]`: WebDAV server
+7. Run the desired executable from the command line
+
 To create a new release:
 
 ```bash
