@@ -24,7 +24,7 @@ jobs:
       run: go mod download
       
     - name: Make test script executable
-      run: chmod +x ./test.sh
+      run: chmod +x ./scripts/test.sh
 
     - name: Run tests and check results
       id: run-tests
@@ -33,7 +33,7 @@ jobs:
         mkdir -p test-results
         
         # Run the tests and capture the output
-        TEST_OUTPUT=$(./test.sh)
+        TEST_OUTPUT=$(./scripts/test.sh)
         
         # Save the full test output to a file
         echo "$TEST_OUTPUT" > test-results/test-output.log
