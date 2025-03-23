@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Run when a tag is pushed that starts with 'v'
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # Don't fail all builds if one fails
+      matrix:
+        include:
+          # Linux builds (Intel)
+          - os: ubuntu-latest
+            arch: amd64
+            output_name: herolauncher-linux-amd64
+          
+          # Linux builds (ARM)
+          - os: ubuntu-latest
+            arch: arm64
+            output_name: herolauncher-linux-arm64
+          
+          # macOS builds
+          - os: macos-latest
+            arch: amd64
+            output_name: herolauncher-darwin-amd64
+          - os: macos-latest
+            arch: arm64
+            output_name: herolauncher-darwin-arm64
+          
+          # Windows builds
+          - os: windows-latest
+            arch: amd64
+            output_name: herolauncher-windows-amd64
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install dependencies
+        run: go mod download
+
+      # Set environment variables for cross-compilation
+      - name: Set build environment
+        shell: bash
+        run: |
+          echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1 | sed 's/ubuntu/linux/;s/macos/darwin/')" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+
+      # Build all main components
+      - name: Build
+        shell: bash
+        run: |
+          # Create a directory for binaries
+          mkdir -p bin
+          
+          # Build all main components except those with known build issues
+          for dir in cmd/*; do
+            if [ -f "$dir/main.go" ]; then
+              component=$(basename $dir)
+              
+              # Skip components with known build issues
+              if [ "$component" == "processmanager" ] || [ "$component" == "vfsdavserver" ]; then
+                echo "Skipping $component due to known build issues..."
+                continue
+              fi
+              
+              echo "Building $component..."
+              go build -v -o bin/$component-${{ matrix.output_name }} ./$dir
+            fi
+          done
+          
+          # Create a combined archive
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # Use zip on Windows - use the bin directory as the source
+            powershell -Command "Compress-Archive -Path bin -DestinationPath '${{ matrix.output_name }}.zip' -Force"
+            echo "ASSET_PATH=${{ matrix.output_name }}.zip" >> $GITHUB_ENV
+            echo "ASSET_NAME=${{ matrix.output_name }}.zip" >> $GITHUB_ENV
+          else
+            # Use tar on Linux/macOS
+            tar -czf ${{ matrix.output_name }}.tar.gz bin/
+            echo "ASSET_PATH=${{ matrix.output_name }}.tar.gz" >> $GITHUB_ENV
+            echo "ASSET_NAME=${{ matrix.output_name }}.tar.gz" >> $GITHUB_ENV
+          fi
+
+      # Upload the built binaries as artifacts
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ env.ASSET_PATH }}
+          retention-days: 7
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for creating releases
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/herolauncher-linux-amd64/herolauncher-linux-amd64.tar.gz
+            artifacts/herolauncher-linux-arm64/herolauncher-linux-arm64.tar.gz
+            artifacts/herolauncher-darwin-amd64/herolauncher-darwin-amd64.tar.gz
+            artifacts/herolauncher-darwin-arm64/herolauncher-darwin-arm64.tar.gz
+            artifacts/herolauncher-windows-amd64/herolauncher-windows-amd64.zip

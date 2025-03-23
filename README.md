@@ -3,6 +3,7 @@
 [![Go Tests](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml)
 [![Go Lint](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml)
 [![Build](https://github.com/freeflowuniverse/herolauncher/actions/workflows/build.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/build.yml)
+[![Release](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml)
 
 
 HeroLauncher is a comprehensive launcher application written in V language with multiple modules:
@@ -113,6 +114,7 @@ This project uses GitHub Actions for CI/CD:
 - **Go Tests**: Runs all tests using the test.sh script on every push and pull request
 - **Go Lint**: Performs linting using golangci-lint to ensure code quality
 - **Build**: Builds the application for multiple platforms (Linux Intel/ARM, macOS Intel/ARM, Windows) and makes the binaries available as artifacts
+- **Release**: Creates GitHub releases with binaries for all platforms when a new tag is pushed
 
 ### Downloading Binaries from CI
 
@@ -135,7 +137,24 @@ The Build workflow creates binaries for multiple platforms and makes them availa
    - `webdavserver-[platform]`: WebDAV server
 7. Run the desired executable from the command line
 
+### Creating a New Release
+
 To create a new release:
+
+1. Use the release script:
+
+```bash
+# Run the release script
+./scripts/release.sh
+```
+
+This script will:
+- Get the latest release from GitHub
+- Ask for a new version number
+- Create a git tag with the new version
+- Push the tag to GitHub
+
+2. Alternatively, you can manually create and push a tag:
 
 ```bash
 # Tag a new version
@@ -144,6 +163,14 @@ git tag v1.0.0
 # Push the tag to trigger the release workflow
 git push origin v1.0.0
 ```
+
+3. The Release workflow will automatically:
+   - Build the binaries for all platforms
+   - Create a GitHub release with the tag name
+   - Upload the binaries as assets to the release
+   - Generate release notes based on the commits since the last release
+
+4. Once the workflow completes, the release will be available on the [Releases](https://github.com/freeflowuniverse/herolauncher/releases) page
 
 #### Docker
 
