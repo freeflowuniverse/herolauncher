@@ -17,16 +17,71 @@ get_latest_release() {
     echo "$response" | grep -o '"tag_name":"[^"]*' | cut -d'"' -f4
 }
 
-# Show current version
+# Get repository root directory
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+
+# Change to repository root
+cd "$repo_root" || { echo "Error: Could not change to repository root directory" >&2; exit 1; }
+
+# Show current version information
+echo "Current project information:"
+echo "----------------------------"
+
+# Show Go version from go.mod
+if [ -f "go.mod" ]; then
+    go_version=$(grep "^go " go.mod | awk '{print $2}')
+    echo "Go version in go.mod: $go_version"
+fi
+
+# Show current version from local git tags
+echo "Fetching latest tag from local git repository..."
+if git tag -l | grep -q "^v"; then
+    latest_local_tag=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+    echo "Latest local git tag: $latest_local_tag"
+else
+    echo "No version tags found in local git repository."
+fi
+
+# Show current version from GitHub releases
+echo "Fetching latest release information from GitHub..."
 latest_release=$(get_latest_release)
 if [ -z "$latest_release" ]; then
-    echo "Error getting latest release" >&2
-    exit 1
+    echo "No previous GitHub releases found. This will be the first release."
+else
+    echo "Current latest GitHub release: $latest_release"
 fi
-echo "Current latest release: $latest_release"
 
-# Ask for new version
-read -p "Enter new version (e.g., 1.0.4): " new_version
+# Show current git branch
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+echo "Current git branch: $current_branch"
+
+echo "----------------------------"
+
+# Determine current version to suggest as default
+current_version=""
+if [ -n "$latest_local_tag" ]; then
+    # Remove 'v' prefix if present
+    current_version=${latest_local_tag#v}
+elif [ -n "$latest_release" ]; then
+    # Remove 'v' prefix if present
+    current_version=${latest_release#v}
+else
+    current_version="0.1.0"  # Default if no version found
+fi
+
+# Suggest an incremented patch version
+IFS='.' read -r major minor patch <<< "$current_version"
+suggested_version="$major.$minor.$((patch + 1))"
+
+# Ask for new version with the suggested version as default
+read -p "Enter new version (current: $current_version, suggested: $suggested_version, press Enter to use suggested): " new_version
+
+# Use suggested version if input is empty
+if [ -z "$new_version" ]; then
+    new_version="$suggested_version"
+    echo "Using suggested version: $new_version"
+fi
 
 # Validate version format
 if ! [[ $new_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -34,76 +89,43 @@ if ! [[ $new_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-# Get script directory
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo "Creating release v$new_version..."
+echo "This will trigger the GitHub Actions release workflow which will:"
+echo "- Build binaries for all platforms (Linux, macOS, Windows)"
+echo "- Create a GitHub release with the tag name"
+echo "- Upload the binaries as assets to the release"
+echo "- Generate release notes based on the commits since the last release"
 
-# Change to script directory
-cd "$script_dir" || { echo "Error: Could not change to script directory" >&2; exit 1; }
-
-# hero_v_path="$script_dir/cli/hero.v"
-
-# # Read hero.v and check if it exists
-# if [ ! -f "$hero_v_path" ]; then
-#     echo "Error: $hero_v_path does not exist" >&2
-#     exit 1
-# fi
-
-# # Create backup of hero.v
-# cp "$hero_v_path" "$hero_v_path.backup" || {
-#     echo "Error creating backup of $hero_v_path" >&2
-#     exit 1
-# }
-
-# # Update version in hero.v
-# if ! sed -i.bak "s/\(.*version:[ ]*\)'[^']*'/\1'$new_version'/" "$hero_v_path"; then
-#     echo "Error updating version in $hero_v_path" >&2
-#     # Restore backup
-#     cp "$hero_v_path.backup" "$hero_v_path" || echo "Error restoring backup" >&2
-#     exit 1
-# fi
-
-# # Clean up backup
-# rm -f "$hero_v_path.backup" "$hero_v_path.bak" || echo "Warning: Could not remove backup file" >&2
-
-# # Update version in install_hero.sh
-# install_hero_path="$script_dir/install_hero.sh"
-
-# # Check if install_hero.sh exists
-# if [ ! -f "$install_hero_path" ]; then
-#     echo "Error: $install_hero_path does not exist" >&2
-#     exit 1
-# fi
-
-# # Create backup of install_hero.sh
-# cp "$install_hero_path" "$install_hero_path.backup" || {
-#     echo "Error creating backup of $install_hero_path" >&2
-#     exit 1
-# }
-
-# # Update version in install_hero.sh
-# if ! sed -i.bak "s/version='[^']*'/version='$new_version'/" "$install_hero_path"; then
-#     echo "Error updating version in $install_hero_path" >&2
-#     # Restore backup
-#     cp "$install_hero_path.backup" "$install_hero_path" || echo "Error restoring backup" >&2
-#     exit 1
-# fi
-
-# # Clean up backup
-# rm -f "$install_hero_path.backup" "$install_hero_path.bak" || echo "Warning: Could not remove backup file" >&2
+# Confirm with user
+read -p "Do you want to continue? (y/n): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Release cancelled."
+    exit 0
+fi
 
 # Prepare git commands
+echo "Preparing git commands..."
 cmd="
 git remote set-url origin git@github.com:freeflowuniverse/herolauncher.git
-git add $hero_v_path $install_hero_path
-git commit -m \"bump version to $new_version\"
-git pull git@github.com:freeflowuniverse/herolauncher.git main
+git pull origin main
 git tag -a \"v$new_version\" -m \"Release version $new_version\"
-git push git@github.com:freeflowuniverse/herolauncher.git \"v$new_version\"
+git push origin \"v$new_version\"
 "
 
+echo "Will execute:"
 echo "$cmd"
+
+# Confirm with user again
+read -p "Execute these commands? (y/n): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Release cancelled."
+    exit 0
+fi
 
 # Execute git commands
 eval "$cmd"
 
 echo "Release v$new_version created and pushed!"
+echo "The GitHub Actions release workflow has been triggered."
+echo "You can check the progress at: https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml"
+echo "Once completed, the release will be available at: https://github.com/freeflowuniverse/herolauncher/releases/tag/v$new_version"
