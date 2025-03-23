@@ -2,6 +2,7 @@
 
 [![Go Tests](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml)
 [![Go Lint](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml)
+[![Build](https://github.com/freeflowuniverse/herolauncher/actions/workflows/build.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/build.yml)
 
 
 HeroLauncher is a comprehensive launcher application written in V language with multiple modules:
@@ -111,6 +112,7 @@ This project uses GitHub Actions for CI/CD:
 
 - **Go Tests**: Runs all tests using the test.sh script on every push and pull request
 - **Go Lint**: Performs linting using golangci-lint to ensure code quality
+- **Build**: Builds the application for multiple platforms (Linux Intel/ARM, macOS Intel/ARM, Windows) and makes the binaries available as artifacts
 
 To create a new release:
 
