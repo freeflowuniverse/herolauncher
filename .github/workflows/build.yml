@@ -82,8 +82,8 @@ jobs:
           
           # Create a combined archive
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            # Use zip on Windows
-            powershell Compress-Archive -Path bin/* -DestinationPath ${{ matrix.output_name }}.zip
+            # Use zip on Windows - use the bin directory as the source
+            powershell -Command "Compress-Archive -Path bin -DestinationPath '${{ matrix.output_name }}.zip' -Force"
           else
             # Use tar on Linux/macOS
             tar -czf ${{ matrix.output_name }}.tar.gz bin/
