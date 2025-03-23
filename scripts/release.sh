@@ -5,16 +5,29 @@ set -e
 
 # Function to get the latest release from GitHub
 get_latest_release() {
-    local url="https://api.github.com/repos/freeflowuniverse/herolauncher/releases/latest"
-    local response
-    response=$(curl -s "$url")
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to fetch from GitHub API" >&2
-        exit 1
+    # Use a simpler approach with curl and grep
+    local version
+    version=$(curl -s "https://api.github.com/repos/freeflowuniverse/herolauncher/releases/latest" | 
+              grep -o '"tag_name": *"[^"]*"' | 
+              sed 's/.*"v\?\([^"]*\)".*/\1/')
+    
+    # If version is empty, check for error message
+    if [ -z "$version" ]; then
+        local error_message
+        error_message=$(curl -s "https://api.github.com/repos/freeflowuniverse/herolauncher/releases/latest" | 
+                        grep -o '"message": *"[^"]*"' | 
+                        sed 's/.*"\([^"]*\)".*/\1/')
+        
+        if [[ "$error_message" == "Not Found" ]]; then
+            echo "No releases found. You will create the first release." >&2
+            return 0
+        else
+            echo "GitHub API Error: $error_message" >&2
+            return 1
+        fi
     fi
     
-    # Extract tag_name using grep and cut
-    echo "$response" | grep -o '"tag_name":"[^"]*' | cut -d'"' -f4
+    echo "$version"
 }
 
 # Get repository root directory
@@ -45,10 +58,12 @@ fi
 
 # Show current version from GitHub releases
 echo "Fetching latest release information from GitHub..."
-latest_release=$(get_latest_release)
+latest_release=$(get_latest_release 2>/dev/null)
 if [ -z "$latest_release" ]; then
     echo "No previous GitHub releases found. This will be the first release."
 else
+    # Clean the version string
+    latest_release=$(echo "$latest_release" | tr -d '\n\r')
     echo "Current latest GitHub release: $latest_release"
 fi
 

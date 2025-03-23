@@ -23,16 +23,43 @@ HeroLauncher is a comprehensive launcher application written in V language with 
 
 ## Installation
 
-### Prerequisites
+### Quick Install
 
-- [V language](https://vlang.io/) installed
-- For IPFS functionality: [IPFS](https://ipfs.io/) installed
+You can install HeroLauncher using our install script:
+
+```bash
+# Install the latest version
+curl -fsSL https://raw.githubusercontent.com/freeflowuniverse/herolauncher/main/scripts/install.sh | bash
+
+# Install a specific version
+curl -fsSL https://raw.githubusercontent.com/freeflowuniverse/herolauncher/main/scripts/install.sh | bash -s 1.0.0
+```
+
+The script will:
+- Download the appropriate binary for your platform
+- Install it to `~/herolauncher/bin`
+- Add the installation directory to your PATH
+- Create symlinks in `/usr/local/bin` if possible
+
+### Manual Installation
+
+You can also download the binaries manually from the [Releases](https://github.com/freeflowuniverse/herolauncher/releases) page.
 
 ### Building from Source
 
 ```bash
-v .  # Build the project
+# Clone the repository
+git clone https://github.com/freeflowuniverse/herolauncher.git
+cd herolauncher
+
+# Build the project
+go build -o bin/herolauncher ./cmd/processmanager
 ```
+
+### Prerequisites
+
+- Go 1.23 or later
+- For IPFS functionality: [IPFS](https://ipfs.io/) installed
 
 ## Usage
 
