@@ -1,0 +1,30 @@
+# This file contains the configuration for golangci-lint
+# See https://golangci-lint.run/usage/configuration/ for more information
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - vendor
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+  disable-all: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+
+# Output configuration
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

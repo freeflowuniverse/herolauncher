@@ -1,9 +1,8 @@
 # HeroLauncher
 
 [![Go Tests](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-tests.yml)
-[![Go CI](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-ci.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/go-ci.yml)
-[![Docker](https://github.com/freeflowuniverse/herolauncher/actions/workflows/docker.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/docker.yml)
-[![Release](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/release.yml)
+[![Go Lint](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml/badge.svg)](https://github.com/freeflowuniverse/herolauncher/actions/workflows/lint.yml)
+
 
 HeroLauncher is a comprehensive launcher application written in V language with multiple modules:
 
@@ -111,9 +110,7 @@ The test script will run all Go tests in the project and display a summary of th
 This project uses GitHub Actions for CI/CD:
 
 - **Go Tests**: Runs all tests using the test.sh script on every push and pull request
-- **Go CI**: Performs linting, builds with multiple Go versions, and generates code coverage reports
-- **Docker**: Builds and pushes Docker images on pushes to main/master and on tag releases
-- **Release**: Automatically creates GitHub releases with binaries for multiple platforms when a tag is pushed
+- **Go Lint**: Performs linting using golangci-lint to ensure code quality
 
 To create a new release:
 

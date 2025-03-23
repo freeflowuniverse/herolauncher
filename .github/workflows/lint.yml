@@ -1,4 +1,4 @@
-name: Go CI
+name: Go Lint
 
 on:
   push:
@@ -12,19 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-
-      # Removed caching step for compatibility
-
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
+          go-version: '1.23'
 
       - name: Run golangci-lint
-        run: |
-          $(go env GOPATH)/bin/golangci-lint run --timeout=5m
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m --config=.golangci.yml
