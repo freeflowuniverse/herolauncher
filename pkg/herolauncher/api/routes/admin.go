@@ -15,8 +15,6 @@ type UptimeProvider interface {
 	GetUptime() string
 }
 
-
-
 // AdminHandler handles admin-related routes
 type AdminHandler struct {
 	uptimeProvider UptimeProvider
@@ -34,7 +32,7 @@ func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsMan
 			fmt.Printf("Error creating StatsManager: %v\n", err)
 		}
 	}
-	
+
 	return &AdminHandler{
 		uptimeProvider: uptimeProvider,
 		statsManager:   statsManager,
@@ -113,12 +111,82 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStats()
 	}
-	
-	// Extract the formatted strings
-	cpuInfo = hardwareStats["cpu"].(string)
-	memoryInfo = hardwareStats["memory"].(string)
-	diskInfo = hardwareStats["disk"].(string)
-	networkInfo = hardwareStats["network"].(string)
+
+	// Extract the formatted strings - safely handle different return types
+	if cpuVal, ok := hardwareStats["cpu"]; ok {
+		switch v := cpuVal.(type) {
+		case string:
+			cpuInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			if model, ok := v["model"].(string); ok {
+				usage := 0.0
+				if usagePercent, ok := v["usage_percent"].(float64); ok {
+					usage = usagePercent
+				}
+				cpuInfo = fmt.Sprintf("%s (Usage: %.1f%%)", model, usage)
+			}
+		}
+	}
+
+	if memVal, ok := hardwareStats["memory"]; ok {
+		switch v := memVal.(type) {
+		case string:
+			memoryInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			usedPercent := 0.0
+			if percent, ok := v["used_percent"].(float64); ok {
+				usedPercent = percent
+			}
+			memoryInfo = fmt.Sprintf("%.1f GB / %.1f GB (%.1f%% used)", used, total, usedPercent)
+		}
+	}
+
+	if diskVal, ok := hardwareStats["disk"]; ok {
+		switch v := diskVal.(type) {
+		case string:
+			diskInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			usedPercent := 0.0
+			if percent, ok := v["used_percent"].(float64); ok {
+				usedPercent = percent
+			}
+			diskInfo = fmt.Sprintf("%.1f GB / %.1f GB (%.1f%% used)", used, total, usedPercent)
+		}
+	}
+
+	if netVal, ok := hardwareStats["network"]; ok {
+		switch v := netVal.(type) {
+		case string:
+			networkInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			upload, download := "Unknown", "Unknown"
+			if uploadSpeed, ok := v["upload_speed"].(string); ok {
+				upload = uploadSpeed
+			}
+			if downloadSpeed, ok := v["download_speed"].(string); ok {
+				download = downloadSpeed
+			}
+			networkInfo = fmt.Sprintf("Upload: %s, Download: %s", upload, download)
+		}
+	}
 
 	// Software information
 	// OS and Uptime
@@ -237,7 +305,7 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStats()
 	}
-	
+
 	// Convert to fiber.Map for template rendering
 	hardware := fiber.Map{}
 	for k, v := range hardwareStats {
@@ -265,7 +333,7 @@ func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
 			"error": "Failed to get process stats: " + err.Error(),
 		})
 	}
-	
+
 	// Convert to []fiber.Map for JSON response
 	processStats := make([]fiber.Map, len(processData.Processes))
 	for i, proc := range processData.Processes {
@@ -297,7 +365,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStatsJSON()
 	}
-	
+
 	// Convert to fiber.Map for JSON response
 	response := fiber.Map{}
 	for k, v := range hardwareStats {
@@ -323,7 +391,7 @@ func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
 	}
-	
+
 	// Convert to []fiber.Map for template rendering
 	processStats := make([]fiber.Map, len(processData.Processes))
 	for i, proc := range processData.Processes {
@@ -341,7 +409,7 @@ func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 	// Return only the table fragment with process data
 	return c.Render("admin/system/processes_table", fiber.Map{
 		"processes": processStats,
-		"title": "System Processes", // Adding title to ensure variable scope is working
-		"layout": "", // Disable layout for partial template
+		"title":     "System Processes", // Adding title to ensure variable scope is working
+		"layout":    "",                 // Disable layout for partial template
 	})
 }
