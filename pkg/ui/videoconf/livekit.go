@@ -70,8 +70,23 @@ func (c *LiveKitClient) makeRequest(method, path string, body interface{}) ([]by
 		reqBody = bytes.NewReader(jsonData)
 	}
 
+	// Convert WebSocket URL to HTTP URL for API requests
+	apiURL := c.url
+	if apiURL == "" {
+		return nil, fmt.Errorf("LiveKit URL is not set")
+	}
+
+	// Convert WebSocket URL to HTTP URL
+	if apiURL[:2] == "ws" {
+		if apiURL[:3] == "wss" {
+			apiURL = "https" + apiURL[3:]
+		} else {
+			apiURL = "http" + apiURL[2:]
+		}
+	}
+
 	// Create the request
-	req, err := http.NewRequest(method, c.url+path, reqBody)
+	req, err := http.NewRequest(method, apiURL+path, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -129,21 +144,6 @@ func (c *LiveKitClient) CreateRoom(name string) (*Room, error) {
 	}
 
 	return &resp.Room, nil
-}
-
-// ListRooms lists all active LiveKit rooms
-func (c *LiveKitClient) ListRooms() ([]Room, error) {
-	respData, err := c.makeRequest("POST", "/twirp/livekit.RoomService/ListRooms", map[string]interface{}{})
-	if err != nil {
-		return nil, err
-	}
-
-	var resp RoomsResponse
-	if err := json.Unmarshal(respData, &resp); err != nil {
-		return nil, err
-	}
-
-	return resp.Rooms, nil
 }
 
 // GenerateToken generates a token for a participant to join a room

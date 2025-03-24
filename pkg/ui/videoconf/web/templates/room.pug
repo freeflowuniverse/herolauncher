@@ -8,22 +8,35 @@ block content
     #pre-join-container(style="display: grid; place-items: center; height: 100%;")
       .pre-join-box
         h2 Join Meeting
+        .video-preview-container
+          #video-preview
+            video#preview-video(autoplay, muted, playsinline)
+            .camera-off-placeholder(style="display: none;")
+              svg(width="48", height="48", viewBox="0 0 24 24")
+                path(fill="currentColor", d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z")
+        
         form#pre-join-form
           .form-group
             label(for="username") Your Name
             input#username(type="text", required)
           
-          .form-group
-            .device-options
-              .device-option
-                input#video-enabled(type="checkbox", checked)
-                label(for="video-enabled") Enable Video
-              .device-option
-                input#audio-enabled(type="checkbox", checked)
-                label(for="audio-enabled") Enable Audio
+          .device-controls
+            .device-control-group
+              button#toggle-video-preview.device-control-button(type="button")
+                span.icon 📹
+                span.label Camera
+              select#video-device-select.device-select
+                option(value="") Loading cameras...
+            
+            .device-control-group
+              button#toggle-audio-preview.device-control-button(type="button")
+                span.icon 🎤
+                span.label Microphone
+              select#audio-device-select.device-select
+                option(value="") Loading microphones...
           
           .form-group
-            button.lk-button(type="submit") Join
+            button.lk-button.join-button(type="submit") Join Meeting
 
     #conference-container(style="display: none; height: 100%;")
       .video-conference

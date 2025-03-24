@@ -1,3 +1,11 @@
+/* CSS Variables */
+:root {
+  --pico-font-size: 14px;
+  --pico-font-weight: 400;
+  --pico-line-height: 1.5;
+  --pico-spacing: 0.75rem;
+}
+
 /* General Styles */
 .main {
   margin-top: 2rem;
@@ -77,4 +85,12 @@
 
 .room-actions .button {
   margin: 0;
+}
+
+.rooms-section {
+  margin-top: 2rem;
+}
+
+.rooms-section article {
+  height: 100%;
 }

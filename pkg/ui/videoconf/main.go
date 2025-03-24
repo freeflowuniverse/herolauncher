@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/livekit/protocol/auth"
 	livekit "github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go/v2"
+	"github.com/yuin/goldmark"
 )
 
 // Config holds the configuration for the video conferencing UI
@@ -77,6 +79,17 @@ func New(config Config) *VideoConf {
 		return t.Format("Jan 02, 2006 15:04:05")
 	})
 
+	// Add function to render markdown as HTML using goldmark
+	engine.AddFunc("markdown", func(content string) template.HTML {
+		var buf strings.Builder
+		md := goldmark.New()
+		if err := md.Convert([]byte(content), &buf); err != nil {
+			log.Printf("Error converting markdown to HTML: %v", err)
+			return template.HTML(content)
+		}
+		return template.HTML(buf.String())
+	})
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		Views: engine,
@@ -134,19 +147,34 @@ func (vc *VideoConf) SetupRoutes() {
 
 	// Home page
 	vc.app.Get("/", func(c *fiber.Ctx) error {
+		// Get rooms from LiveKit
+		var rooms []*livekit.Room
+		var connectionError bool
+
 		roomClient := lksdk.NewRoomServiceClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
 		res, err := roomClient.ListRooms(context.Background(), &livekit.ListRoomsRequest{})
-		log.Printf("Response listing rooms: %v", res)
 
 		if err != nil {
 			log.Printf("Error listing rooms: %v", err)
+			connectionError = true
+			// Return empty list instead of nil to avoid nil pointer dereference
+			rooms = []*livekit.Room{}
+		} else {
+			rooms = res.Rooms
 		}
 
-		log.Printf(" listing rooms: %v", res.Rooms)
+		// Read the markdown content
+		mdContent, err := ioutil.ReadFile(vc.config.StaticPath + "/../content/ow_meet_header.md")
+		if err != nil {
+			log.Printf("Error reading markdown file: %v", err)
+			mdContent = []byte("# OurWorld Meet\n\nSecure, private video conferencing solution.")
+		}
 
 		return c.Render("home", fiber.Map{
-			"title": "Video Conference",
-			"rooms": res.Rooms,
+			"title":           "OurWorld Meet",
+			"rooms":           rooms,
+			"mdContent":       string(mdContent),
+			"connectionError": connectionError,
 		})
 	})
 
