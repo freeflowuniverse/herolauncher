@@ -13,9 +13,9 @@ block content
             h3#processes-title Running Processes
             p.refresh-status
               // Refresh button with loading indicator - only shows loading state during refresh
-              a(href="/admin/system/processes-data" up-target=".processes-table-content" up-transition="cross-fade")
+              button.btn.btn-sm(onclick="refreshProcesses()")
                 | Refresh
-                span.loading-indicator(up-show-for="up:fragment:loading") &nbsp;Loading...
+                span.loading-indicator#refresh-loading(style="display: none;") &nbsp;Loading...
           
           // Table with process information that updates every 5 seconds
           .processes-table-content(up-poll="/admin/system/processes-data" up-interval="5000" style="display: block; width: 100%;")

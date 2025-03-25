@@ -145,6 +145,40 @@ function setupCollapsibleSections() {
   }
 }
 
+// Refresh processes data without page reload
+function refreshProcesses() {
+  // Show loading indicator
+  const loadingIndicator = document.getElementById('refresh-loading');
+  if (loadingIndicator) {
+    loadingIndicator.style.display = 'inline';
+  }
+  
+  // Fetch updated process data
+  fetch('/admin/system/processes-data')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.text();
+    })
+    .then(html => {
+      // Update the processes table content
+      const tableContent = document.querySelector('.processes-table-content');
+      if (tableContent) {
+        tableContent.innerHTML = html;
+      }
+    })
+    .catch(error => {
+      console.error('Error refreshing processes data:', error);
+    })
+    .finally(() => {
+      // Hide loading indicator
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+    });
+}
+
 // Setup logging functionality
 function setupLogging() {
   // Log panel functionality
