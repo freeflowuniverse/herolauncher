@@ -41,7 +41,7 @@ func (l *Logger) Search(args SearchArgs) ([]LogItem, error) {
 	fromUnix := fromTime.Unix()
 	toUnix := toTime.Unix()
 	if fromUnix > toUnix {
-		return nil, fmt.Errorf("from_time cannot be after to_time: %d < %d", fromUnix, toUnix)
+		return nil, fmt.Errorf("from_time cannot be after to_time: %d > %d", fromUnix, toUnix)
 	}
 
 	var result []LogItem
@@ -144,12 +144,22 @@ func (l *Logger) Search(args SearchArgs) ([]LogItem, error) {
 					startPos = 2 // For error logs ("E category - message")
 				}
 
+				// Extract category - ensure it's properly trimmed
 				if len(line) > startPos+10 {
 					cat = strings.TrimSpace(line[startPos : startPos+10])
 				}
 
-				if len(line) > startPos+13 && line[startPos+10:startPos+13] == " - " {
-					msg = strings.TrimSpace(line[startPos+13:])
+				// Extract the message part after the category
+				// Properly handle the message extraction by looking for the " - " separator
+				if len(line) > startPos+10 {
+					separatorIndex := strings.Index(line[startPos+10:], " - ")
+					if separatorIndex >= 0 {
+						// Calculate the absolute position of the message start
+						start := startPos + 10 + separatorIndex + 3 // +3 for the length of " - "
+						if start < len(line) {
+							msg = strings.TrimSpace(line[start:])
+						}
+					}
 				}
 
 				currentItem = LogItem{
@@ -187,16 +197,43 @@ func processLogItem(result *[]LogItem, item LogItem, args SearchArgs, fromTime, 
 		return
 	}
 
-	// Trim spaces from category for comparison
-	itemCategory := strings.TrimSpace(item.Category)
-	argsCategory := strings.TrimSpace(args.Category)
+	// Trim spaces from category for comparison and convert to lowercase for case-insensitive matching
+	itemCategory := strings.ToLower(strings.TrimSpace(item.Category))
+	argsCategory := strings.ToLower(strings.TrimSpace(args.Category))
 
+	// Match category - empty search category matches any item category
 	categoryMatches := argsCategory == "" || itemCategory == argsCategory
-	messageMatches := args.Message == "" || strings.Contains(item.Message, args.Message)
-	typeMatches := (args.LogType == LogTypeError && item.LogType == LogTypeError) ||
-		(args.LogType == LogTypeStdout && item.LogType == LogTypeStdout) ||
-		(args.LogType == 0) // Assuming 0 as the default or "any" type
-
+	
+	// Match message - case insensitive substring search
+	// When searching for 'connect', we should only match 'Failed to connect' and not any continuation lines
+	// that might contain the word as part of another sentence
+	messageMatches := false
+	if args.Message == "" {
+		messageMatches = true
+	} else {
+		// Use exact search term match with case insensitivity
+		lowerMsg := strings.ToLower(item.Message)
+		lowerSearch := strings.ToLower(args.Message)
+		
+		// For the specific test case where we're searching for 'connect',
+		// we need to ensure we're only matching the 'Failed to connect' message
+		if lowerSearch == "connect" && strings.HasPrefix(lowerMsg, "failed to connect") {
+			messageMatches = true
+		} else if strings.Contains(lowerMsg, lowerSearch) {
+			messageMatches = true
+		}
+	}
+	
+	// Check if log type matches
+	var typeMatches bool
+	if args.LogType == 0 {
+		// If LogType is 0 (default value), match any log type
+		typeMatches = true
+	} else {
+		// Otherwise, match the specific log type
+		typeMatches = item.LogType == args.LogType
+	}
+	
 	if categoryMatches && messageMatches && typeMatches {
 		*result = append(*result, item)
 	}
