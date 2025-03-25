@@ -410,10 +410,30 @@ func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
 
 // getProcessesData returns the HTML fragment for processes data
 func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
-	// Get process data from the StatsManager
-	processData, err := h.statsManager.GetProcessStats(0) // Get all processes
+	// Check if this is a manual refresh request (with X-Requested-With header set)
+	isManualRefresh := c.Get("X-Requested-With") == "XMLHttpRequest"
+	
+	// For manual refresh, always get fresh data by forcing cache invalidation
+	var processData *stats.ProcessStats
+	var err error
+	if isManualRefresh {
+		// Force bypass cache for manual refresh by using fresh data
+		processData, err = h.statsManager.GetProcessStatsFresh(0)
+	} else {
+		// Use cached data for auto-polling
+		processData, err = h.statsManager.GetProcessStats(0)
+	}
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
+		// Handle AJAX requests differently from regular requests
+		isAjax := c.Get("X-Requested-With") == "XMLHttpRequest"
+		if isAjax {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
+		}
+		// For regular requests, render the error within the fragment
+		return c.Render("admin/system/processes_fragment", fiber.Map{
+			"error":   "Failed to get process data: " + err.Error(),
+			"layout":  "",
+		})
 	}
 
 	// Convert to []fiber.Map for template rendering

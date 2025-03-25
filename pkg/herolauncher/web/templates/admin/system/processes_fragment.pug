@@ -3,7 +3,8 @@
 .alert.alert-danger {{.error}}
 | {{end}}
 
-table.processes-stats(class="table table-striped")
+// Process data table - regenerated on each refresh
+table.processes-stats(class="table table-striped" id="processes-table")
   thead
     tr
       th(scope='col') PID

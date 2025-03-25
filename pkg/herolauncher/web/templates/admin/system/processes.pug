@@ -17,8 +17,8 @@ block content
                 | Refresh
                 span.loading-indicator#refresh-loading(style="display: none;") &nbsp;Loading...
           
-          // Table with process information that updates every 5 seconds
-          .processes-table-content(up-poll="/admin/system/processes-data" up-interval="5000" style="display: block; width: 100%;")
+          // Table with process information that updates periodically
+          .processes-table-content(up-poll="/admin/system/processes-data" up-interval="10000" style="display: block; width: 100%;" id="processes-content")
             | {{if .error}}
             .alert.alert-danger {{.error}}
             | {{end}}
