@@ -8,10 +8,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/freeflowuniverse/herolauncher/pkg/logger"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -43,28 +45,39 @@ type ProcessInfo struct {
 	JobID      string        `json:"job_id,omitempty"`
 	Deadline   int           `json:"deadline,omitempty"`
 	Error      string        `json:"error,omitempty"`
-	
+
 	cmd        *exec.Cmd
 	ctx        context.Context
 	cancel     context.CancelFunc
-	logFile    *os.File
-	logBuffer  *RingBuffer   // Ring buffer to store logs
+	procLogger *logger.Logger // Logger instance for this process
 	mutex      sync.Mutex
 }
 
 // ProcessManager manages multiple processes
 type ProcessManager struct {
-	processes map[string]*ProcessInfo
-	mutex     sync.RWMutex
-	secret    string
+	processes    map[string]*ProcessInfo
+	mutex        sync.RWMutex
+	secret       string
+	logsBasePath string // Base path for all process logs
 }
 
 // NewProcessManager creates a new process manager
 func NewProcessManager(secret string) *ProcessManager {
+	// Default logs path
+	logsPath := filepath.Join(os.TempDir(), "herolauncher", "process_logs")
+
 	return &ProcessManager{
-		processes: make(map[string]*ProcessInfo),
-		secret:    secret,
+		processes:    make(map[string]*ProcessInfo),
+		secret:       secret,
+		logsBasePath: logsPath,
 	}
+}
+
+// SetLogsBasePath sets the base directory path for process logs
+func (pm *ProcessManager) SetLogsBasePath(path string) {
+	pm.mutex.Lock()
+	defer pm.mutex.Unlock()
+	pm.logsBasePath = path
 }
 
 // StartProcess starts a new process with the given name and command
@@ -94,47 +107,50 @@ func (pm *ProcessManager) StartProcess(name, command string, logEnabled bool, de
 
 	// Set up logging if enabled
 	if logEnabled {
-		logFile, err := os.OpenFile(fmt.Sprintf("%s.log", name), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		// Create a process-specific log directory
+		processLogDir := filepath.Join(pm.logsBasePath, name)
+
+		// Initialize the logger for this process
+		loggerInstance, err := logger.New(processLogDir)
 		if err != nil {
-			return fmt.Errorf("failed to create log file: %v", err)
+			return fmt.Errorf("failed to create logger: %v", err)
 		}
-		procInfo.logFile = logFile
+		procInfo.procLogger = loggerInstance
 	}
-	
-	// Create log buffer (20KB capacity)
-	procInfo.logBuffer = NewRingBuffer(20 * 1024)
 
 	// Start the process
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
-	
+
 	// Set up output redirection
-	if logEnabled {
-		// Create a multi-writer to write to both log file and ring buffer
-		var writers []io.Writer
-		
-		// Add log file if enabled
-		if procInfo.logFile != nil {
-			writers = append(writers, procInfo.logFile)
+	if logEnabled && procInfo.procLogger != nil {
+		// Create stdout writer that logs to the process logger
+		stdoutWriter := &logWriter{
+			procLogger: procInfo.procLogger,
+			category:   "stdout",
+			logType:    logger.LogTypeStdout,
 		}
-		
-		// Always add the ring buffer
-		writers = append(writers, procInfo.logBuffer)
-		
-		// Create multi-writer for stdout and stderr
-		multiWriter := io.MultiWriter(writers...)
-		cmd.Stdout = multiWriter
-		cmd.Stderr = multiWriter
+
+		// Create stderr writer that logs to the process logger
+		stderrWriter := &logWriter{
+			procLogger: procInfo.procLogger,
+			category:   "stderr",
+			logType:    logger.LogTypeError,
+		}
+
+		cmd.Stdout = stdoutWriter
+		cmd.Stderr = stderrWriter
 	} else {
-		// If logging is disabled, still capture to ring buffer
-		cmd.Stdout = procInfo.logBuffer
-		cmd.Stderr = procInfo.logBuffer
+		// Discard output if logging is disabled
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
 	}
-	
+
 	procInfo.cmd = cmd
 	err := cmd.Start()
 	if err != nil {
-		if logEnabled && procInfo.logFile != nil {
-			procInfo.logFile.Close()
+		// Set logger to nil to allow garbage collection
+		if logEnabled && procInfo.procLogger != nil {
+			procInfo.procLogger = nil
 		}
 		return fmt.Errorf("failed to start process: %v", err)
 	}
@@ -181,7 +197,7 @@ func (pm *ProcessManager) monitorProcess(name string) {
 
 			// Update process info
 			procInfo.mutex.Lock()
-			
+
 			// Check if process is still running
 			if procInfo.cmd.ProcessState != nil && procInfo.cmd.ProcessState.Exited() {
 				if procInfo.cmd.ProcessState.Success() {
@@ -203,7 +219,7 @@ func (pm *ProcessManager) monitorProcess(name string) {
 					procInfo.MemoryMB = float64(memInfo.RSS) / 1024 / 1024
 				}
 			}
-			
+
 			procInfo.mutex.Unlock()
 		}
 	}
@@ -212,36 +228,47 @@ func (pm *ProcessManager) monitorProcess(name string) {
 // StopProcess stops a running process
 func (pm *ProcessManager) StopProcess(name string) error {
 	pm.mutex.Lock()
-	defer pm.mutex.Unlock()
-
 	procInfo, exists := pm.processes[name]
+	pm.mutex.Unlock()
+
 	if !exists {
 		return fmt.Errorf("process '%s' not found", name)
-	}
-
-	if procInfo.Status != ProcessStatusRunning {
-		return fmt.Errorf("process '%s' is not running", name)
 	}
 
 	procInfo.mutex.Lock()
 	defer procInfo.mutex.Unlock()
 
+	// Check if already stopped
+	if procInfo.Status != ProcessStatusRunning {
+		return fmt.Errorf("process '%s' is not running", name)
+	}
+
+	// Try to flush any remaining logs
+	if stdout, ok := procInfo.cmd.Stdout.(*logWriter); ok {
+		stdout.flush()
+	}
+	if stderr, ok := procInfo.cmd.Stderr.(*logWriter); ok {
+		stderr.flush()
+	}
+
 	// Cancel the context to stop the process
 	procInfo.cancel()
-	
-	// Wait for the process to exit
-	err := procInfo.cmd.Process.Kill()
-	if err != nil {
-		return fmt.Errorf("failed to kill process: %v", err)
+
+	// Try graceful termination first
+	var err error
+	if procInfo.cmd != nil && procInfo.cmd.Process != nil {
+		// Attempt to terminate the process
+		err = procInfo.cmd.Process.Signal(os.Interrupt)
+		if err != nil {
+			// If graceful termination fails, force kill
+			err = procInfo.cmd.Process.Kill()
+		}
 	}
 
 	procInfo.Status = ProcessStatusStopped
 
-	// Close log file if it exists
-	if procInfo.logFile != nil {
-		procInfo.logFile.Close()
-		procInfo.logFile = nil
-	}
+	// Clean up the logger
+	procInfo.procLogger = nil
 
 	return nil
 }
@@ -291,11 +318,9 @@ func (pm *ProcessManager) DeleteProcess(name string) error {
 		procInfo.mutex.Lock()
 		procInfo.cancel()
 		_ = procInfo.cmd.Process.Kill()
-		
-		// Close log file if it exists
-		if procInfo.logFile != nil {
-			procInfo.logFile.Close()
-		}
+
+		// Set logger to nil to allow garbage collection
+		procInfo.procLogger = nil
 		procInfo.mutex.Unlock()
 	}
 
@@ -374,12 +399,12 @@ func (pm *ProcessManager) GetSecret() string {
 func (pm *ProcessManager) listAvailableProcesses() string {
 	pm.mutex.RLock()
 	defer pm.mutex.RUnlock()
-	
+
 	var result strings.Builder
 	if len(pm.processes) == 0 {
 		return "  No processes found\n"
 	}
-	
+
 	result.WriteString("  Available processes:\n")
 	for name := range pm.processes {
 		result.WriteString(fmt.Sprintf("  - %s\n", name))
@@ -402,13 +427,32 @@ func (pm *ProcessManager) GetProcessLogs(name string, lines int) (string, error)
 		lines = 20
 	}
 
-	// Check if log buffer exists
-	if procInfo.logBuffer == nil {
-		return "", fmt.Errorf("log buffer is nil for process '%s'", name)
+	// Check if logger exists
+	if !procInfo.LogEnabled || procInfo.procLogger == nil {
+		return "", fmt.Errorf("logging is not enabled for process '%s'", name)
 	}
 
-	// Get logs from the ring buffer
-	return procInfo.logBuffer.GetLastLines(lines), nil
+	// Search for the most recent logs
+	results, err := procInfo.procLogger.Search(logger.SearchArgs{
+		MaxItems: lines,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve logs: %v", err)
+	}
+
+	// Format the results
+	var logBuffer strings.Builder
+	for _, item := range results {
+		timestamp := item.Timestamp.Format("2006-01-02 15:04:05")
+		prefix := " "
+		if item.LogType == logger.LogTypeError {
+			prefix = "E"
+		}
+		logBuffer.WriteString(fmt.Sprintf("%s %s %s - %s\n",
+			timestamp, prefix, item.Category, item.Message))
+	}
+
+	return logBuffer.String(), nil
 }
 
 // FormatProcessInfo formats process information based on the specified format
@@ -423,7 +467,7 @@ func FormatProcessInfo(procInfo *ProcessInfo, format string) (string, error) {
 	default:
 		// Default to a simple text format
 		return fmt.Sprintf("Name: %s\nStatus: %s\nPID: %d\nCPU: %.2f%%\nMemory: %.2f MB\nStarted: %s\n",
-			procInfo.Name, procInfo.Status, procInfo.PID, procInfo.CPUPercent, 
+			procInfo.Name, procInfo.Status, procInfo.PID, procInfo.CPUPercent,
 			procInfo.MemoryMB, procInfo.StartTime.Format(time.RFC3339)), nil
 	}
 }
@@ -445,5 +489,79 @@ func FormatProcessList(processes []*ProcessInfo, format string) (string, error) 
 				proc.Name, proc.Status, proc.PID, proc.CPUPercent, proc.MemoryMB)
 		}
 		return result, nil
+	}
+}
+
+// logWriter is a writer implementation that sends output to a logger
+// It's used to capture stdout/stderr and convert them to structured logs
+type logWriter struct {
+	procLogger *logger.Logger
+	category   string
+	logType    logger.LogType
+	buffer     strings.Builder
+}
+
+// Write implements the io.Writer interface
+func (lw *logWriter) Write(p []byte) (int, error) {
+	// Add the data to our buffer
+	lw.buffer.Write(p)
+
+	// Check if we have a complete line ending with newline
+	bufStr := lw.buffer.String()
+
+	// Process each complete line
+	for {
+		// Find the next newline character
+		idx := strings.IndexByte(bufStr, '\n')
+		if idx == -1 {
+			break // No more complete lines
+		}
+
+		// Extract the line (without the newline)
+		line := strings.TrimSpace(bufStr[:idx])
+
+		// Log the line (only if non-empty)
+		if line != "" {
+			err := lw.procLogger.Log(logger.LogItemArgs{
+				Category: lw.category,
+				Message:  line,
+				LogType:  lw.logType,
+			})
+
+			if err != nil {
+				// Just continue on error, don't want to break the process output
+				fmt.Fprintf(os.Stderr, "Error logging process output: %v\n", err)
+			}
+		}
+
+		// Move to the next part of the buffer
+		bufStr = bufStr[idx+1:]
+	}
+
+	// Keep any partial line in the buffer
+	lw.buffer.Reset()
+	lw.buffer.WriteString(bufStr)
+
+	// Always report success to avoid breaking the process
+	return len(p), nil
+}
+
+// flush should be called when the process exits to log any remaining content
+func (lw *logWriter) flush() {
+	if lw.buffer.Len() > 0 {
+		// Log any remaining content that didn't end with a newline
+		line := strings.TrimSpace(lw.buffer.String())
+		if line != "" {
+			err := lw.procLogger.Log(logger.LogItemArgs{
+				Category: lw.category,
+				Message:  line,
+				LogType:  lw.logType,
+			})
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error flushing process output: %v\n", err)
+			}
+		}
+		lw.buffer.Reset()
 	}
 }
