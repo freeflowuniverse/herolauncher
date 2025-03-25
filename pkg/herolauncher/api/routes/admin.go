@@ -376,18 +376,42 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-// getProcesses renders the processes page without waiting for process data
+// getProcesses renders the processes page with initial process data
 func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
-	// Initialize with an empty processes array to ensure the variable exists
+	// Get process data from the StatsManager
+	processData, err := h.statsManager.GetProcessStats(0) // Get all processes
+	if err != nil {
+		// If there's an error, still render the page but with empty data
+		return c.Render("admin/system/processes", fiber.Map{
+			"processes": []fiber.Map{},
+			"error":     "Failed to load process data: " + err.Error(),
+		})
+	}
+
+	// Convert to []fiber.Map for template rendering
+	processStats := make([]fiber.Map, len(processData.Processes))
+	for i, proc := range processData.Processes {
+		processStats[i] = fiber.Map{
+			"pid":             proc.PID,
+			"name":            proc.Name,
+			"status":          proc.Status,
+			"cpu_percent":     proc.CPUPercent,
+			"memory_mb":       proc.MemoryMB,
+			"create_time_str": proc.CreateTime,
+			"is_current":      proc.IsCurrent,
+		}
+	}
+
+	// Render the full page with initial process data
 	return c.Render("admin/system/processes", fiber.Map{
-		"processes": []fiber.Map{},
+		"processes": processStats,
 	})
 }
 
 // getProcessesData returns the HTML fragment for processes data
 func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
-	// Get process data from the stats package
-	processData, err := stats.GetProcessStats(0) // Get all processes
+	// Get process data from the StatsManager
+	processData, err := h.statsManager.GetProcessStats(0) // Get all processes
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
 	}
@@ -406,8 +430,8 @@ func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 		}
 	}
 
-	// Return only the table fragment with process data
-	return c.Render("admin/system/processes_table", fiber.Map{
+	// Return only the table HTML content directly to be injected into the processes-table-content div
+	return c.Render("admin/system/processes_fragment", fiber.Map{
 		"processes": processStats,
 		"title":     "System Processes", // Adding title to ensure variable scope is working
 		"layout":    "",                 // Disable layout for partial template
