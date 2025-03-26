@@ -1131,11 +1131,80 @@ document.addEventListener('DOMContentLoaded', async () => {
           videoElement.id = `video-${publication.trackSid}`;
           videoElement.autoplay = true;
           videoElement.playsInline = true;
+          videoElement.setAttribute('webkit-playsinline', 'true'); // For older Safari versions
+          videoElement.disablePictureInPicture = false; // Don't disable PiP
           videoElement.muted = false; // Ensure remote videos are not muted
           
-          // Clear existing content and append the new video element
+          // Create a container for the video and controls
+          const videoAndControlsContainer = document.createElement('div');
+          videoAndControlsContainer.className = 'video-and-controls-container';
+          videoAndControlsContainer.style.position = 'relative';
+          videoAndControlsContainer.style.width = '100%';
+          videoAndControlsContainer.style.height = '100%';
+          
+          // Detect Firefox browser
+          const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+          
+          // Create PiP button (only for non-Firefox browsers)
+          const pipButton = document.createElement('button');
+          pipButton.className = 'pip-button';
+          pipButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>`;
+          pipButton.style.position = 'absolute';
+          pipButton.style.bottom = '10px';
+          pipButton.style.right = '10px';
+          pipButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+          pipButton.style.border = 'none';
+          pipButton.style.borderRadius = '4px';
+          pipButton.style.padding = '5px';
+          pipButton.style.cursor = 'pointer';
+          pipButton.style.color = 'white';
+          pipButton.style.display = 'none'; // Initially hidden
+          pipButton.style.zIndex = '10';
+          
+          // Add hover effect to show/hide PiP button (only for non-Firefox browsers)
+          if (!isFirefox) {
+            videoAndControlsContainer.addEventListener('mouseenter', () => {
+              pipButton.style.display = 'block';
+            });
+            
+            videoAndControlsContainer.addEventListener('mouseleave', () => {
+              pipButton.style.display = 'none';
+            });
+          }
+          
+          // Add click event for PiP functionality
+          pipButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            try {
+              // For Safari
+              if (videoElement.webkitSupportsPresentationMode && 
+                  typeof videoElement.webkitSetPresentationMode === 'function') {
+                videoElement.webkitSetPresentationMode(
+                  videoElement.webkitPresentationMode === 'picture-in-picture' ? 
+                  'inline' : 'picture-in-picture'
+                );
+              } 
+              // For Chrome and other browsers
+              else if (document.pictureInPictureEnabled) {
+                if (document.pictureInPictureElement === videoElement) {
+                  await document.exitPictureInPicture();
+                } else {
+                  await videoElement.requestPictureInPicture();
+                }
+              }
+            } catch (err) {
+              console.error('Error toggling picture-in-picture mode:', err);
+            }
+          });
+          
+          // Clear existing content and append the new elements
           videoContainer.innerHTML = '';
-          videoContainer.appendChild(videoElement);
+          videoAndControlsContainer.appendChild(videoElement);
+          // Only add the PiP button for non-Firefox browsers
+          if (!isFirefox) {
+            videoAndControlsContainer.appendChild(pipButton);
+          }
+          videoContainer.appendChild(videoAndControlsContainer);
           
           // Attach the track to the video element
           console.log('Debug: About to attach video track to element');
@@ -1246,10 +1315,83 @@ document.addEventListener('DOMContentLoaded', async () => {
             localVideo.autoplay = true;
             localVideo.muted = true;
             localVideo.playsInline = true;
+            localVideo.setAttribute('webkit-playsinline', 'true'); // For older Safari versions
+            localVideo.disablePictureInPicture = false; // Don't disable PiP
           }
           
+          // Create a container for the video and controls
+          const videoAndControlsContainer = document.createElement('div');
+          videoAndControlsContainer.className = 'local-video-and-controls-container';
+          videoAndControlsContainer.style.position = 'relative';
+          videoAndControlsContainer.style.width = '100%';
+          videoAndControlsContainer.style.height = '100%';
+          
+          // Detect Firefox browser
+          const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+          
+          // Create PiP button (only for non-Firefox browsers)
+          const pipButton = document.createElement('button');
+          pipButton.className = 'pip-button';
+          pipButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"/></svg>`;
+          pipButton.style.position = 'absolute';
+          pipButton.style.bottom = '10px';
+          pipButton.style.right = '10px';
+          pipButton.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+          pipButton.style.border = 'none';
+          pipButton.style.borderRadius = '4px';
+          pipButton.style.padding = '5px';
+          pipButton.style.cursor = 'pointer';
+          pipButton.style.color = 'white';
+          pipButton.style.display = 'none'; // Initially hidden
+          pipButton.style.zIndex = '10';
+          
+          // Add hover effect to show/hide PiP button (only for non-Firefox browsers)
+          if (!isFirefox) {
+            videoAndControlsContainer.addEventListener('mouseenter', () => {
+              pipButton.style.display = 'block';
+            });
+            
+            videoAndControlsContainer.addEventListener('mouseleave', () => {
+              pipButton.style.display = 'none';
+            });
+          }
+          
+          // Add click event for PiP functionality
+          pipButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            try {
+              // For Safari
+              if (localVideo.webkitSupportsPresentationMode && 
+                  typeof localVideo.webkitSetPresentationMode === 'function') {
+                localVideo.webkitSetPresentationMode(
+                  localVideo.webkitPresentationMode === 'picture-in-picture' ? 
+                  'inline' : 'picture-in-picture'
+                );
+              } 
+              // For Chrome and other browsers
+              else if (document.pictureInPictureEnabled) {
+                if (document.pictureInPictureElement === localVideo) {
+                  await document.exitPictureInPicture();
+                } else {
+                  await localVideo.requestPictureInPicture();
+                }
+              }
+            } catch (err) {
+              console.error('Error toggling picture-in-picture mode:', err);
+            }
+          });
+          
           cameraPublication.track.attach(localVideo);
-          videoContainer.appendChild(localVideo);
+          
+          // Clear existing content and append the new elements
+          videoContainer.innerHTML = '';
+          videoAndControlsContainer.appendChild(localVideo);
+          // Only add the PiP button for non-Firefox browsers
+          if (!isFirefox) {
+            videoAndControlsContainer.appendChild(pipButton);
+          }
+          videoContainer.appendChild(videoAndControlsContainer);
+          
           console.log('Debug: Video attached and appended successfully');
         } catch (attachError) {
           console.error('Debug: Error attaching video:', attachError);
