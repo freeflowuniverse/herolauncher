@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // Add resize event listener to handle orientation changes
+    window.addEventListener('resize', () => {
+        console.log('Debug: Window resized, updating layout');
+        updateParticipantLayout();
+    });
     // Get DOM elements
     const preJoinContainer = document.getElementById('pre-join-container');
     const conferenceContainer = document.getElementById('conference-container');
@@ -44,6 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let audioEnabled = true;
     let selectedVideoDeviceId = '';
     let selectedAudioDeviceId = '';
+    
+    // State for participant layout and pagination
+    let participantCount = 0;
+    let currentPage = 1;
+    let totalPages = 1;
+    let participantsPerPage = 16; // Max participants per page
     
     // Detect Firefox browser globally for use in multiple functions
     const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
@@ -821,6 +832,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('Debug: Track info:', track.kind, 'publication:', publication.trackSid);
         // Pass the participant from the outer scope, not from the event parameters
         handleTrackSubscribed(track, publication, participant);
+        
+        // Update layout after track is subscribed
+        updateParticipantLayout();
       });
       
       participant.on(LivekitClient.ParticipantEvent.TrackUnsubscribed, (track, publication) => {
@@ -862,11 +876,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Handle participant disconnected event
     function handleParticipantDisconnected(participant) {
-      console.log('Participant disconnected:', participant.identity);
+      console.log('Debug: Participant disconnected:', participant.identity);
+      console.log('Debug: Participant SID:', participant.sid);
+      
       const participantElement = document.getElementById(`participant-${participant.sid}`);
       if (participantElement) {
+        console.log('Debug: Removing participant element from DOM');
         participantElement.remove();
+      } else {
+        console.error('Debug: Could not find element for disconnected participant');
       }
+      
+      // Update participant count and layout
+      console.log('Debug: Updating layout after participant disconnected');
+      updateParticipantLayout();
+      
+      // Force a recheck of all participants to ensure layout is correct
+      setTimeout(() => {
+        console.log('Debug: Delayed layout update after participant disconnected');
+        updateParticipantLayout();
+      }, 500);
     }
     
     // Handle data received event (for chat)
@@ -924,6 +953,113 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Handle room reconnecting event
     function handleRoomReconnecting() {
       console.log('Reconnecting to room...');
+    }
+    
+    // Function to update participant layout based on count
+    function updateParticipantLayout() {
+      console.log('Debug: updateParticipantLayout called');
+      const remoteParticipantsContainer = document.getElementById('remote-participants');
+      const localParticipantContainer = document.getElementById('local-participant');
+      const paginationControls = document.getElementById('pagination-controls');
+      
+      if (!remoteParticipantsContainer || !localParticipantContainer) {
+        console.error('Debug: Missing participant containers');
+        return;
+      }
+      
+      // Ensure pagination controls exist
+      if (!paginationControls) {
+        console.error('Debug: Pagination controls not found');
+      }
+      
+      // Count all participant elements (excluding local)
+      const remoteParticipantElements = document.querySelectorAll('#remote-participants .participant-tile:not(#local-participant)');
+      participantCount = remoteParticipantElements.length;
+      
+      console.log('Debug: Updating layout for', participantCount, 'remote participants');
+      console.log('Debug: Total participants (including local):', participantCount + 1);
+      
+      // Reset any existing classes
+      remoteParticipantsContainer.className = 'remote-participants';
+      localParticipantContainer.classList.remove('fullscreen');
+      
+      // Force a re-layout
+      remoteParticipantsContainer.style.display = 'none';
+      // Trigger reflow
+      void remoteParticipantsContainer.offsetHeight;
+      remoteParticipantsContainer.style.display = 'grid';
+      
+      // Apply layout classes based on total participants (including local)
+      const totalParticipants = participantCount + 1; // Local participant is already in the DOM
+      
+      // Check screen orientation
+      const isLandscape = window.innerWidth > window.innerHeight;
+      console.log('Debug: Screen orientation - isLandscape:', isLandscape);
+      
+      if (totalParticipants === 1) {
+        // Only local participant - fullscreen
+        remoteParticipantsContainer.classList.add('layout-empty');
+        localParticipantContainer.classList.add('fullscreen');
+        console.log('Debug: Applied fullscreen layout');
+      } else if (totalParticipants === 2) {
+        // 1 remote + local = 2 participants - split in half
+        remoteParticipantsContainer.classList.add('layout-one');
+        console.log('Debug: Applied layout-one');
+      } else if (totalParticipants <= 4) {
+        // 2-3 remote + local = 3-4 participants - 2x2 grid
+        remoteParticipantsContainer.classList.add('layout-small');
+        console.log('Debug: Applied layout-small');
+      } else if (totalParticipants <= 9) {
+        // 5-8 remote + local = 5-9 participants - 3x3 grid
+        remoteParticipantsContainer.classList.add('layout-medium');
+        console.log('Debug: Applied layout-medium');
+      } else if (totalParticipants <= 16) {
+        // 9-15 remote + local = 10-16 participants - 4x4 grid
+        remoteParticipantsContainer.classList.add('layout-large');
+        console.log('Debug: Applied layout-large');
+      } else {
+        // More than 16 participants - enable pagination
+        remoteParticipantsContainer.classList.add('layout-large');
+        
+        // Calculate total pages
+        totalPages = Math.ceil(participantCount / participantsPerPage);
+        
+        // Show pagination controls if needed
+        if (totalPages > 1) {
+          paginationControls.style.display = 'flex';
+          document.getElementById('page-indicator').textContent = `${currentPage} / ${totalPages}`;
+          
+          // Show/hide participants based on current page
+          // Always ensure local participant is visible
+          if (localParticipantContainer) {
+            localParticipantContainer.style.display = 'flex';
+            console.log('Debug: Local participant is always visible');
+          }
+          
+          // Handle remote participants
+          remoteParticipantElements.forEach((element, index) => {
+            const pageForThisParticipant = Math.floor(index / participantsPerPage) + 1;
+            element.style.display = (pageForThisParticipant === currentPage) ? 'flex' : 'none';
+            console.log(`Debug: Participant ${index} on page ${pageForThisParticipant}, current page: ${currentPage}, display: ${element.style.display}`);
+          });
+        } else {
+          paginationControls.style.display = 'none';
+        }
+      }
+    }
+    
+    // Function to handle pagination
+    function changePage(direction) {
+      console.log('Debug: changePage called with direction:', direction);
+      if (direction === 'next' && currentPage < totalPages) {
+        currentPage++;
+      } else if (direction === 'prev' && currentPage > 1) {
+        currentPage--;
+      }
+      
+      // Update layout after page change
+      updateParticipantLayout();
+      console.log('Debug: New page:', currentPage, 'of', totalPages);
     }
     
     // Handle local track published event
@@ -1185,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add placeholder until video arrives
         const placeholderDiv = document.createElement('div');
         placeholderDiv.className = 'video-placeholder';
-        placeholderDiv.textContent = '📷';
+        placeholderDiv.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>';
         videoContainer.appendChild(placeholderDiv);
         
         // Create participant info
@@ -1205,6 +1341,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add to the DOM
         remoteParticipants.appendChild(participantElement);
         console.log('Debug: Added participant element to DOM');
+        
+        // Force a reflow to ensure the grid layout is applied
+        void remoteParticipants.offsetHeight;
+        
+        // Update participant count and layout
+        updateParticipantLayout();
+        
+        // Force another layout update after a short delay to ensure grid is applied
+        setTimeout(() => {
+          console.log('Debug: Delayed layout update after adding participant');
+          updateParticipantLayout();
+        }, 100);
         
         // Attach existing tracks
         console.log('Debug: Checking for existing tracks for participant:', participant.identity);
@@ -1263,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               // Add a placeholder
               const placeholderDiv = document.createElement('div');
               placeholderDiv.className = 'video-placeholder';
-              placeholderDiv.textContent = '📷';
+              placeholderDiv.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>';
               videoContainer.appendChild(placeholderDiv);
               
               console.log('Debug: Added placeholder for disabled camera in Firefox');
@@ -1367,5 +1515,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Clear input
       chatMessageInput.value = '';
     });
+    
+    // Add pagination control event listeners
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    
+    if (prevPageBtn && nextPageBtn) {
+      console.log('Debug: Setting up pagination button event listeners');
+      prevPageBtn.addEventListener('click', () => {
+        console.log('Debug: Previous page button clicked');
+        changePage('prev');
+      });
+      
+      nextPageBtn.addEventListener('click', () => {
+        console.log('Debug: Next page button clicked');
+        changePage('next');
+      });
+    } else {
+      console.error('Debug: Pagination buttons not found in DOM');
+    }
   });
   
