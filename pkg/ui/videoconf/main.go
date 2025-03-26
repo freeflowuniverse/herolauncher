@@ -32,7 +32,6 @@ type Config struct {
 type VideoConf struct {
 	app        *fiber.App
 	config     Config
-	livekit    *LiveKitClient
 	apiKey     string
 	apiSecret  string
 	livekitURL string
@@ -121,17 +120,9 @@ func New(config Config) *VideoConf {
 		log.Printf("Video conferencing functionality will be limited")
 	}
 
-	// Initialize LiveKit client
-	livekit, err := NewLiveKitClient()
-	if err != nil {
-		log.Printf("Warning: LiveKit client initialization failed: %v", err)
-		log.Printf("Video conferencing functionality will be limited")
-	}
-
 	return &VideoConf{
 		app:        app,
 		config:     config,
-		livekit:    livekit,
 		apiKey:     apiKey,
 		apiSecret:  apiSecret,
 		livekitURL: livekitURL,
@@ -266,7 +257,6 @@ func (vc *VideoConf) SetupRoutes() {
 	vc.app.Post("/api/rooms", func(c *fiber.Ctx) error {
 		// Parse form data
 		roomName := c.FormValue("roomName", "")
-		roomType := c.FormValue("roomType", "public")
 
 		if roomName == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -280,23 +270,14 @@ func (vc *VideoConf) SetupRoutes() {
 			roomId = generateRoomId()
 		}
 
-		// If LiveKit client is available, create a real room
-		if vc.livekit != nil {
-			room, err := vc.livekit.CreateRoom(roomId)
-			if err != nil {
-				log.Printf("Error creating room %s: %v", roomId, err)
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error": "Failed to create room",
-				})
-			}
-			log.Printf("Created LiveKit room: %s (ID: %s, Type: %s)", roomName, room.Name, roomType)
-		} else {
-			// Log room creation without LiveKit
-			log.Printf("Created mock room: %s (ID: %s, Type: %s)", roomName, roomId, roomType)
-		}
+		roomClient := lksdk.NewRoomServiceClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
+		// create a new room
+		room, _ := roomClient.CreateRoom(context.Background(), &livekit.CreateRoomRequest{
+			Name: roomId,
+		})
 
 		// Redirect to the new room
-		return c.Redirect("/room/" + roomId)
+		return c.Redirect("/room/" + room.Sid)
 	})
 
 	// GET endpoint to handle connection details
