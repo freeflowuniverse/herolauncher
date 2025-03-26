@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/telnetserver"
 )
 
 func main() {
@@ -23,14 +24,14 @@ func main() {
 	}
 
 	// Create process manager
-	pm := processmanager.NewProcessManager(*secret)
+	processManager := processmanager.NewProcessManager(*secret)
 
-	// Create telnet server
-	ts := processmanager.NewTelnetServer(pm)
+	// Create telnet adapter
+	telnetAdapter := telnetserver.NewTelnetAdapter(processManager)
 
 	// Start telnet server
 	fmt.Printf("Starting process manager telnet server on socket: %s\n", *socketPath)
-	err := ts.Start(*socketPath)
+	err := telnetAdapter.Start(*socketPath)
 	if err != nil {
 		log.Fatalf("Failed to start telnet server: %v", err)
 	}
@@ -44,7 +45,7 @@ func main() {
 	fmt.Printf("Received signal %v, shutting down...\n", sig)
 
 	// Stop telnet server
-	err = ts.Stop()
+	err = telnetAdapter.Stop()
 	if err != nil {
 		log.Printf("Error stopping telnet server: %v", err)
 	}

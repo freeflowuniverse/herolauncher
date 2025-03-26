@@ -1,21 +1,70 @@
-package processmanager
+package telnetserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"text/tabwriter"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 )
+
+
+
+// FormatError formats an error message
+func FormatError(err error, interactive bool) string {
+	if err == nil {
+		return ""
+	}
+
+	if interactive {
+		return fmt.Sprintf("%sError: %s%s\n", ColorRed, err.Error(), ColorReset)
+	}
+	return fmt.Sprintf("Error: %s\n", err.Error())
+}
+
+// FormatResult formats a command result
+func FormatResult(result, jobID string, interactive bool) string {
+	if jobID != "" {
+		return fmt.Sprintf("jobid: %s\n%s", jobID, result)
+	}
+	return result
+}
+
+// FormatTable formats data as a table
+func FormatTable(headers []string, rows [][]string, interactive bool) string {
+	var buf bytes.Buffer
+	w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+
+	// Write headers
+	if interactive {
+		fmt.Fprintf(w, "%s", Bold)
+	}
+	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	if interactive {
+		fmt.Fprintf(w, "%s", ColorReset)
+	}
+
+	// Write rows
+	for _, row := range rows {
+		fmt.Fprintln(w, strings.Join(row, "\t"))
+	}
+
+	w.Flush()
+	return buf.String()
+}
 
 // TelnetAdapter represents an adapter between the process manager and telnet server
 type TelnetAdapter struct {
-	processManager *ProcessManager
-	telnetServer   *telnet.Server
+	processManager *processmanager.ProcessManager
+	telnetServer   *TelnetServer
 	logEnabled     bool
 }
 
 // NewTelnetAdapter creates a new telnet adapter
-func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
+func NewTelnetAdapter(processManager *processmanager.ProcessManager) *TelnetAdapter {
 	log.Println("Creating new telnet adapter for process manager")
 	adapter := &TelnetAdapter{
 		processManager: processManager,
@@ -23,7 +72,7 @@ func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
 	}
 
 	// Create telnet server with auth and command handlers
-	server := telnet.NewServer(
+	server := NewTelnetServer(
 		// Auth handler
 		func(secret string) bool {
 			return secret == processManager.GetSecret()
@@ -63,7 +112,7 @@ func (ta *TelnetAdapter) Stop() error {
 }
 
 // handleCommand handles commands from clients
-func (ta *TelnetAdapter) handleCommand(session *telnet.Session, command string) error {
+func (ta *TelnetAdapter) handleCommand(session *Session, command string) error {
 	// Handle empty command
 	if command == "" {
 		return nil
@@ -115,7 +164,7 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 		if ta.logEnabled {
 			log.Println("Error: empty command")
 		}
-		return telnet.FormatError(fmt.Errorf("empty command"), interactive)
+		return FormatError(fmt.Errorf("empty command"), interactive)
 	}
 
 	// Extract job ID if present
@@ -179,7 +228,7 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 
 	result.WriteString(actionResult)
 
-	formattedResult := telnet.FormatResult(result.String(), jobID, interactive)
+	formattedResult := FormatResult(result.String(), jobID, interactive)
 
 	if ta.logEnabled {
 		log.Printf("Command result: %s", strings.ReplaceAll(formattedResult, "\n", " "))
@@ -249,7 +298,7 @@ func (ta *TelnetAdapter) handleProcessList() string {
 		})
 	}
 
-	return telnet.FormatTable(headers, rows, false)
+	return FormatTable(headers, rows, false)
 }
 
 // handleProcessDelete handles the process.delete command
@@ -354,8 +403,8 @@ func (ta *TelnetAdapter) handleProcessLog(name string, lines int, interactive bo
 	var output strings.Builder
 	if interactive {
 		output.WriteString(fmt.Sprintf("%sLast %d lines of logs for process '%s':%s\n",
-			telnet.Bold, lines, name, telnet.ColorReset))
-		output.WriteString(fmt.Sprintf("%s%s\n", telnet.ColorGreen, logs))
+			Bold, lines, name, ColorReset))
+		output.WriteString(fmt.Sprintf("%s%s\n", ColorGreen, logs))
 	} else {
 		output.WriteString(fmt.Sprintf("Last %d lines of logs for process '%s':\n", lines, name))
 		output.WriteString(logs)

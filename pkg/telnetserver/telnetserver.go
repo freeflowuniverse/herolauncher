@@ -1,4 +1,5 @@
-package processmanager
+// Package telnetserver provides a telnet interface for interacting with the process manager
+package telnetserver
 
 import (
 	"bufio"
@@ -9,34 +10,56 @@ import (
 	"sync"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 )
 
-// ANSI color codes for terminal output
-const (
-	ColorReset  = "\033[0m"
-	ColorRed    = "\033[31m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorBlue   = "\033[34m"
-	ColorPurple = "\033[35m"
-	ColorCyan   = "\033[36m"
-	ColorWhite  = "\033[37m"
-	Bold        = "\033[1m"
-)
+
+
+// Session represents a telnet session
+type Session struct {
+	conn   net.Conn
+	reader *bufio.Reader
+	writer *bufio.Writer
+}
+
+// IsInteractive returns whether the session is interactive
+func (s *Session) IsInteractive() bool {
+	return true
+}
+
+// Write writes data to the session
+func (s *Session) Write(data string) error {
+	_, err := s.writer.WriteString(data)
+	if err != nil {
+		return err
+	}
+	return s.writer.Flush()
+}
+
+// PrintlnYellow prints a yellow line to the session
+func (s *Session) PrintlnYellow(message string) error {
+	return s.Write(fmt.Sprintf("\033[33m%s\033[0m\n", message))
+}
 
 // TelnetServer represents a telnet server for interacting with the process manager
 type TelnetServer struct {
-	listener     net.Listener
-	clients      map[net.Conn]bool
-	clientsMutex sync.RWMutex
-	running      bool
+	listener       net.Listener
+	clients        map[net.Conn]bool
+	clientsMutex   sync.RWMutex
+	running        bool
+	processManager *processmanager.ProcessManager
+	authHandler    func(string) bool
+	commandHandler func(*Session, string) error
+	debugMode      bool
 }
 
 // NewTelnetServer creates a new telnet server
-func NewTelnetServer(processManager *ProcessManager) *TelnetServer {
+func NewTelnetServer(authHandler func(string) bool, commandHandler func(*Session, string) error, debugMode bool) *TelnetServer {
 	return &TelnetServer{
-		processManager: processManager,
 		clients:        make(map[net.Conn]bool),
+		authHandler:    authHandler,
+		commandHandler: commandHandler,
+		debugMode:      debugMode,
 	}
 }
 
@@ -334,7 +357,7 @@ func (ts *TelnetServer) handleProcessList(action *playbook.Action) string {
 	format := action.Params.Get("format")
 	processes := ts.processManager.ListProcesses()
 
-	result, err := FormatProcessList(processes, format)
+	result, err := processmanager.FormatProcessList(processes, format)
 	if err != nil {
 		return fmt.Sprintf("Error formatting process list: %v\n", err)
 	}
@@ -371,7 +394,7 @@ func (ts *TelnetServer) handleProcessStatus(action *playbook.Action) string {
 		return fmt.Sprintf("Error getting process status: %v\n", err)
 	}
 
-	result, err := FormatProcessInfo(procInfo, format)
+	result, err := processmanager.FormatProcessInfo(procInfo, format)
 	if err != nil {
 		return fmt.Sprintf("Error formatting process info: %v\n", err)
 	}
