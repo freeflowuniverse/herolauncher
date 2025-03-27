@@ -54,12 +54,13 @@ type TelnetServer struct {
 }
 
 // NewTelnetServer creates a new telnet server
-func NewTelnetServer(authHandler func(string) bool, commandHandler func(*Session, string) error, debugMode bool) *TelnetServer {
+func NewTelnetServer(authHandler func(string) bool, commandHandler func(*Session, string) error, debugMode bool, processManager *processmanager.ProcessManager) *TelnetServer {
 	return &TelnetServer{
 		clients:        make(map[net.Conn]bool),
 		authHandler:    authHandler,
 		commandHandler: commandHandler,
 		debugMode:      debugMode,
+		processManager: processManager,
 	}
 }
 

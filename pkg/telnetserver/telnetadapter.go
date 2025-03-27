@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -81,6 +82,8 @@ func NewTelnetAdapter(processManager *processmanager.ProcessManager) *TelnetAdap
 		adapter.handleCommand,
 		// Debug mode
 		false,
+		// Process manager
+		processManager,
 	)
 
 	adapter.telnetServer = server
@@ -183,7 +186,35 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 		if ta.logEnabled {
 			log.Println("Handling process.start command")
 		}
-		actionResult = "Process start command received\n"
+		
+		// Parse the command parameters
+		name := ""
+		command := ""
+		logEnabled := false
+		deadline := 0
+		cron := ""
+		jobID := ""
+		
+		// Extract parameters from the command string
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "name:") {
+				name = strings.Trim(strings.TrimPrefix(part, "name:"), "'\"")
+			} else if strings.HasPrefix(part, "command:") {
+				command = strings.Trim(strings.TrimPrefix(part, "command:"), "'\"")
+			} else if strings.HasPrefix(part, "log:") {
+				logStr := strings.TrimPrefix(part, "log:")
+				logEnabled = (logStr == "true" || logStr == "t")
+			} else if strings.HasPrefix(part, "deadline:") {
+				deadlineStr := strings.TrimPrefix(part, "deadline:")
+				deadline, _ = strconv.Atoi(deadlineStr)
+			} else if strings.HasPrefix(part, "cron:") {
+				cron = strings.Trim(strings.TrimPrefix(part, "cron:"), "'\"")
+			} else if strings.HasPrefix(part, "jobid:") {
+				jobID = strings.Trim(strings.TrimPrefix(part, "jobid:"), "'\"")
+			}
+		}
+		
+		actionResult = ta.handleProcessStart(name, command, logEnabled, deadline, cron, jobID)
 	case strings.HasPrefix(cmd, "!!process.list"):
 		if ta.logEnabled {
 			log.Println("Handling process.list command")
@@ -259,6 +290,15 @@ func (ta *TelnetAdapter) handleProcessStart(name, command string, logEnabled boo
 func (ta *TelnetAdapter) handleProcessList() string {
 	format := "" // Default format
 	processes := ta.processManager.ListProcesses()
+
+	// Log the processes for debugging
+	if ta.logEnabled {
+		log.Printf("Process list requested, found %d processes", len(processes))
+		for i, proc := range processes {
+			log.Printf("Process[%d]: Name=%s, Status=%s, PID=%d, Command=%s", 
+				i, proc.Name, proc.Status, proc.PID, proc.Command)
+		}
+	}
 
 	if format == "json" {
 		jsonData, err := json.MarshalIndent(processes, "", "  ")

@@ -395,23 +395,6 @@ func (pm *ProcessManager) GetSecret() string {
 	return pm.secret
 }
 
-// listAvailableProcesses returns a string listing all available processes
-func (pm *ProcessManager) listAvailableProcesses() string {
-	pm.mutex.RLock()
-	defer pm.mutex.RUnlock()
-
-	var result strings.Builder
-	if len(pm.processes) == 0 {
-		return "  No processes found\n"
-	}
-
-	result.WriteString("  Available processes:\n")
-	for name := range pm.processes {
-		result.WriteString(fmt.Sprintf("  - %s\n", name))
-	}
-	return result.String()
-}
-
 // GetProcessLogs returns the logs for a specific process
 func (pm *ProcessManager) GetProcessLogs(name string, lines int) (string, error) {
 	pm.mutex.RLock()
