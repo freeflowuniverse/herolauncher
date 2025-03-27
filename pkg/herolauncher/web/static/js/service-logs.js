@@ -216,15 +216,13 @@ function fetchProcessLogs(name, lines = 10000) {
           logsContent.style.fontFamily = 'monospace';
           logsContent.style.whiteSpace = 'pre-wrap';
           
-          // Restore scroll position if it was an auto-refresh
-          if (isAutoRefresh) {
-            if (wasScrolledToBottom) {
-              // If user was at the bottom, keep them at the bottom
-              logsContent.scrollTop = logsContent.scrollHeight;
-            } else {
-              // Otherwise maintain the same scroll position
-              logsContent.scrollTop = scrollTop;
-            }
+          // Scroll to bottom for first load or if auto-refreshing and was at bottom
+          if (!isAutoRefresh || wasScrolledToBottom) {
+            // Scroll to the bottom of the logs
+            logsContent.scrollTop = logsContent.scrollHeight;
+          } else {
+            // For auto-refresh when not at bottom, maintain the same scroll position
+            logsContent.scrollTop = scrollTop;
           }
         } else {
           logsContent.textContent = 'No logs available';

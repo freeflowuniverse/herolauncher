@@ -493,7 +493,15 @@ button.danger, .button.danger {
   color: #fff;
 }
 
-button.danger:hover, .button.danger:hover {
+.button-group button.danger,
+.button-group .button.danger {
+  background-color: #e53935;
+  color: #fff;
+}
+
+button.danger:hover, .button.danger:hover,
+.button-group button.danger:hover,
+.button-group .button.danger:hover {
   background-color: #c62828;
 }
 
