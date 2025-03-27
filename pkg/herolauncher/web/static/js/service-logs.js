@@ -160,7 +160,33 @@ function fetchProcessLogs(name, lines = 50) {
         cleanedLogs = cleanedLogs.replace(/\*\*ENDRESULT\*\*/g, '');
         // Trim extra whitespace
         cleanedLogs = cleanedLogs.trim();
-        logsContent.textContent = cleanedLogs;
+        
+        // Format the logs with stderr lines in red
+        if (cleanedLogs.length > 0) {
+          // Clear the logs content
+          logsContent.textContent = '';
+          
+          // Split the logs into lines and process each line
+          const lines = cleanedLogs.split('\n');
+          lines.forEach(line => {
+            const logLine = document.createElement('div');
+            
+            // Check if this is a stderr line (starts with timestamp followed by E)
+            if (line.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} E /)) {
+              logLine.className = 'stderr-log';
+              logLine.style.color = '#ff3333'; // Red color for stderr
+            }
+            
+            logLine.textContent = line;
+            logsContent.appendChild(logLine);
+          });
+          
+          // Add some styling for the pre element to maintain formatting
+          logsContent.style.fontFamily = 'monospace';
+          logsContent.style.whiteSpace = 'pre-wrap';
+        } else {
+          logsContent.textContent = 'No logs available';
+        }
       }
     })
     .catch(error => {
