@@ -488,6 +488,15 @@ button.secondary:hover, .button.secondary:hover {
   background-color: #343d4f;
 }
 
+button.danger, .button.danger {
+  background-color: #e53935;
+  color: #fff;
+}
+
+button.danger:hover, .button.danger:hover {
+  background-color: #c62828;
+}
+
 /* Section layouts */
 .content-section {
   margin-bottom: 0.5rem;
