@@ -399,7 +399,7 @@ func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 	defer h.pmClient.Close()
 
 	// Delete the service
-	_, err = h.pmClient.SendCommand(fmt.Sprintf("delete %s", name))
+	_, err = h.pmClient.DeleteProcess(name)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to delete service: %v", err),
