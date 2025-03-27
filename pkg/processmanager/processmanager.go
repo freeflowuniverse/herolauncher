@@ -300,8 +300,7 @@ func (pm *ProcessManager) StopProcess(name string) error {
 
 	procInfo.Status = ProcessStatusStopped
 
-	// Clean up the logger
-	procInfo.procLogger = nil
+	// We keep the procLogger available so logs can still be viewed after stopping
 
 	return nil
 }
