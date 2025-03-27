@@ -51,6 +51,9 @@ func main() {
 			config.Port = portInt
 		}
 	}
+	
+	// Set up alternative ports to try if the main one is busy
+	config.AlternativePorts = []int{8100, 8101, 8102, 8103, 8104}
 
 	vc := videoconf.New(config)
 

@@ -1527,6 +1527,94 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
     
+    // Recording state
+    let isRecording = false;
+    let currentEgressId = null;
+    
+    // Function to start recording
+    async function startRecording() {
+      try {
+        if (!room || !localParticipant) {
+          console.error('Room or local participant not available');
+          alert('Cannot start recording: You must be connected to a room.');
+          return;
+        }
+        
+        // Get the local participant's identity
+        const identity = localParticipant.identity;
+        
+        console.log('Starting recording for participant:', identity);
+        
+        // Make API request to start recording
+        const response = await fetch('/api/recording/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            roomName: room.name,
+            identity: identity
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to start recording');
+        }
+        
+        const data = await response.json();
+        currentEgressId = data.egressId;
+        isRecording = true;
+        
+        // Update UI
+        const recordBtn = document.getElementById('record-meeting');
+        if (recordBtn) {
+          recordBtn.classList.add('active');
+          recordBtn.querySelector('.label').textContent = 'Stop Recording';
+        }
+        
+        console.log('Recording started with egress ID:', currentEgressId);
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        alert(`Failed to start recording: ${error.message}`);
+      }
+    }
+    
+    // Function to stop recording
+    async function stopRecording() {
+      if (!currentEgressId) return;
+      
+      try {
+        const response = await fetch('/api/recording/stop', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `egressId=${currentEgressId}`
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to stop recording');
+        }
+        
+        isRecording = false;
+        currentEgressId = null;
+        
+        // Update UI
+        const recordBtn = document.getElementById('record-meeting');
+        if (recordBtn) {
+          recordBtn.classList.remove('active');
+          recordBtn.querySelector('.label').textContent = 'Record';
+        }
+        
+        console.log('Recording stopped');
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        alert(`Failed to stop recording: ${error.message}`);
+      }
+    }
+    
     // Control button event listeners
     toggleVideoBtn.addEventListener('click', async () => {
       if (!localParticipant) return;
@@ -1609,6 +1697,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       chatPanel.style.display = chatPanel.style.display === 'none' ? 'flex' : 'none';
       toggleChatBtn.classList.toggle('active', chatPanel.style.display === 'flex');
     });
+    
+    // Add event listener for record button
+    const recordBtn = document.getElementById('record-meeting');
+    if (recordBtn) {
+      recordBtn.addEventListener('click', () => {
+        if (isRecording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      });
+    }
     
     closeChatBtn.addEventListener('click', () => {
       chatPanel.style.display = 'none';

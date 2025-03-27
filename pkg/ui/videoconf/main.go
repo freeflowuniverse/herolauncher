@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,18 +25,21 @@ import (
 
 // Config holds the configuration for the video conferencing UI
 type Config struct {
-	Port          int
-	TemplatesPath string
-	StaticPath    string
+	Port             int
+	AlternativePorts []int
+	TemplatesPath    string
+	StaticPath       string
+	SrtURL           string
 }
 
 // VideoConf represents the video conferencing UI server
 type VideoConf struct {
-	app        *fiber.App
-	config     Config
-	apiKey     string
-	apiSecret  string
-	livekitURL string
+	app           *fiber.App
+	config        Config
+	apiKey        string
+	apiSecret     string
+	livekitURL    string
+	recordingsDir string
 }
 
 // ConnectionDetails represents the connection details for a LiveKit room
@@ -45,12 +50,26 @@ type ConnectionDetails struct {
 	ParticipantName  string `json:"participantName"`
 }
 
+// RecordingRequest represents a request to start recording a room
+type RecordingRequest struct {
+	RoomName string `json:"roomName"`
+	Identity string `json:"identity"` // Identity of the participant to record
+}
+
+// RecordingResponse represents the response from a recording request
+type RecordingResponse struct {
+	EgressID string `json:"egressId"`
+	Status   string `json:"status"`
+}
+
 // DefaultConfig returns the default configuration for the video conferencing UI
 func DefaultConfig() Config {
 	return Config{
-		Port:          8088,
-		TemplatesPath: "./web/templates",
-		StaticPath:    "./web/static",
+		Port:             8088,
+		AlternativePorts: []int{8089, 8090, 8091, 8092},
+		TemplatesPath:    "./web/templates",
+		StaticPath:       "./web/static",
+		SrtURL:           "srt://localhost:22222",
 	}
 }
 
@@ -120,12 +139,25 @@ func New(config Config) *VideoConf {
 		log.Printf("Video conferencing functionality will be limited")
 	}
 
+	// Set up recordings directory
+	recordingsDir := os.Getenv("RECORDINGS_DIR")
+	if recordingsDir == "" {
+		// Default to a directory within static path if not specified
+		recordingsDir = filepath.Join(config.StaticPath, "recordings")
+	}
+
+	// Create recordings directory if it doesn't exist
+	if err := os.MkdirAll(recordingsDir, 0755); err != nil {
+		log.Printf("Failed to create recordings directory: %v\n", err)
+	}
+
 	return &VideoConf{
-		app:        app,
-		config:     config,
-		apiKey:     apiKey,
-		apiSecret:  apiSecret,
-		livekitURL: livekitURL,
+		app:           app,
+		config:        config,
+		apiKey:        apiKey,
+		apiSecret:     apiSecret,
+		livekitURL:    livekitURL,
+		recordingsDir: recordingsDir,
 	}
 }
 
@@ -332,6 +364,290 @@ func (vc *VideoConf) SetupRoutes() {
 		// Return JSON response
 		return c.JSON(connectionDetails)
 	})
+
+	// Start recording a room
+	vc.app.Post("/api/recording/start", func(c *fiber.Ctx) error {
+		var req RecordingRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid request body: " + err.Error(),
+			})
+		}
+
+		// Validate request
+		if req.RoomName == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Room name is required",
+			})
+		}
+		if req.Identity == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Participant identity is required",
+			})
+		}
+
+		// Create LiveKit room client to get participant tracks
+		roomClient := lksdk.NewRoomServiceClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
+
+		// Get participants in the room to find tracks
+		ctx := context.Background()
+		listReq := &livekit.ListParticipantsRequest{
+			Room: req.RoomName,
+		}
+		response, err := roomClient.ListParticipants(ctx, listReq)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to get room participants: " + err.Error(),
+			})
+		}
+
+		// Find the participant to record
+		var targetParticipant *livekit.ParticipantInfo
+		for _, p := range response.Participants {
+			if p.Identity == req.Identity {
+				targetParticipant = p
+				break
+			}
+		}
+
+		if targetParticipant == nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "Participant not found in room",
+			})
+		}
+
+		// Generate a unique filename prefix based on room name, participant and timestamp
+		timestamp := time.Now().Format("20060102-150405")
+		filenamePrefix := fmt.Sprintf("%s-%s-%s", req.RoomName, req.Identity, timestamp)
+
+		// Create LiveKit egress client
+		egressClient := lksdk.NewEgressClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
+
+		// Generate a unique session ID for this recording
+		sessionID := fmt.Sprintf("%s_%s", filenamePrefix, GenerateRandomString(4))
+
+		// Handle IPv6 addresses properly by enclosing them in square brackets if needed
+		log.Printf("Using SRT URL: %s", vc.config.SrtURL)
+		streamOutput := &livekit.StreamOutput{
+			Protocol: livekit.StreamProtocol_SRT,
+			Urls:     []string{vc.config.SrtURL},
+		}
+
+		// Log detailed information about the stream output
+		log.Printf("Stream output configuration: Protocol=%v, URLs=%v",
+			streamOutput.Protocol, streamOutput.Urls)
+
+		// Create the ParticipantEgressRequest
+		participantEgressReq := &livekit.ParticipantEgressRequest{
+			RoomName: req.RoomName,
+			Identity: req.Identity,
+			StreamOutputs: []*livekit.StreamOutput{
+				streamOutput,
+			},
+		}
+
+		// Log detailed information about the egress request
+		log.Printf("Participant egress request details: RoomName=%s, Identity=%s, StreamOutputs=%+v",
+			participantEgressReq.RoomName, participantEgressReq.Identity, participantEgressReq.StreamOutputs)
+
+		// Log network interface information to help diagnose connectivity issues
+		log.Printf("Network interfaces for diagnostic purposes:")
+		interfaces, err := net.Interfaces()
+		if err == nil {
+			for _, iface := range interfaces {
+				addrs, err := iface.Addrs()
+				if err == nil {
+					for _, addr := range addrs {
+						log.Printf("Interface: %s, Address: %s", iface.Name, addr.String())
+					}
+				}
+			}
+		} else {
+			log.Printf("Error getting network interfaces: %v", err)
+		}
+
+		// Start the participant egress
+		log.Printf("Starting participant egress with request: %+v", participantEgressReq)
+		egressInfo, err := egressClient.StartParticipantEgress(ctx, participantEgressReq)
+		if err != nil {
+			log.Printf("Error: Failed to start participant recording: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to start recording: " + err.Error(),
+			})
+		}
+
+		log.Printf("Egress started successfully with ID: %s, status: %s", egressInfo.EgressId, egressInfo.Status.String())
+
+		// Log more detailed information about the egress response
+		log.Printf("Egress response details: EgressId=%s, Status=%s, StartedAt=%v, Error=%v",
+			egressInfo.EgressId, egressInfo.Status.String(),
+			time.Unix(egressInfo.StartedAt, 0), egressInfo.Error)
+
+		// Log additional information about egress outputs
+		log.Printf("Checking for stream result details in egress response")
+		if streamResults := egressInfo.GetStreamResults(); len(streamResults) > 0 {
+			for i, result := range streamResults {
+				log.Printf("Stream result %d: URL=%s, Status=%s", i, result.GetUrl(), result.GetStatus().String())
+			}
+		} else {
+			log.Printf("WARNING: No stream results available in egress response")
+		}
+
+		// Return response with the egress ID and session ID for later reference
+		egressID := egressInfo.EgressId
+		status := egressInfo.Status.String()
+
+		// Store the session ID and egress ID mapping for later reference
+		// This could be used to retrieve the recording file path later
+		log.Printf("Started recording with egressID: %s, sessionID: %s\n", egressID, sessionID)
+
+		return c.JSON(RecordingResponse{
+			EgressID: egressID,
+			Status:   status,
+		})
+	})
+
+	// Stop recording a room
+	vc.app.Post("/api/recording/stop", func(c *fiber.Ctx) error {
+		egressID := c.FormValue("egressId")
+		if egressID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Egress ID is required",
+			})
+		}
+
+		// Create LiveKit client
+		egressClient := lksdk.NewEgressClient(vc.livekitURL, vc.apiKey, vc.apiSecret)
+
+		// First check the egress status
+		log.Printf("Getting egress info for ID: %s", egressID)
+
+		egressInfo, err := egressClient.ListEgress(context.Background(), &livekit.ListEgressRequest{
+			EgressId: egressID,
+		})
+		if err != nil {
+			log.Printf("Error getting egress info: %v", err)
+			log.Printf("Error type: %T", err)
+			log.Printf("Error details: %+v", err)
+			// Continue with stop attempt even if we can't get info
+		} else {
+			log.Printf("Successfully retrieved egress info with %d items", len(egressInfo.Items))
+			// Check if we have any items in the list
+			if len(egressInfo.Items) == 0 {
+				log.Printf("No egress found with ID: %s", egressID)
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"error": "Recording not found",
+				})
+			}
+
+			// Get the first item (should be the only one)
+			egress := egressInfo.Items[0]
+
+			// Log the current status and details
+			log.Printf("Egress status before stopping: %s", egress.Status.String())
+			// Format times properly
+			var endedAtTime, updatedAtTime string
+			if egress.EndedAt > 0 {
+				endedAtTime = time.Unix(egress.EndedAt, 0).String()
+			} else {
+				endedAtTime = "not set"
+			}
+			if egress.UpdatedAt > 0 {
+				updatedAtTime = time.Unix(egress.UpdatedAt, 0).String()
+			} else {
+				updatedAtTime = "not set"
+			}
+
+			log.Printf("Egress details: Room=%s, StartedAt=%v, EndedAt=%v, UpdatedAt=%v, Error=%s",
+				egress.RoomName,
+				time.Unix(egress.StartedAt, 0),
+				endedAtTime,
+				updatedAtTime,
+				egress.Error)
+
+			// Log additional details about the egress
+			log.Printf("Egress additional details: SourceType=%s, ErrorCode=%d, Details=%s",
+				egress.SourceType.String(), egress.ErrorCode, egress.Details)
+
+			// Check for stream results
+			if streamResults := egress.GetStreamResults(); len(streamResults) > 0 {
+				for i, result := range streamResults {
+					log.Printf("Stream result %d: URL=%s, Status=%s",
+						i, result.GetUrl(), result.GetStatus().String())
+				}
+			} else {
+				log.Printf("WARNING: No stream results available in egress response")
+			}
+
+			// If egress failed, log more details
+			if egress.Status == livekit.EgressStatus_EGRESS_FAILED {
+				log.Printf("Egress failure reason: %s", egress.Error)
+				log.Printf("Egress failure code: %d", egress.ErrorCode)
+				log.Printf("Egress failure details: %s", egress.Details)
+			}
+
+			// If already in a terminal state, return success without trying to stop
+			if egress.Status == livekit.EgressStatus_EGRESS_COMPLETE ||
+				egress.Status == livekit.EgressStatus_EGRESS_FAILED ||
+				egress.Status == livekit.EgressStatus_EGRESS_ABORTED {
+				log.Printf("Egress already in terminal state: %s, not attempting to stop", egress.Status.String())
+				return c.JSON(fiber.Map{
+					"status":  "already_stopped",
+					"message": fmt.Sprintf("Recording was already in %s state", egress.Status.String()),
+					"error":   egress.Error,
+				})
+			}
+		}
+
+		// Try to stop egress
+		log.Printf("Attempting to stop egress with ID: %s", egressID)
+
+		stopResult, err := egressClient.StopEgress(context.Background(), &livekit.StopEgressRequest{
+			EgressId: egressID,
+		})
+		if err != nil {
+			// Log detailed error information
+			log.Printf("Error stopping egress: %v", err)
+			log.Printf("Error type: %T", err)
+			log.Printf("Error details: %+v", err)
+
+			// Check if the error is because the egress is already in a terminal state
+			if strings.Contains(err.Error(), "EGRESS_FAILED") ||
+				strings.Contains(err.Error(), "EGRESS_COMPLETE") ||
+				strings.Contains(err.Error(), "EGRESS_ABORTED") {
+				log.Printf("Egress already in terminal state according to error: %v", err)
+				return c.JSON(fiber.Map{
+					"status":  "already_stopped",
+					"message": "Recording was already stopped or failed",
+					"error":   err.Error(),
+				})
+			}
+
+			log.Printf("Error stopping egress: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to stop recording: " + err.Error(),
+			})
+		}
+
+		log.Printf("Successfully stopped egress, result status: %s", stopResult.Status.String())
+		// Format EndedAt time properly
+		var endedAtTime string
+		if stopResult.EndedAt > 0 {
+			endedAtTime = time.Unix(stopResult.EndedAt, 0).String()
+		} else {
+			endedAtTime = "not set"
+		}
+
+		log.Printf("Detailed stop result: EgressId=%s, Status=%s, StartedAt=%v, EndedAt=%v, Error=%s",
+			stopResult.EgressId, stopResult.Status.String(),
+			time.Unix(stopResult.StartedAt, 0),
+			endedAtTime,
+			stopResult.Error)
+
+		return c.JSON(fiber.Map{
+			"status": "stopped",
+		})
+	})
 }
 
 // Start starts the video conferencing UI server
@@ -383,7 +699,7 @@ func (vc *VideoConf) getLiveKitURL(region string) (string, error) {
 // createParticipantToken generates a token for a participant to join a room
 func (vc *VideoConf) createParticipantToken(participantName string, roomName string, metadata string) (string, error) {
 	// Generate a random string for the participant's identity
-	randomStr := generateRandomString(4)
+	randomStr := GenerateRandomString(4)
 	identity := fmt.Sprintf("%s__%s", participantName, randomStr)
 
 	// Debug: Log the API key and secret (truncated for security)
@@ -435,8 +751,8 @@ func min(a, b int) int {
 	return b
 }
 
-// generateRandomString generates a random string of the specified length
-func generateRandomString(length int) string {
+// GenerateRandomString generates a random string of the specified length
+func GenerateRandomString(length int) string {
 	// Initialize random source with current time
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
