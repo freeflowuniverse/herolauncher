@@ -69,6 +69,7 @@ func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
 	services.Post("/start", h.startService)
 	services.Post("/stop", h.stopService)
 	services.Post("/restart", h.restartService)
+	services.Post("/delete", h.deleteService)
 	services.Post("/logs", h.getProcessLogs)
 }
 
@@ -372,6 +373,41 @@ func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 		"success":  true,
 		"message":  "Process restarted successfully",
 		"response": response,
+	})
+}
+
+// deleteService deletes a service
+func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
+	// Get the service name from the form
+	name := c.FormValue("name")
+	if name == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Service name is required",
+		})
+	}
+
+	// Debug: Log the delete request
+	h.logger.Printf("Deleting process with name: %s", name)
+
+	// Connect to the process manager
+	err := h.pmClient.Connect()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to connect to process manager: %v", err),
+		})
+	}
+	defer h.pmClient.Close()
+
+	// Delete the service
+	_, err = h.pmClient.SendCommand(fmt.Sprintf("delete %s", name))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": fmt.Sprintf("Failed to delete service: %v", err),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": fmt.Sprintf("Service '%s' deleted successfully", name),
 	})
 }
 
