@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -305,6 +306,8 @@ func (ts *TelnetServer) executeHeroscript(script string, interactive bool) strin
 				result.WriteString(ts.handleProcessRestart(action))
 			case "stop":
 				result.WriteString(ts.handleProcessStop(action))
+			case "logs":
+				result.WriteString(ts.handleProcessLogs(action))
 			default:
 				result.WriteString(fmt.Sprintf("Unknown action: %s.%s\n", action.Actor, action.Name))
 			}
@@ -431,6 +434,39 @@ func (ts *TelnetServer) handleProcessStop(action *playbook.Action) string {
 	}
 
 	return fmt.Sprintf("Process '%s' stopped successfully\n", name)
+}
+
+// handleProcessLogs handles the process.logs action
+func (ts *TelnetServer) handleProcessLogs(action *playbook.Action) string {
+	// Get process name
+	name := action.Params.Get("name")
+	if name == "" {
+		return "Error: name parameter is required\n"
+	}
+
+	// Get number of lines to retrieve
+	lines := 50 // Default to 50 lines
+	linesStr := action.Params.Get("lines")
+	if linesStr != "" {
+		parsedLines, err := strconv.Atoi(linesStr)
+		if err == nil && parsedLines > 0 {
+			lines = parsedLines
+		}
+	}
+
+	// Get logs from the process manager
+	logs, err := ts.processManager.GetProcessLogs(name, lines)
+	if err != nil {
+		return fmt.Sprintf("Error retrieving logs: %v\n", err)
+	}
+
+	// Format the result
+	var result strings.Builder
+	result.WriteString(fmt.Sprintf("**RESULT**\nLogs for process '%s' (last %d lines):\n\n", name, lines))
+	result.WriteString(logs)
+	result.WriteString("\n**ENDRESULT**")
+
+	return result.String()
 }
 
 // formatHeroscript formats heroscript with colors for interactive mode

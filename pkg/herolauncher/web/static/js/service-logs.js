@@ -154,7 +154,13 @@ function fetchProcessLogs(name, lines = 50) {
       if (data.error) {
         logsContent.textContent = `Error: ${data.error}`;
       } else {
-        logsContent.textContent = data.logs || 'No logs available';
+        // Clean up the logs by removing **RESULT** and **ENDRESULT** markers
+        let cleanedLogs = data.logs || 'No logs available';
+        cleanedLogs = cleanedLogs.replace(/\*\*RESULT\*\*/g, '');
+        cleanedLogs = cleanedLogs.replace(/\*\*ENDRESULT\*\*/g, '');
+        // Trim extra whitespace
+        cleanedLogs = cleanedLogs.trim();
+        logsContent.textContent = cleanedLogs;
       }
     })
     .catch(error => {

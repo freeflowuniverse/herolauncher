@@ -240,11 +240,34 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 			log.Println("Handling process.stop command")
 		}
 		actionResult = "Process stop command received\n"
-	case strings.HasPrefix(cmd, "!!process.log"):
+	case strings.HasPrefix(cmd, "!!process.logs"):
 		if ta.logEnabled {
-			log.Println("Handling process.log command")
+			log.Println("Handling process.logs command")
 		}
-		actionResult = "Process log command received\n"
+		// Parse parameters
+		parts := strings.Fields(cmd)
+		var name string
+		lines := 50 // Default to 50 lines
+		
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "name:") {
+				name = strings.Trim(strings.TrimPrefix(part, "name:"), "'\"")
+			} else if strings.HasPrefix(part, "lines:") {
+				linesStr := strings.TrimPrefix(part, "lines:")
+				parsedLines, err := strconv.Atoi(linesStr)
+				if err == nil && parsedLines > 0 {
+					lines = parsedLines
+				}
+			}
+		}
+		
+		// Check required parameters
+		if name == "" {
+			actionResult = "Error: Missing required parameter 'name'\n"
+		} else {
+			// Get process logs
+			actionResult = ta.handleProcessLog(name, lines, false)
+		}
 	case cmd == "!!help" || cmd == "?" || cmd == "h":
 		if ta.logEnabled {
 			log.Println("Handling help command")
@@ -466,7 +489,7 @@ func (ta *TelnetAdapter) generateHelpText(interactive bool) string {
 	helpText.WriteString("  !!process.status name:'<name>' [format:'json']\n")
 	helpText.WriteString("  !!process.restart name:'<name>'\n")
 	helpText.WriteString("  !!process.stop name:'<name>'\n")
-	helpText.WriteString("  !!process.log name:'<name>' [lines:20]\n\n")
+	helpText.WriteString("  !!process.logs name:'<name>' [lines:50]\n\n")
 
 	// Special commands
 	helpText.WriteString("Special commands:\n")
