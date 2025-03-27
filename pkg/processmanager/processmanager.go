@@ -355,6 +355,15 @@ func (pm *ProcessManager) DeleteProcess(name string) error {
 		_ = procInfo.cmd.Process.Kill()
 	}
 
+	// Delete the log directory for this process if it exists
+	if pm.logsBasePath != "" {
+		processLogDir := filepath.Join(pm.logsBasePath, name)
+		if _, err := os.Stat(processLogDir); err == nil {
+			// Directory exists, delete it and its contents
+			os.RemoveAll(processLogDir)
+		}
+	}
+
 	// Always set logger to nil to allow garbage collection
 	// This ensures that when a service with the same name is started again,
 	// a new logger instance will be created
