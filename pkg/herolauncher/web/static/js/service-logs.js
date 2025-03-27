@@ -1,5 +1,8 @@
 // Variables for logs functionality
 let currentServiceName = '';
+let autoRefreshEnabled = false;
+let autoRefreshInterval = null;
+const AUTO_REFRESH_RATE = 3000; // 3 seconds
 
 // Function to show process logs
 function showProcessLogs(name) {
@@ -33,6 +36,10 @@ function createLogsModal() {
         <pre id="logs-content">Loading logs...</pre>
       </div>
       <div class="modal-footer">
+        <label class="auto-refresh-toggle">
+          <input type="checkbox" id="auto-refresh-checkbox" onchange="toggleAutoRefresh()">
+          <span>Auto-refresh</span>
+        </label>
         <button class="button secondary" onclick="closeLogsModal()">Close</button>
         <button class="button primary" onclick="refreshLogs()">Refresh</button>
       </div>
@@ -119,6 +126,17 @@ function createLogsModal() {
       justify-content: flex-end;
       gap: 10px;
     }
+    
+    .auto-refresh-toggle {
+      display: flex;
+      align-items: center;
+      margin-right: auto;
+      cursor: pointer;
+    }
+    
+    .auto-refresh-toggle input {
+      margin-right: 5px;
+    }
   `;
   document.head.appendChild(style);
   
@@ -131,11 +149,14 @@ function closeLogsModal() {
   if (modal) {
     modal.style.display = 'none';
   }
+  
+  // Disable auto-refresh when closing the modal
+  disableAutoRefresh();
   currentServiceName = '';
 }
 
 // Function to fetch process logs
-function fetchProcessLogs(name, lines = 50) {
+function fetchProcessLogs(name, lines = 10000) {
   const formData = new FormData();
   formData.append('name', name);
   formData.append('lines', lines);
@@ -143,7 +164,17 @@ function fetchProcessLogs(name, lines = 50) {
   const logsContent = document.getElementById('logs-content');
   if (!logsContent) return;
   
-  logsContent.textContent = 'Loading logs...';
+  // Save scroll position if auto-refreshing
+  const isAutoRefresh = autoRefreshEnabled;
+  const scrollTop = isAutoRefresh ? logsContent.scrollTop : 0;
+  const scrollHeight = isAutoRefresh ? logsContent.scrollHeight : 0;
+  const clientHeight = isAutoRefresh ? logsContent.clientHeight : 0;
+  const wasScrolledToBottom = scrollHeight - scrollTop <= clientHeight + 5; // 5px tolerance
+  
+  // Only show loading indicator on first load, not during auto-refresh
+  if (!isAutoRefresh) {
+    logsContent.textContent = 'Loading logs...';
+  }
   
   fetch('/admin/services/logs', {
     method: 'POST',
@@ -184,6 +215,17 @@ function fetchProcessLogs(name, lines = 50) {
           // Add some styling for the pre element to maintain formatting
           logsContent.style.fontFamily = 'monospace';
           logsContent.style.whiteSpace = 'pre-wrap';
+          
+          // Restore scroll position if it was an auto-refresh
+          if (isAutoRefresh) {
+            if (wasScrolledToBottom) {
+              // If user was at the bottom, keep them at the bottom
+              logsContent.scrollTop = logsContent.scrollHeight;
+            } else {
+              // Otherwise maintain the same scroll position
+              logsContent.scrollTop = scrollTop;
+            }
+          }
         } else {
           logsContent.textContent = 'No logs available';
         }
@@ -199,6 +241,54 @@ function refreshLogs() {
   if (currentServiceName) {
     fetchProcessLogs(currentServiceName);
   }
+}
+
+// Function to toggle auto-refresh
+function toggleAutoRefresh() {
+  const checkbox = document.getElementById('auto-refresh-checkbox');
+  if (checkbox && checkbox.checked) {
+    enableAutoRefresh();
+  } else {
+    disableAutoRefresh();
+  }
+}
+
+// Function to enable auto-refresh
+function enableAutoRefresh() {
+  // Don't create multiple intervals
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+  }
+  
+  // Set the flag
+  autoRefreshEnabled = true;
+  
+  // Create the interval
+  autoRefreshInterval = setInterval(() => {
+    if (currentServiceName) {
+      fetchProcessLogs(currentServiceName);
+    }
+  }, AUTO_REFRESH_RATE);
+  
+  console.log('Auto-refresh enabled with interval:', AUTO_REFRESH_RATE, 'ms');
+}
+
+// Function to disable auto-refresh
+function disableAutoRefresh() {
+  autoRefreshEnabled = false;
+  
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+  
+  // Uncheck the checkbox if it exists
+  const checkbox = document.getElementById('auto-refresh-checkbox');
+  if (checkbox) {
+    checkbox.checked = false;
+  }
+  
+  console.log('Auto-refresh disabled');
 }
 
 // Close modal when clicking outside of it

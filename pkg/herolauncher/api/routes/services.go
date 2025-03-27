@@ -46,8 +46,8 @@ type ServiceHandler struct {
 	logger   *log.Logger
 }
 
-// default number of log lines to retrieve
-const DefaultLogLines = 50
+// default number of log lines to retrieve - use a high value to essentially show all logs
+const DefaultLogLines = 10000
 
 // NewServiceHandler creates a new service handler with the provided process manager client
 func NewServiceHandler(pmClient *client.Client, logger *log.Logger) *ServiceHandler {
@@ -207,16 +207,20 @@ func (h *ServiceHandler) getProcessList() ([]ProcessDisplayInfo, error) {
 
 // formatUptime formats a duration as a human-readable uptime string
 func formatUptime(duration time.Duration) string {
-	days := int(duration.Hours()) / 24
-	hours := int(duration.Hours()) % 24
-	minutes := int(duration.Minutes()) % 60
+	totalSeconds := int(duration.Seconds())
+	days := totalSeconds / (24 * 3600)
+	hours := (totalSeconds % (24 * 3600)) / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
 
 	if days > 0 {
 		return fmt.Sprintf("%d days, %d hours", days, hours)
 	} else if hours > 0 {
 		return fmt.Sprintf("%d hours, %d minutes", hours, minutes)
+	} else if minutes > 0 {
+		return fmt.Sprintf("%d minutes, %d seconds", minutes, seconds)
 	} else {
-		return fmt.Sprintf("%d minutes", minutes)
+		return fmt.Sprintf("%d seconds", seconds)
 	}
 }
 

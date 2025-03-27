@@ -169,11 +169,23 @@ func (hl *HeroLauncher) GetUptime() string {
 	// Calculate uptime based on the server's start time
 	uptimeDuration := time.Since(hl.startTime)
 
-	// Extract days and hours for a more readable format
-	days := int(uptimeDuration.Hours() / 24)
-	hours := int(uptimeDuration.Hours()) % 24
+	// Use more precise calculation for the uptime
+	totalSeconds := int(uptimeDuration.Seconds())
+	days := totalSeconds / (24 * 3600)
+	hours := (totalSeconds % (24 * 3600)) / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
 
-	return fmt.Sprintf("%d days, %d hours", days, hours)
+	// Format the uptime string based on the duration
+	if days > 0 {
+		return fmt.Sprintf("%d days, %d hours", days, hours)
+	} else if hours > 0 {
+		return fmt.Sprintf("%d hours, %d minutes", hours, minutes)
+	} else if minutes > 0 {
+		return fmt.Sprintf("%d minutes, %d seconds", minutes, seconds)
+	} else {
+		return fmt.Sprintf("%d seconds", seconds)
+	}
 }
 
 // startProcessManager starts the process manager as a background process

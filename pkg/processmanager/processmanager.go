@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/logger"
 	"github.com/shirou/gopsutil/v3/process"
@@ -119,7 +120,39 @@ func (pm *ProcessManager) StartProcess(name, command string, logEnabled bool, de
 	}
 
 	// Start the process
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	// Determine if the command starts with a path (has slashes) or contains shell operators
+	var cmd *exec.Cmd
+	hasShellOperators := strings.ContainsAny(command, ";&|<>$()`")
+
+	// Split the command into parts but preserve quoted sections
+	commandParts := parseCommand(command)
+
+	if !hasShellOperators && len(commandParts) > 0 && strings.Contains(commandParts[0], "/") {
+		// Command has an absolute or relative path and no shell operators, handle it directly
+		execPath := commandParts[0]
+		execPath = filepath.Clean(execPath) // Clean the path
+
+		// Check if the executable exists and is executable
+		if _, err := os.Stat(execPath); err == nil {
+			if fileInfo, err := os.Stat(execPath); err == nil {
+				if fileInfo.Mode()&0111 != 0 { // Check if executable
+					// Use direct execution with the absolute path
+					var args []string
+					if len(commandParts) > 1 {
+						args = commandParts[1:]
+					}
+
+					cmd = exec.CommandContext(ctx, execPath, args...)
+					goto setupOutput // Skip the shell execution
+				}
+			}
+		}
+	}
+
+	// If we get here, use shell execution
+	cmd = exec.CommandContext(ctx, "sh", "-c", command)
+
+setupOutput:
 
 	// Set up output redirection
 	if logEnabled && procInfo.procLogger != nil {
@@ -405,9 +438,10 @@ func (pm *ProcessManager) GetProcessLogs(name string, lines int) (string, error)
 		return "", fmt.Errorf("process '%s' not found", name)
 	}
 
-	// Default to 20 lines if not specified or negative
+	// Set default line count for logs
 	if lines <= 0 {
-		lines = 20
+		// Default to a high number to essentially show all logs
+		lines = 10000
 	}
 
 	// Check if logger exists
@@ -547,4 +581,44 @@ func (lw *logWriter) flush() {
 		}
 		lw.buffer.Reset()
 	}
+}
+
+// parseCommand parses a command string into parts, respecting quotes
+func parseCommand(cmd string) []string {
+	var parts []string
+	var current strings.Builder
+	inQuote := false
+	quoteChar := ' ' // placeholder
+
+	for _, r := range cmd {
+		switch {
+		case r == '\'' || r == '"':
+			if inQuote {
+				if r == quoteChar { // closing quote
+					inQuote = false
+				} else { // different quote char inside quotes
+					current.WriteRune(r)
+				}
+			} else { // opening quote
+				inQuote = true
+				quoteChar = r
+			}
+		case unicode.IsSpace(r):
+			if inQuote { // space inside quote
+				current.WriteRune(r)
+			} else if current.Len() > 0 { // end of arg
+				parts = append(parts, current.String())
+				current.Reset()
+			}
+		default:
+			current.WriteRune(r)
+		}
+	}
+
+	// Add the last part if not empty
+	if current.Len() > 0 {
+		parts = append(parts, current.String())
+	}
+
+	return parts
 }
