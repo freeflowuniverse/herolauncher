@@ -345,16 +345,20 @@ func (pm *ProcessManager) DeleteProcess(name string) error {
 		return fmt.Errorf("process '%s' not found", name)
 	}
 
+	// Lock the process info to ensure thread safety
+	procInfo.mutex.Lock()
+	defer procInfo.mutex.Unlock()
+
 	// Stop the process if it's running
 	if procInfo.Status == ProcessStatusRunning {
-		procInfo.mutex.Lock()
 		procInfo.cancel()
 		_ = procInfo.cmd.Process.Kill()
-
-		// Set logger to nil to allow garbage collection
-		procInfo.procLogger = nil
-		procInfo.mutex.Unlock()
 	}
+
+	// Always set logger to nil to allow garbage collection
+	// This ensures that when a service with the same name is started again,
+	// a new logger instance will be created
+	procInfo.procLogger = nil
 
 	// Remove the process from the map
 	delete(pm.processes, name)
