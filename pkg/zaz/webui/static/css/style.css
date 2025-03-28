@@ -132,3 +132,7 @@ footer {
 header nav {
   margin-top: 10px;
 }
+
+article header {
+  padding: 1rem;
+}

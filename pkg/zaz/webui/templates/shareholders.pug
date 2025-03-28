@@ -2,13 +2,14 @@ extends layout
 
 block content
   article
-    header
-      h2 Shareholders
-      p Manage all shareholders registered in the Freezone
+    header.action-header
+      div
+        h2 Shareholders
+        p Manage all shareholders registered in the Freezone
+      a(href="/shareholders/create" role="button") Add Shareholder
 
     .action-bar
-      a(href="/shareholders/create" role="button") Add Shareholder
-      form.search-form(action="/shareholders" method="get")
+      form.search-form(role="search" action="/shareholders" method="get")
         input(type="search" name="search" placeholder="Search shareholders..." value="{{.search}}")
         button(type="submit") Search
     

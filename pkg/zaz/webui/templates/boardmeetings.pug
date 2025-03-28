@@ -2,13 +2,14 @@ extends layout
 
 block content
   article
-    header
-      h2 Board Meetings
-      p Manage all board meetings in the Freezone
+    header.action-header
+      hgroup
+        h2 Board Meetings
+        p Manage all board meetings in the Freezone
+      a(href="/boardmeetings/create" role="button") Schedule Meeting
 
     .action-bar
-      a(href="/boardmeetings/create" role="button") Schedule Meeting
-      form.search-form(action="/boardmeetings" method="get")
+      form.search-form(role="search" action="/boardmeetings" method="get")
         input(type="search" name="search" placeholder="Search meetings..." value="{{.search}}")
         button(type="submit") Search
     

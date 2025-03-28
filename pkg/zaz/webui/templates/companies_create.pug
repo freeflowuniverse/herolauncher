@@ -6,8 +6,6 @@ block content
       h2 Create New Company
       p Register a new company in the Freezone
     
-    p TEST
-
     | {{if .formErrors}}
     .form-errors
       h4 Please correct the following errors:
@@ -18,18 +16,20 @@ block content
     | {{end}}
     
     form(action="/companies/create" method="post")
-      | {{if .csrfToken}}
-      input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
-      | {{end}}
-      
-      .grid
-        div
-          label(for="name") Company Name
-          input(type="text" id="name" name="name" placeholder="Enter company name" value="{{.form.Name}}")
+      section
+        h3 Company Information
+        | {{if .csrfToken}}
+        input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+        | {{end}}
         
-        div
-          label(for="registration_number") Registration Number
-          input(type="text" id="registration_number" name="registration_number" placeholder="e.g. BRN12345678" value="{{.form.RegistrationNumber}}")
+        .grid
+          div
+            label(for="name") Company Name
+            input(type="text" id="name" name="name" placeholder="Enter company name" value="{{.form.Name}}")
+          
+          div
+            label(for="registration_number") Registration Number
+            input(type="text" id="registration_number" name="registration_number" placeholder="e.g. BRN12345678" value="{{.form.RegistrationNumber}}")
       
       .grid
         div
@@ -44,8 +44,9 @@ block content
             option(value="{{$month.Value}}") {{$month.Name}}
             | {{end}}
       
-      fieldset
-        legend Contact Information
+      hr
+      section
+        h3 Contact Information
         .grid
           div
             label(for="email") Email
