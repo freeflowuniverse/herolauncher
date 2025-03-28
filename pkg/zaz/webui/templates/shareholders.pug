@@ -27,9 +27,9 @@ block content
         tr
           td {{.ID}}
           td {{.Name}}
-          td {{if .ContactInfo}}{{.ContactInfo.Email}}{{else}}N/A{{end}}
-          td {{.CompaniesCount}}
-          td {{.TotalShares}}
+          td N/A
+          td {{.CompanyID}}
+          td {{.Shares}}
           td.actions
             a(href="/shareholders/{{.ID}}" title="View Details") Details
             a(href="/shareholders/{{.ID}}/edit" title="Edit Shareholder") Edit
