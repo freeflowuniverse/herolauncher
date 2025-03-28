@@ -16,19 +16,19 @@ block content
             div
               h4 Total Companies
               p
-                strong= companiesCount
+                strong {{.stats.CompaniesCount}}
                 span  registered
             
             div
               h4 Active Companies
               p
-                strong= activeCompaniesCount
+                strong {{.stats.ActiveCompaniesCount}}
                 span  companies
             
             div
               h4 Total Shareholders
               p
-                strong= shareholdersCount
+                strong {{.stats.ShareholdersCount}}
                 span  shareholders
       
       div
@@ -36,11 +36,14 @@ block content
           header
             h3 Recent Activity
           
+          | {{if .recentActivities}}
           ul
-            li Board meeting scheduled for Company A (2 days from now)
-            li New shareholder registered (3 hours ago)
-            li Voting period for Resolution #42 ended (1 day ago)
-            li New product added to catalog (2 days ago)
+            | {{range .recentActivities}}
+            li {{.Description}} ({{.TimeAgo}})
+            | {{end}}
+          | {{else}}
+          p.no-data No recent activities to display.
+          | {{end}}
     
     article
       header
@@ -48,10 +51,33 @@ block content
       
       .grid
         div
-          a(href="/companies/create", role="button") Register Company
+          a(href="/companies/create" role="button") Register Company
         
         div
-          a(href="/boardmeetings/create", role="button", class="secondary") Schedule Meeting
+          a(href="/boardmeetings/create" role="button" class="secondary") Schedule Meeting
         
         div
-          a(href="/votes/create", role="button", class="contrast") Create Vote
+          a(href="/votes/create" role="button" class="contrast") Create Vote
+          
+    | {{if .upcomingMeetings}}
+    article
+      header
+        h3 Upcoming Meetings
+      
+      table
+        thead
+          tr
+            th Date
+            th Company
+            th Title
+            th Actions
+        tbody
+          | {{range .upcomingMeetings}}
+          tr
+            td {{.Date}}
+            td {{.Company.Name}}
+            td {{.Title}}
+            td
+              a.action-button(href="/boardmeetings/{{.ID}}" title="View Details") Details
+          | {{end}}
+    | {{end}}

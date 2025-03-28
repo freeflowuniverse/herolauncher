@@ -5,47 +5,56 @@ block content
     header.slim-header
       h2 Company Details
       .header-actions.button-group
-        a(href="/companies/1/edit" role="button" class="secondary small") Edit Company
+        a(href="/companies/{{.company.ID}}/edit" role="button" class="secondary small") Edit Company
         a(href="/companies" role="button" class="outline small") Back to List
         
     .company-info.grid
       .company-profile
-        h3 TechCorp Inc.
+        h3 {{.company.Name}}
         
         p.registration
           strong Registration #: 
-          span BRN12345678
+          span {{.company.RegistrationNumber}}
         p.incorporation
           strong Incorporated: 
-          span 2024-09-28
+          span {{.company.IncorporationDate}}
         p.status
           strong Status: 
-          span.status Active
+          span(class="status") {{.company.Status}}
         p.business-type
           strong Business Type: 
-          span Limited Liability Company
+          span {{.company.BusinessType}}
         p.industry
           strong Industry: 
-          span Technology
+          span {{.company.Industry}}
         
       .company-contact
         h3 Contact Information
         p
           strong Email: 
-          a(href="mailto:info@techcorp.com") info@techcorp.com
+          a(href="mailto:{{.company.Email}}") {{.company.Email}}
         p
           strong Phone: 
-          span +1 234 567 8900
+          span {{.company.Phone}}
         p
           strong Website: 
-          a(href="https://techcorp.com" target="_blank") techcorp.com
+          | {{if .company.Website}}
+          a(href="{{.company.Website}}" target="_blank") {{.company.Website}}
+          | {{else}}
+          span Not provided
+          | {{end}}
         
       .company-description
         h3 Description
-        p TechCorp is a leading technology company specializing in AI solutions and cloud services.
+        | {{if .company.Description}}
+        p {{.company.Description}}
+        | {{else}}
+        p No description provided.
+        | {{end}}
       
     section.shareholders
       h3 Shareholders
+      | {{if .company.Shareholders}}
       table
         thead
           tr
@@ -55,25 +64,24 @@ block content
             th Since
             th Actions
         tbody
+          | {{range .company.Shareholders}}
           tr
-            td John Smith
-            td 1000
-            td 50%
-            td 2024-09-28
+            td {{.Name}}
+            td {{.Shares}}
+            td {{.Percentage}}%
+            td {{.Since}}
             td.actions
-              a.action-button(href="/shareholders/1" title="View Details") Details
-          tr
-            td Jane Doe
-            td 500
-            td 25%
-            td 2024-09-28
-            td.actions
-              a.action-button(href="/shareholders/2" title="View Details") Details
+              a.action-button(href="/shareholders/{{.ID}}" title="View Details") Details
+          | {{end}}
+      | {{else}}
+      p.no-data No shareholders registered for this company.
+      | {{end}}
       
     section.board-meetings
       h3 Board Meetings
-      a(href="/companies/1/boardmeetings/schedule" role="button" class="outline") Schedule Meeting
+      a(href="/companies/{{.company.ID}}/boardmeetings/schedule" role="button" class="outline") Schedule Meeting
       
+      | {{if .boardMeetings}}
       table
         thead
           tr
@@ -83,19 +91,18 @@ block content
             th Status
             th Actions
         tbody
+          | {{range .boardMeetings}}
           tr
-            td 2025-04-15
-            td Quarterly Board Meeting
-            td 5
-            td Scheduled
+            td {{.Date}}
+            td {{.Title}}
+            td {{len .Attendees}}
+            td {{.Status}}
             td.actions
-              a.action-button(href="/boardmeetings/1" title="View Details") Details
-              a.action-button(href="/boardmeetings/1/minutes" title="Meeting Minutes") Minutes
-          tr
-            td 2025-02-28
-            td Annual General Meeting
-            td 8
-            td Completed
-            td.actions
-              a.action-button(href="/boardmeetings/2" title="View Details") Details
-              a.action-button(href="/boardmeetings/2/minutes" title="Meeting Minutes") Minutes
+              a.action-button(href="/boardmeetings/{{.ID}}" title="View Details") Details
+              | {{if eq .Status "Completed"}}
+              a.action-button(href="/boardmeetings/{{.ID}}/minutes" title="Meeting Minutes") Minutes
+              | {{end}}
+          | {{end}}
+      | {{else}}
+      p.no-data No board meetings scheduled for this company.
+      | {{end}}

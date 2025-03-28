@@ -1,43 +1,51 @@
-//- sidebar.pug - Vertical navigation menu for the Freezone Manager
-.sidebar
-  .sidebar-section
-    h3 Dashboard
-    .sidebar-menu
-      a.nav-item.main-item(href="/") Overview
-      a.nav-item.sub-item(href="/stats") Statistics
-  
-  .sidebar-section
-    h3 Companies
-    .sidebar-menu
-      a.nav-item.main-item(href="/companies") All Companies
-      a.nav-item.sub-item(href="/companies/create") Register Company
-      a.nav-item.sub-item(href="/companies/reports") Company Reports
-  
-  .sidebar-section
-    h3 Shareholders
-    .sidebar-menu
-      a.nav-item.main-item(href="/shareholders") All Shareholders
-      a.nav-item.sub-item(href="/shareholders/create") Add Shareholder
-      a.nav-item.sub-item(href="/shareholders/reports") Shareholder Reports
-  
-  .sidebar-section
-    h3 Meetings
-    .sidebar-menu
-      a.nav-item.main-item(href="/boardmeetings") All Meetings
-      a.nav-item.sub-item(href="/boardmeetings/create") Schedule Meeting
-      a.nav-item.sub-item(href="/boardmeetings/minutes") Meeting Minutes
-  
-  .sidebar-section
-    h3 Voting
-    .sidebar-menu
-      a.nav-item.main-item(href="/votes") All Votes
-      a.nav-item.sub-item(href="/votes/create") Create Vote
-      a.nav-item.sub-item(href="/votes/results") Vote Results
-      
-  .sidebar-section
-    h3 Sales
-    .sidebar-menu
-      a.nav-item.main-item(href="/sales") All Sales
-      a.nav-item.sub-item(href="/sales/products") Products
-      a.nav-item.sub-item(href="/sales/services") Services
-      a.nav-item.sub-item(href="/sales/reports") Sales Reports
+//- sidebar.pug - Vertical navigation menu for the Freezone Manager using PicoCSS defaults
+aside
+  nav
+    details(open)
+      summary Dashboard
+      ul
+        li: a(href="/") Overview
+        li: a(href="/stats") Statistics
+    
+    details(open)
+      summary Companies
+      ul
+        li: a(href="/companies") All Companies
+        li: a(href="/companies/create") Register Company
+        li: a(href="/companies/reports") Company Reports
+    
+    details(open)
+      summary Shareholders
+      ul
+        li: a(href="/shareholders") All Shareholders
+        li: a(href="/shareholders/create") Add Shareholder
+        li: a(href="/shareholders/reports") Shareholder Reports
+    
+    details(open)
+      summary Meetings
+      ul
+        li: a(href="/boardmeetings") All Meetings
+        li: a(href="/boardmeetings/create") Schedule Meeting
+        li: a(href="/boardmeetings/minutes") Meeting Minutes
+    
+    details(open)
+      summary Voting
+      ul
+        li: a(href="/votes") All Votes
+        li: a(href="/votes/create") Create Vote
+        li: a(href="/votes/results") Vote Results
+    
+    details(open)
+      summary Sales
+      ul
+        li: a(href="/sales") All Sales
+        li: a(href="/sales/products") Products
+        li: a(href="/sales/services") Services
+        li: a(href="/sales/reports") Sales Reports
+    
+    details(open)
+      summary Administration
+      ul
+        li: a(href="/admin") Admin Dashboard
+        li: a(href="/admin/users") User Management
+        li: a(href="/admin/settings") System Settings

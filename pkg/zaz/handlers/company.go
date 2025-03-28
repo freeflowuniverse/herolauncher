@@ -40,6 +40,7 @@ func (h *CompanyHandler) GetDashboard(c *fiber.Ctx) error {
 func (h *CompanyHandler) GetCompanies(c *fiber.Ctx) error {
 	// Get companies from the store
 	companies := h.store.GetAllCompanies()
+	log.Printf("Initial companies count from store: %d", len(companies))
 	
 	// Filter by search query if provided
 	searchQuery := c.Query("search")
@@ -51,12 +52,7 @@ func (h *CompanyHandler) GetCompanies(c *fiber.Ctx) error {
 			}
 		}
 		companies = filteredCompanies
-	}
-
-	// Ensure we have company data
-	if len(companies) == 0 {
-		// If no companies exist in the store, log a warning
-		log.Printf("Warning: No companies found in the store")
+		log.Printf("After filtering by search query '%s': %d companies", searchQuery, len(companies))
 	}
 
 	// Debug log to verify companies are being loaded
@@ -64,20 +60,39 @@ func (h *CompanyHandler) GetCompanies(c *fiber.Ctx) error {
 	
 	// Log some sample company data for debugging
 	if len(companies) > 0 {
-		sampleCompany := companies[0]
-		log.Printf("Sample company: ID=%d, Name=%s, Status=%s, Industry=%s, Shareholders=%d", 
-			sampleCompany.ID, 
-			sampleCompany.Name, 
-			sampleCompany.Status, 
-			sampleCompany.Industry, 
-			len(sampleCompany.Shareholders))
+		log.Printf("Companies data details:")
+		for i, company := range companies {
+			log.Printf("Company %d: ID=%d, Name=%s, Status=%s", 
+				i+1,
+				company.ID, 
+				company.Name, 
+				company.Status)
+		}
 	}
 
-	return RenderWithDefaults(c, "companies", fiber.Map{
-		"title": "Companies",
-		"companies": companies,
-		"search": searchQuery,
-	})
+	// Create a much simpler data structure using maps instead of structs
+	companyList := make([]map[string]interface{}, len(companies))
+	for i, company := range companies {
+		companyList[i] = map[string]interface{}{
+			"ID":       company.ID,
+			"Name":     company.Name,
+			"Status":   company.Status,
+			"Industry": company.Industry,
+		}
+	}
+
+	// Create the data map with the simple list
+	data := fiber.Map{
+		"title":     "Companies",
+		"companies": companyList,
+		"search":    searchQuery,
+		"count":     len(companies),
+	}
+
+	// Debug: Print the exact data being passed to the template
+	log.Printf("Data being passed to companies template: %+v", data)
+	
+	return c.Render("companies", data)
 }
 
 // GetCreateCompany renders the company creation page

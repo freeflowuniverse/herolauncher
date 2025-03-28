@@ -6,43 +6,51 @@ block content
       h2 Register
       p Create a new account for the Freezone Manager
     
-    form(action="/register", method="post")
+    | {{if .formErrors}}
+    .form-errors
+      h4 Please correct the following errors:
+      ul
+        | {{range .formErrors}}
+        li {{.}}
+        | {{end}}
+    | {{end}}
+    
+    form(action="/register" method="post")
+      | {{if .csrfToken}}
+      input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+      | {{end}}
+      
       .grid
         div
           label(for="name") Full Name
-          input(type="text", id="name", name="name", placeholder="John Doe", required)
+          input(type="text" id="name" name="name" placeholder="John Doe" value="{{.form.Name}}")
         
         div
           label(for="email") Email
-          input(type="email", id="email", name="email", placeholder="your.email@example.com", required)
+          input(type="email" id="email" name="email" placeholder="your.email@example.com" value="{{.form.Email}}")
       
       .grid
         div
           label(for="password") Password
-          input(type="password", id="password", name="password", placeholder="Create a strong password", required)
+          input(type="password" id="password" name="password" placeholder="Create a strong password")
         
         div
           label(for="confirm_password") Confirm Password
-          input(type="password", id="confirm_password", name="confirm_password", placeholder="Confirm your password", required)
+          input(type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password")
       
       .grid
         div
           label(for="company") Company (Optional)
-          input(type="text", id="company", name="company", placeholder="Your company name")
+          input(type="text" id="company" name="company" placeholder="Your company name" value="{{.form.Company}}")
         
         div
           label(for="role") Role (Optional)
-          select(id="role", name="role")
+          select(id="role" name="role")
             option(value="") Select your role
-            option(value="company_admin") Company Administrator
-            option(value="shareholder") Shareholder
-            option(value="board_member") Board Member
-            option(value="staff") Staff Member
+            | {{range $role := .roles}}
+            option(value="{{$role.Value}}") {{$role.Name}}
+            | {{end}}
       
       .form-actions
-        button(type="submit", role="button") Register
-        a(href="/login", role="button", class="secondary") Back to Login
-      
-      if error
-        .error-message
-          p= error
+        button(type="submit" role="button") Register
+        a(href="/login" role="button" class="secondary") Back to Login

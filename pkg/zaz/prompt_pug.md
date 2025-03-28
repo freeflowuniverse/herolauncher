@@ -61,7 +61,7 @@ span {{.user.Profile.Name}}
 ```pug
 // Using registered template functions
 h2 {{title .name}}  // Using a custom "title" function
-div {{unescaped .htmlContent}}  // Using function to render unescaped HTML
+div | .htmlContent
 ```
 
 ## Common Mistakes to Avoid

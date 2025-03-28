@@ -6,87 +6,87 @@ block content
       h2 Create New Company
       p Register a new company in the Freezone
     
-    form(action="/companies/create", method="post")
+    p TEST
+
+    | {{if .formErrors}}
+    .form-errors
+      h4 Please correct the following errors:
+      ul
+        | {{range .formErrors}}
+        li {{.}}
+        | {{end}}
+    | {{end}}
+    
+    form(action="/companies/create" method="post")
+      | {{if .csrfToken}}
+      input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+      | {{end}}
+      
       .grid
         div
           label(for="name") Company Name
-          input(type="text", id="name", name="name", placeholder="Enter company name", required)
+          input(type="text" id="name" name="name" placeholder="Enter company name" value="{{.form.Name}}")
         
         div
           label(for="registration_number") Registration Number
-          input(type="text", id="registration_number", name="registration_number", placeholder="e.g. BRN12345678")
+          input(type="text" id="registration_number" name="registration_number" placeholder="e.g. BRN12345678" value="{{.form.RegistrationNumber}}")
       
       .grid
         div
           label(for="incorporation_date") Incorporation Date
-          input(type="date", id="incorporation_date", name="incorporation_date", required)
+          input(type="date" id="incorporation_date" name="incorporation_date" value="{{.form.IncorporationDate}}")
         
         div
           label(for="fiscal_year_end") Fiscal Year End
-          select(id="fiscal_year_end", name="fiscal_year_end")
+          select(id="fiscal_year_end" name="fiscal_year_end")
             option(value="") Select month
-            option(value="01") January
-            option(value="02") February
-            option(value="03") March
-            option(value="04") April
-            option(value="05") May
-            option(value="06") June
-            option(value="07") July
-            option(value="08") August
-            option(value="09") September
-            option(value="10") October
-            option(value="11") November
-            option(value="12") December
+            | {{range $month := .months}}
+            option(value="{{$month.Value}}") {{$month.Name}}
+            | {{end}}
       
       fieldset
         legend Contact Information
         .grid
           div
             label(for="email") Email
-            input(type="email", id="email", name="email", placeholder="company@example.com")
+            input(type="email" id="email" name="email" placeholder="company@example.com" value="{{.form.Email}}")
           
           div
             label(for="phone") Phone
-            input(type="tel", id="phone", name="phone", placeholder="+1 234 567 8900")
+            input(type="tel" id="phone" name="phone" placeholder="+1 234 567 8900" value="{{.form.Phone}}")
         
         .grid
           div
             label(for="website") Website
-            input(type="url", id="website", name="website", placeholder="https://example.com")
+            input(type="url" id="website" name="website" placeholder="https://example.com" value="{{.form.Website}}")
           
           div
             label(for="address") Address
-            textarea(id="address", name="address", placeholder="Company Address", rows="3")
+            textarea(id="address" name="address" placeholder="Company Address" rows="3") {{.form.Address}}
       
       fieldset
         legend Company Details
         .grid
           div
             label(for="business_type") Business Type
-            select(id="business_type", name="business_type")
+            select(id="business_type" name="business_type")
               option(value="") Select type
-              option(value="llc") Limited Liability Company
-              option(value="corp") Corporation
-              option(value="partnership") Partnership
-              option(value="sole_prop") Sole Proprietorship
-              option(value="other") Other
+              | {{range $type := .businessTypes}}
+              option(value="{{$type.Value}}") {{$type.Name}}
+              | {{end}}
           
           div
             label(for="industry") Industry
-            select(id="industry", name="industry")
+            select(id="industry" name="industry")
               option(value="") Select industry
-              option(value="tech") Technology
-              option(value="finance") Finance
-              option(value="healthcare") Healthcare
-              option(value="retail") Retail
-              option(value="manufacturing") Manufacturing
-              option(value="services") Services
-              option(value="other") Other
+              | {{range $industry := .industries}}
+              option(value="{{$industry.Value}}") {{$industry.Name}}
+              | {{end}}
         
         div
           label(for="description") Company Description
-          textarea(id="description", name="description", placeholder="Brief description of the company", rows="4")
+          textarea(id="description" name="description" placeholder="Brief description of the company" rows="4") {{.form.Description}}
       
       .form-actions
-        button(type="submit", role="button") Create Company
-        a(href="/companies", role="button", class="secondary") Cancel
+        button(type="submit" role="button") Create Company
+        a(href="/companies" role="button" class="secondary") Cancel

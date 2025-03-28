@@ -3,30 +3,43 @@ html(lang="en")
   head
     meta(charset="UTF-8")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    title Freezone Manager
+    title {{if .pageTitle}}{{.pageTitle}} - {{end}}Freezone Manager
     link(rel="icon", href="/img/freezone-icon.svg", type="image/svg+xml")
     link(rel="shortcut icon", href="/favicon.ico")
     link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap")
     link(rel="stylesheet", href="/css/pico.min.css")
     link(rel="stylesheet", href="/css/freezone.css")
     link(rel="stylesheet", href="/css/unpoly.min.css")
+    | {{if .customCSS}}
+    style .customCSS
+    | {{end}}
   
-  body
-    .app-container
-      include partials/header
+  body(class="{{.bodyClass}}")
+    | {{if .flashMessage}}
+    .flash-message(class="{{.flashMessage.Type}}")
+      .container
+        p {{.flashMessage.Text}}
+        button.close-flash &times;
+    | {{end}}
+    
+    include partials/header
       
-      .page-container
-        include partials/sidebar
+    .container
+      .grid
+        div(style="grid-column: span 3")
+          include partials/sidebar
         
-        main.main-content
-          .container
-            block content
+        main(style="grid-column: span 9")
+          block content
       
-      footer.app-footer
-        .container
-          p &copy; 2025 Freezone Manager - A FreeFlow Universe Project
+    footer
+      .container
+        p &copy; {{.currentYear}} Freezone Manager - A FreeFlow Universe Project
     
     script(src="/js/unpoly.min.js")
     script(src="/js/echarts/echarts.min.js")
     script(src="/js/freezone.js")
+    | {{if .customJS}}
+    script .customJS
+    | {{end}}
     block scripts

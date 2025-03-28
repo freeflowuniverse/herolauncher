@@ -5,43 +5,47 @@ block content
     header
       h2 Companies
       p Manage all companies registered in the Freezone
-    
+
+    p TEST
+
     .action-bar
-      a(href="/companies/create" role="button")
+      a(href="/companies/create" role="button") Create Company
       form.search-form(action="/companies" method="get")
-        input(type="search" name="search" placeholder="Search companies...")
+        input(type="search" name="search" placeholder="Search companies..." value="{{.search}}")
         button(type="submit") Search
+
+    p TEST
+
+    // Debug info
+    p Found {{.count}} companies in the database
     
-    | {{ if and .companies .companies.length }}
-      table
-        thead
-          tr
-            th ID
-            th Name
-            th Registration Date
-            th Status
-            th Industry
-            th Shareholders
-            th Actions
-        tbody
-          each company in companies
-            tr
-              td= company.ID
-              td= company.Name
-              td= new Date(company.IncorporationDate).toLocaleDateString()
-              td
-                span(class=`status ${company.Status.toLowerCase()}`)= company.Status
-              td= company.Industry
-              td= company.Shareholders ? company.Shareholders.length : 0
-              td.actions
-                a.action-button(href=`/companies/${company.ID}` title="View Details") Details
-                a.action-button(href=`/companies/${company.ID}/edit` title="Edit Company") Edit
-                a.action-button(href=`/companies/${company.ID}/shareholders` title="Manage Shareholders") Shareholders
-    | else
-      .empty-state
-        p No companies found
-        if search
-          p No results for "#{search}"
-          a(href="/companies") Clear search
-        | else
-          a(href="/companies/create" role="button") Register your first company
+    | {{if .companies}}
+    table
+      thead
+        tr
+          th ID
+          th Name
+          th Status
+          th Industry
+          th Actions
+      tbody
+        | {{range .companies}}
+        tr
+          td {{.ID}}
+          td {{.Name}}
+          td {{.Status}}
+          td {{.Industry}}
+          td.actions
+            a(href="/companies/{{.ID}}" title="View Details") Details
+            a(href="/companies/{{.ID}}/edit" title="Edit Company") Edit
+        | {{end}}
+    | {{else}}
+    .empty-state
+      p No companies found
+      | {{if .search}}
+      p No results for "{{.search}}"
+      a(href="/companies") Clear search
+      | {{else}}
+      a(href="/companies/create" role="button") Register your first company
+      | {{end}}
+    | {{end}}

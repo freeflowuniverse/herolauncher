@@ -75,8 +75,8 @@ func (g *GoInstaller) InstallGo() (string, error) {
 		}
 	}
 	// Default Go installation location
-	installDir := "/usr/local"
-	goExePath := filepath.Join(installDir, "go", "bin", "go")
+	var installDir string = "/usr/local"
+	var goExePath string = filepath.Join(installDir, "go", "bin", "go")
 	
 	// Check if Go is already installed by checking the binary directly
 	if _, err := os.Stat(goExePath); err == nil {
@@ -134,14 +134,19 @@ func (g *GoInstaller) InstallGo() (string, error) {
 	
 	// Extract tarball to install directory
 	fmt.Printf("Extracting Go to %s\n", installDir)
-	if err := extractTarGz(tarballPath, installDir); err != nil {
+	err = extractTarGz(tarballPath, installDir)
+	if err != nil {
 		return "", fmt.Errorf("failed to extract Go tarball: %w", err)
 	}
 	
 	// Verify installation
-	goExePath := filepath.Join(installDir, "go", "bin", "go")
-	if _, err = os.Stat(goExePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("Go installation failed - go executable not found at %s", goExePath)
+	var goExePathVerify = filepath.Join(installDir, "go", "bin", "go") // Use = instead of := to avoid variable shadowing
+	
+	// Check if the Go binary exists
+	var statErr error
+	_, statErr = os.Stat(goExePathVerify)
+	if statErr != nil {
+		return "", fmt.Errorf("Go installation failed - go executable not found at %s", goExePathVerify)
 	}
 	
 	// Set up environment variables

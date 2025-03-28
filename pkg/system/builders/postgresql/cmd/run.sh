@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 
 export SERVER="65.109.18.183"
@@ -57,12 +57,16 @@ rsync -avz --progress build/postgresql_builder "root@$SERVER:~/postgresql_builde
 
 # Run the PostgreSQL builder on the server
 log "Running PostgreSQL builder on server..."
-BUILD_OUTPUT=$(ssh "root@$SERVER" "cd ~/postgresql_builder && ./postgresql_builder" 2>&1)
-BUILD_EXIT_CODE=$?
-echo "$BUILD_OUTPUT" | tee -a "$LOG_FILE"
+ssh -t "root@$SERVER" "cd ~/postgresql_builder && ./postgresql_builder" 2>&1 | tee -a "$LOG_FILE"
+BUILD_EXIT_CODE=${PIPESTATUS[0]}
 
-# Check for errors in output or exit code
-if [[ $BUILD_EXIT_CODE -eq 0 && ! "$BUILD_OUTPUT" =~ "Error" ]]; then
+# If there was an error, make it very clear
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+    log "⚠️  PostgreSQL builder failed with exit code: $BUILD_EXIT_CODE"
+fi
+
+# Check for errors in exit code
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
     log "✅ SUCCESS: PostgreSQL builder completed successfully!"
     log "----------------------------------------------------------------"
     
@@ -81,16 +85,8 @@ else
     log "❌ ERROR: PostgreSQL builder failed to run properly on the server."
     
     # Get more detailed error information
-    log "Checking for error logs on server..."
-    ssh "root@$SERVER" "cd ~/postgresql_builder && ls -la" 2>&1 | tee -a "$LOG_FILE"
-    
-    log "----------------------------------------------------------------"
-    log "📋 POSSIBLE FAILURE REASONS:"
-    log "  1. ⚙️ Missing dependencies on the server"
-    log "  2. 🚀 Insufficient permissions"
-    log "  3. 🔒 Network connectivity issues during download"
-    log "  4. 🔑 Compilation errors"
-    log "================================================================"
+    # log "Checking for error logs on server..."
+    # ssh "root@$SERVER" "cd ~/postgresql_builder && ls -la" 2>&1 | tee -a "$LOG_FILE"    
     exit 1
 fi
 

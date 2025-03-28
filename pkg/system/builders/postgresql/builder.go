@@ -2,6 +2,9 @@ package postgresql
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/dependencies"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/gosp"
@@ -45,6 +48,16 @@ func (b *Builder) WithInstallPrefix(prefix string) *Builder {
 }
 
 // WithPostgresURL sets the PostgreSQL download URL
+// RunPostgresInScreen starts PostgreSQL in a screen session
+func (b *Builder) RunPostgresInScreen() error {
+	return b.PostgresBuilder.RunPostgresInScreen()
+}
+
+// CheckPostgresUser checks if PostgreSQL can be run as postgres user
+func (b *Builder) CheckPostgresUser() error {
+	return b.PostgresBuilder.CheckPostgresUser()
+}
+
 func (b *Builder) WithPostgresURL(url string) *Builder {
 	b.PostgresBuilder.WithPostgresURL(url)
 	return b
@@ -71,9 +84,81 @@ func (b *Builder) Build() error {
 		return fmt.Errorf("failed to build PostgreSQL: %w", err)
 	}
 
-	// Build Go stored procedure
-	if err := b.GoSPBuilder.Build(); err != nil {
-		return fmt.Errorf("failed to build Go stored procedure: %w", err)
+	// Ensure Go is installed first to get its path
+	goInstaller := postgres.NewGoInstaller()
+	goPath, err := goInstaller.InstallGo()
+	if err != nil {
+		return fmt.Errorf("failed to ensure Go is installed: %w", err)
+	}
+	fmt.Printf("Using Go executable from: %s\n", goPath)
+	
+	// Pass the Go path explicitly to the GoSPBuilder
+	b.GoSPBuilder.WithGoPath(goPath)
+	
+	// For the Go stored procedure, we'll create and execute a shell script directly
+	// to ensure all environment variables are properly set
+	fmt.Println("Building Go stored procedure via shell script...")
+	
+	tempDir, err := os.MkdirTemp("", "gosp-build-")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+	
+	// Create the Go source file in the temp directory
+	libPath := filepath.Join(tempDir, "gosp.go")
+	libSrc := `
+package main
+import "C"
+import "fmt"
+
+//export helloworld
+func helloworld() {
+	fmt.Println("Hello from Go stored procedure!")
+}
+
+func main() {}
+`
+	if err := os.WriteFile(libPath, []byte(libSrc), 0644); err != nil {
+		return fmt.Errorf("failed to write Go source file: %w", err)
+	}
+	
+	// Create a shell script to build the Go stored procedure
+	buildScript := filepath.Join(tempDir, "build.sh")
+	buildScriptContent := fmt.Sprintf(`#!/bin/sh
+set -e
+
+# Set environment variables
+export GOROOT=/usr/local/go
+export GOPATH=/root/go
+export PATH=/usr/local/go/bin:$PATH
+
+echo "Current directory: $(pwd)"
+echo "Go source file: %s"
+echo "Output file: %s/lib/libgosp.so"
+
+# Create output directory
+mkdir -p %s/lib
+
+# Run the build command
+echo "Running: go build -buildmode=c-shared -o %s/lib/libgosp.so %s"
+go build -buildmode=c-shared -o %s/lib/libgosp.so %s
+
+echo "Go stored procedure built successfully!"
+`,
+		libPath, b.InstallPrefix, b.InstallPrefix, b.InstallPrefix, libPath, b.InstallPrefix, libPath)
+	
+	if err := os.WriteFile(buildScript, []byte(buildScriptContent), 0755); err != nil {
+		return fmt.Errorf("failed to write build script: %w", err)
+	}
+	
+	// Execute the build script
+	cmd := exec.Command("/bin/sh", buildScript)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	fmt.Println("Executing build script:", buildScript)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run build script: %w", err)
 	}
 
 	// Verify the installation
