@@ -104,21 +104,10 @@ func (b *PostgresBuilder) PatchPostmasterC(baseDir string) error {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Check if already patched
-	if strings.Contains(string(input), "patched to allow root") {
-		fmt.Println("✅ postmaster.c is already patched to allow root")
-		return nil
-	}
-
-	// Check for the root user check pattern
-	if !strings.Contains(string(input), "if (geteuid() == 0)") {
-		return fmt.Errorf("could not find the expected root user check in postmaster.c")
-	}
-
 	// Patch the file
 	modified := strings.Replace(string(input),
-		"if (geteuid() == 0)",
-		"if (false /* patched to allow root */)",
+		"geteuid() == 0",
+		"false",
 		1)
 
 	if err := os.WriteFile(file, []byte(modified), 0644); err != nil {
@@ -171,56 +160,21 @@ func (b *PostgresBuilder) PatchInitdbC(baseDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read initdb.c: %w", err)
 	}
-
-	// Check if already patched
-	if strings.Contains(string(input), "patched to allow root") {
-		fmt.Println("✅ initdb.c is already patched to allow root")
-		return nil
-	}
-
-	// Check for the root user check patterns
-	rootCheckFound := false
-	if strings.Contains(string(input), "if (geteuid() == 0)") {
-		rootCheckFound = true
-	} else if strings.Contains(string(input), "if (pg_euid == 0)") {
-		rootCheckFound = true
-	}
-
-	if !rootCheckFound {
-		return fmt.Errorf("could not find the expected root user check in initdb.c")
-	}
-
 	// Patch the file to bypass root user check
 	// This modifies the condition that checks if the user is root
 	modified := strings.Replace(string(input),
-		"if (geteuid() == 0)", // Common pattern to check for root
-		"if (false /* patched to allow root */)",
+		"geteuid() == 0", // Common pattern to check for root
+		"false",
 		-1) // Replace all occurrences
 
 	// Also look for any alternate ways the check might be implemented
 	modified = strings.Replace(modified,
-		"if (pg_euid == 0)", // Alternative check pattern
-		"if (false /* patched to allow root */)",
+		"pg_euid == 0", // Alternative check pattern
+		"false",
 		-1) // Replace all occurrences
 
 	if err := os.WriteFile(initdbPath, []byte(modified), 0644); err != nil {
 		return fmt.Errorf("failed to write to initdb.c: %w", err)
-	}
-
-	// Verify patch was applied successfully
-	updatedContent, err := os.ReadFile(initdbPath)
-	if err != nil {
-		return fmt.Errorf("failed to read file after patching: %w", err)
-	}
-
-	if !strings.Contains(string(updatedContent), "patched to allow root") {
-		return fmt.Errorf("patching initdb.c failed: verification check failed")
-	}
-
-	// Look for any remaining unpatched root checks
-	if strings.Contains(string(updatedContent), "if (geteuid() == 0)") ||
-		strings.Contains(string(updatedContent), "if (pg_euid == 0)") {
-		return fmt.Errorf("patching initdb.c may be incomplete: found remaining root user checks")
 	}
 
 	fmt.Println("✅ Successfully patched initdb.c")

@@ -3,7 +3,11 @@ html(lang="en")
   head
     meta(charset="UTF-8")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    title {{if .pageTitle}}{{.pageTitle}} - {{end}}Freezone Manager
+    | {{if .pageTitle}}
+    title {{.pageTitle}} - Freezone Manager
+    | {{else}}
+    title Freezone Manager
+    | {{end}}
     link(rel="icon", href="/img/freezone-icon.svg", type="image/svg+xml")
     link(rel="shortcut icon", href="/favicon.ico")
     link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap")
@@ -11,10 +15,15 @@ html(lang="en")
     link(rel="stylesheet", href="/css/freezone.css")
     link(rel="stylesheet", href="/css/unpoly.min.css")
     | {{if .customCSS}}
-    style .customCSS
+    style.
+      {{.customCSS}}
     | {{end}}
   
+  | {{if .bodyClass}}
   body(class="{{.bodyClass}}")
+  | {{else}}
+  body
+  | {{end}}
     | {{if .flashMessage}}
     .flash-message(class="{{.flashMessage.Type}}")
       .container
@@ -40,6 +49,7 @@ html(lang="en")
     script(src="/js/echarts/echarts.min.js")
     script(src="/js/freezone.js")
     | {{if .customJS}}
-    script .customJS
+    script.
+      {{.customJS}}
     | {{end}}
     block scripts

@@ -1,0 +1,163 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Sale Details
+      .header-actions.button-group
+        | {{if ne .sale.Status "Completed"}}
+        a(href="/sales/{{.sale.ID}}/edit" role="button" class="secondary small") Edit Sale
+        | {{end}}
+        a(href="/sales" role="button" class="outline small") Back to List
+        
+    .sale-info.grid
+      .sale-details
+        h3 Sale #{{.sale.ID}}
+        
+        p.company
+          strong Company: 
+          a(href="/companies/{{.sale.CompanyID}}") {{.sale.CompanyName}}
+        p.type
+          strong Type: 
+          span | {{.sale.Type}}
+        p.status
+          strong Status: 
+          span(class="status {{.sale.Status}}") | {{.sale.Status}}
+        p.date
+          strong Date: 
+          span | {{.sale.Date}}
+        
+      .customer-details
+        h3 Customer Information
+        p
+          strong Name: 
+          span | {{.sale.CustomerName}}
+        p
+          strong Email: 
+          a(href="mailto:{{.sale.CustomerEmail}}") | {{.sale.CustomerEmail}}
+        | {{if .sale.CustomerPhone}}
+        p
+          strong Phone: 
+          span | {{.sale.CustomerPhone}}
+        | {{end}}
+        
+      .payment-details
+        h3 Payment Information
+        p
+          strong Amount: 
+          span | ${{.sale.Amount}}
+        p
+          strong Payment Method: 
+          span | {{.sale.PaymentMethod}}
+        | {{if .sale.TransactionID}}
+        p
+          strong Transaction ID: 
+          span | {{.sale.TransactionID}}
+        | {{end}}
+        | {{if .sale.PaymentDate}}
+        p
+          strong Payment Date: 
+          span | {{.sale.PaymentDate}}
+        | {{end}}
+      
+    | {{if eq .sale.Type "product"}}
+    section.product-details
+      h3 Product Details
+      
+      | {{if .sale.Products}}
+      table
+        thead
+          tr
+            th Product
+            th Quantity
+            th Unit Price
+            th Total
+        tbody
+          | {{range .sale.Products}}
+          tr
+            td {{.Name}}
+            td {{.Quantity}}
+            td {{.UnitPrice}}
+            td {{.Total}}
+          | {{end}}
+      | {{else}}
+      p.no-data No product details available.
+      | {{end}}
+    | {{end}}
+    
+    | {{if eq .sale.Type "service"}}
+    section.service-details
+      h3 Service Details
+      
+      | {{if .sale.Services}}
+      table
+        thead
+          tr
+            th Service
+            th Hours
+            th Rate
+            th Total
+        tbody
+          | {{range .sale.Services}}
+          tr
+            td | {{.Name}}
+            td | {{.Hours}}
+            td | ${{.Rate}}
+            td | ${{.Total}}
+          | {{end}}
+      | {{else}}
+      p.no-data No service details available.
+      | {{end}}
+    | {{end}}
+    
+    | {{if eq .sale.Type "subscription"}}
+    section.subscription-details
+      h3 Subscription Details
+      
+      | {{if .sale.Subscription}}
+      .subscription-info
+        p
+          strong Plan: 
+          span | {{.sale.Subscription.Plan}}
+        p
+          strong Duration: 
+          span | {{.sale.Subscription.Duration}} months
+        p
+          strong Start Date: 
+          span | {{.sale.Subscription.StartDate}}
+        p
+          strong End Date: 
+          span | {{.sale.Subscription.EndDate}}
+        p
+          strong Status: 
+          span | {{.sale.Subscription.Status}}
+      | {{else}}
+      p.no-data No subscription details available.
+      | {{end}}
+    | {{end}}
+    
+    section.notes
+      h3 Notes
+      | {{if .sale.Notes}}
+      p | {{.sale.Notes}}
+      | {{else}}
+      p.no-data No additional notes.
+      | {{end}}
+    
+    | {{if .sale.Timeline}}
+    section.timeline
+      h3 Timeline
+      
+      ul.sale-timeline
+        | {{range .sale.Timeline}}
+        li
+          .timeline-date | {{.Date}}
+          .timeline-event
+            strong | {{.Event}}
+            | {{if .Description}}
+            p | {{.Description}}
+            | {{end}}
+        | {{end}}
+      | {{else}}
+      p.no-data No timeline events recorded.
+      | {{end}}

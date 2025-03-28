@@ -1,0 +1,48 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Products
+      p Manage all products available for sale in the Freezone
+
+    .action-bar
+      a(href="/sales/products/create" role="button") Add Product
+      form.search-form(action="/sales/products" method="get")
+        input(type="search" name="search" placeholder="Search products..." value="{{.search}}")
+        button(type="submit") Search
+    
+    | {{if .products}}
+    table
+      thead
+        tr
+          th ID
+          th Name
+          th Company
+          th Category
+          th Price
+          th Stock
+          th Actions
+      tbody
+        | {{range .products}}
+        tr
+          td {{.ID}}
+          td {{.Name}}
+          td {{.CompanyName}}
+          td {{.Category}}
+          td ${{.Price}}
+          td {{.Stock}}
+          td.actions
+            a(href="/sales/products/{{.ID}}" title="View Details") Details
+            a(href="/sales/products/{{.ID}}/edit" title="Edit Product") Edit
+        | {{end}}
+    | {{else}}
+    .empty-state
+      p No products found
+      | {{if .search}}
+      p No results for "{{.search}}"
+      a(href="/sales/products") Clear search
+      | {{else}}
+      a(href="/sales/products/create" role="button") Add your first product
+      | {{end}}
+    | {{end}}

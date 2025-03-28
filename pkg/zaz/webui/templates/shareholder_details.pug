@@ -1,0 +1,97 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Shareholder Details
+      .header-actions.button-group
+        a(href="/shareholders/{{.shareholder.ID}}/edit" role="button" class="secondary small") Edit Shareholder
+        a(href="/shareholders" role="button" class="outline small") Back to List
+        
+    .shareholder-info.grid
+      .shareholder-profile
+        h3 {{.shareholder.Name}}
+        
+        p.identification
+          strong ID: 
+          span {{.shareholder.ID}}
+        p.since
+          strong Member Since: 
+          span {{.shareholder.Since}}
+        p.nationality
+          strong Nationality: 
+          span {{.shareholder.Nationality}}
+        p.tax-id
+          strong Tax ID: 
+          span {{.shareholder.TaxID}}
+        
+      .shareholder-contact
+        h3 Contact Information
+        p
+          strong Email: 
+          a(href="mailto:{{.shareholder.Email}}") {{.shareholder.Email}}
+        p
+          strong Phone: 
+          span {{.shareholder.Phone}}
+        p
+          strong Address: 
+          span {{.shareholder.Address}}
+        
+      .shareholder-notes
+        h3 Notes
+        | {{if .shareholder.Notes}}
+        p {{.shareholder.Notes}}
+        | {{else}}
+        p No additional notes provided.
+        | {{end}}
+      
+    section.companies
+      h3 Companies
+      | {{if .shareholder.Companies}}
+      table
+        thead
+          tr
+            th Company
+            th Shares
+            th Percentage
+            th Since
+            th Actions
+        tbody
+          | {{range .shareholder.Companies}}
+          tr
+            td {{.CompanyName}}
+            td {{.Shares}}
+            td {{.Percentage}}%
+            td {{.Since}}
+            td.actions
+              a.action-button(href="/companies/{{.CompanyID}}" title="View Company Details") View Company
+          | {{end}}
+      | {{else}}
+      p.no-data No companies associated with this shareholder.
+      | {{end}}
+      
+    section.votes
+      h3 Voting History
+      
+      | {{if .votes}}
+      table
+        thead
+          tr
+            th Date
+            th Company
+            th Resolution
+            th Vote
+            th Actions
+        tbody
+          | {{range .votes}}
+          tr
+            td {{.Date}}
+            td {{.CompanyName}}
+            td {{.Resolution}}
+            td {{.Vote}}
+            td.actions
+              a.action-button(href="/votes/{{.ID}}" title="View Vote Details") Details
+          | {{end}}
+      | {{else}}
+      p.no-data No voting history for this shareholder.
+      | {{end}}
