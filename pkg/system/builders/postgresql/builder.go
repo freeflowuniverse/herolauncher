@@ -6,6 +6,7 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/dependencies"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/gosp"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/postgres"
+	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/verification"
 )
 
 // Constants for PostgreSQL installation
@@ -19,6 +20,7 @@ type Builder struct {
 	PostgresBuilder   *postgres.PostgresBuilder
 	GoSPBuilder       *gosp.GoSPBuilder
 	DependencyManager *dependencies.DependencyManager
+	Verifier          *verification.Verifier
 }
 
 // NewBuilder creates a new PostgreSQL builder with default values
@@ -30,6 +32,7 @@ func NewBuilder() *Builder {
 		PostgresBuilder:   postgres.NewPostgresBuilder().WithInstallPrefix(installPrefix),
 		GoSPBuilder:       gosp.NewGoSPBuilder(installPrefix),
 		DependencyManager: dependencies.NewDependencyManager("bison"),
+		Verifier:          verification.NewVerifier(installPrefix),
 	}
 }
 
@@ -73,6 +76,18 @@ func (b *Builder) Build() error {
 		return fmt.Errorf("failed to build Go stored procedure: %w", err)
 	}
 
-	fmt.Println("✅ Done! PostgreSQL installed in:", b.InstallPrefix)
+	// Verify the installation
+	fmt.Println("Verifying installation...")
+	success, err := b.Verifier.Verify()
+	if err != nil {
+		fmt.Printf("Warning: Verification had issues: %v\n", err)
+	}
+
+	if success {
+		fmt.Println("✅ Done! PostgreSQL installed and verified in:", b.InstallPrefix)
+	} else {
+		fmt.Println("⚠️ Done with warnings! PostgreSQL installed in:", b.InstallPrefix)
+	}
+
 	return nil
 }

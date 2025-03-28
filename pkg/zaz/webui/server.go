@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/freeflowuniverse/herolauncher/pkg/zaz/store"
 	handlerpkg "github.com/freeflowuniverse/herolauncher/pkg/zaz/webui/handlers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,6 +20,7 @@ type Server struct {
 	app       *fiber.App
 	config    Config
 	startTime time.Time
+	store     *store.Store
 	
 	// Handlers
 	authHandler       AuthHandler
@@ -31,6 +33,11 @@ type Server struct {
 
 // NewServer creates a new instance of the Freezone Manager UI server
 func NewServer(config Config) *Server {
+	// Initialize the data store and load fake data
+	dataStore := store.NewStore()
+	dataStore.LoadFakeData()
+	log.Printf("Data store initialized with fake data")
+
 	// Initialize template engine
 	engine := pug.New(config.TemplatesPath, ".pug")
 	engine.Debug(true)  // Enable debug mode
@@ -49,22 +56,20 @@ func NewServer(config Config) *Server {
 	
 	// Companies function returns a list of sample companies
 	engine.AddFunc("companies", func() []map[string]interface{} {
-		return []map[string]interface{}{
-			{
-				"id": 1,
-				"name": "TechCorp Inc.",
-				"registration_date": "2024-09-28",
-				"status": "Active",
-				"shareholders_count": 5,
-			},
-			{
-				"id": 2,
-				"name": "GreenEnergy Ltd.",
-				"registration_date": "2023-03-15",
-				"status": "Active",
-				"shareholders_count": 3,
-			},
+		companies := dataStore.GetAllCompanies()
+		result := make([]map[string]interface{}, len(companies))
+		
+		for i, company := range companies {
+			result[i] = map[string]interface{}{
+				"id": company.ID,
+				"name": company.Name,
+				"registration_date": company.IncorporationDate.Format("2006-01-02"),
+				"status": company.Status,
+				"shareholders_count": len(company.Shareholders),
+			}
 		}
+		
+		return result
 	})
 	
 	// Search function for the template
@@ -74,17 +79,17 @@ func NewServer(config Config) *Server {
 	
 	// CompaniesCount function for the template
 	engine.AddFunc("companiesCount", func() int {
-		return 2
+		return len(dataStore.GetAllCompanies())
 	})
 	
 	// ActiveCompaniesCount function for the template
 	engine.AddFunc("activeCompaniesCount", func() int {
-		return 2
+		return len(dataStore.GetActiveCompanies())
 	})
 	
 	// ShareholdersCount function for the template
 	engine.AddFunc("shareholdersCount", func() int {
-		return 7
+		return len(dataStore.GetAllShareholders())
 	})
 	
 	// Error function for the login template
@@ -99,50 +104,53 @@ func NewServer(config Config) *Server {
 	
 	// Company function returns a sample company for the details page
 	engine.AddFunc("company", func() map[string]interface{} {
+		companies := dataStore.GetAllCompanies()
+		if len(companies) == 0 {
+			return map[string]interface{}{}
+		}
+		
+		// Use the first company in the store
+		company := companies[0]
+		
+		// Format shareholders for template
+		shareholders := make([]map[string]interface{}, len(company.Shareholders))
+		for i, sh := range company.Shareholders {
+			shareholders[i] = map[string]interface{}{
+				"id": sh.ID,
+				"name": sh.Name,
+				"shares": sh.Shares,
+				"percentage": sh.Percentage,
+				"since": sh.Since.Format("2006-01-02"),
+			}
+		}
+		
+		// Format board meetings for template
+		meetings := make([]map[string]interface{}, len(company.BoardMeetings))
+		for i, bm := range company.BoardMeetings {
+			meetings[i] = map[string]interface{}{
+				"id": bm.ID,
+				"date": bm.Date.Format("2006-01-02"),
+				"title": bm.Title,
+				"attendees_count": len(bm.Attendees),
+				"status": bm.Status,
+			}
+		}
+		
+		// Return formatted company data
 		return map[string]interface{}{
-			"id": 1,
-			"name": "TechCorp Inc.",
-			"registration_number": "BRN12345678",
-			"incorporation_date": "2024-09-28",
-			"status": "Active",
-			"business_type": "Limited Liability Company",
-			"industry": "Technology",
-			"email": "info@techcorp.com",
-			"phone": "+1 234 567 8900",
-			"website": "https://techcorp.com",
-			"description": "TechCorp is a leading technology company specializing in AI solutions and cloud services.",
-			"shareholders": []map[string]interface{}{
-				{
-					"id": 1,
-					"name": "John Smith",
-					"shares": 1000,
-					"percentage": 50,
-					"since": "2024-09-28",
-				},
-				{
-					"id": 2,
-					"name": "Jane Doe",
-					"shares": 500,
-					"percentage": 25,
-					"since": "2024-09-28",
-				},
-			},
-			"boardmeetings": []map[string]interface{}{
-				{
-					"id": 1,
-					"date": "2025-04-15",
-					"title": "Quarterly Board Meeting",
-					"attendees_count": 5,
-					"status": "Scheduled",
-				},
-				{
-					"id": 2,
-					"date": "2025-02-28",
-					"title": "Annual General Meeting",
-					"attendees_count": 8,
-					"status": "Completed",
-				},
-			},
+			"id": company.ID,
+			"name": company.Name,
+			"registration_number": company.RegistrationNumber,
+			"incorporation_date": company.IncorporationDate.Format("2006-01-02"),
+			"status": company.Status,
+			"business_type": company.BusinessType,
+			"industry": company.Industry,
+			"email": company.Email,
+			"phone": company.Phone,
+			"website": company.Website,
+			"description": company.Description,
+			"shareholders": shareholders,
+			"boardmeetings": meetings,
 		}
 	})
 	
@@ -195,6 +203,7 @@ func NewServer(config Config) *Server {
 		app:       app,
 		config:    config,
 		startTime: time.Now(),
+		store:     dataStore,
 		authHandler: authHandler,
 		companyHandler: companyHandler,
 		shareholderHandler: shareholderHandler,

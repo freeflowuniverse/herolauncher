@@ -1,8 +1,6 @@
 package postgres
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/mholt/archiver/v3"
 )
 
 // Constants for PostgreSQL installation
@@ -84,116 +84,134 @@ func (b *PostgresBuilder) DownloadPostgres() error {
 // ExtractTarGz extracts the tar.gz file and returns the top directory
 func (b *PostgresBuilder) ExtractTarGz() (string, error) {
 	fmt.Println("Extracting...")
-	file, err := os.Open(b.PostgresTar)
+
+	// Create a temporary directory to extract to
+	tempDir, err := os.MkdirTemp("", "postgres-extract-")
 	if err != nil {
-		return "", fmt.Errorf("failed to open tar.gz file: %w", err)
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer file.Close()
+	defer os.RemoveAll(tempDir) // Clean up temp dir when function returns
 
-	gzr, err := gzip.NewReader(file)
+	// Extract the archive using archiver
+	err = archiver.Unarchive(b.PostgresTar, tempDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-
-	tr := tar.NewReader(gzr)
-	var topDir string
-	var firstDir string
-
-	// First pass: find the top directory
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		// Skip pax_global_header
-		if header.Name == "pax_global_header" {
-			continue
-		}
-
-		// Find the first real directory
-		if header.Typeflag == tar.TypeDir && firstDir == "" {
-			firstDir = header.Name
-			// Remove trailing slash if present
-			firstDir = strings.TrimSuffix(firstDir, "/")
-		}
-
-		// If we have a file path with directories
-		if strings.Contains(header.Name, "/") {
-			parts := strings.SplitN(header.Name, "/", 2)
-			if topDir == "" && parts[0] != "" {
-				topDir = parts[0]
-				break
-			}
-		}
+		return "", fmt.Errorf("failed to extract archive: %w", err)
 	}
 
-	// If we didn't find a top directory but found a first directory, use that
-	if topDir == "" && firstDir != "" {
-		topDir = firstDir
-	}
-
-	// Reset the file for the second pass
-	file.Seek(0, 0)
-	gzr.Close()
-	gzr, err = gzip.NewReader(file)
+	// Find the top-level directory
+	entries, err := os.ReadDir(tempDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader: %w", err)
-	}
-	defer gzr.Close()
-	tr = tar.NewReader(gzr)
-
-	// Second pass: extract files
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to read tar header: %w", err)
-		}
-
-		// Skip pax_global_header
-		if header.Name == "pax_global_header" {
-			continue
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(header.Name, 0755); err != nil {
-				return "", fmt.Errorf("failed to create directory: %w", err)
-			}
-		case tar.TypeReg:
-			// Create parent directories if they don't exist
-			dir := filepath.Dir(header.Name)
-			if dir != "." {
-				if err := os.MkdirAll(dir, 0755); err != nil {
-					return "", fmt.Errorf("failed to create parent directory: %w", err)
-				}
-			}
-
-			f, err := os.Create(header.Name)
-			if err != nil {
-				return "", fmt.Errorf("failed to create file: %w", err)
-			}
-			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
-				return "", fmt.Errorf("failed to write to file: %w", err)
-			}
-			f.Close()
-		}
+		return "", fmt.Errorf("failed to read temp directory: %w", err)
 	}
 
-	if topDir == "" {
-		return "", fmt.Errorf("failed to find top directory in archive")
+	if len(entries) == 0 {
+		return "", fmt.Errorf("no files found in extracted archive")
+	}
+
+	// In most cases, a properly packaged tarball will extract to a single top directory
+	topDir := entries[0].Name()
+	topDirPath := filepath.Join(tempDir, topDir)
+
+	// Move the contents to the current directory
+	err = moveContents(topDirPath, ".")
+	if err != nil {
+		return "", fmt.Errorf("failed to move contents from temp directory: %w", err)
 	}
 
 	fmt.Println("Extracted to directory:", topDir)
 	return topDir, nil
+}
+
+// moveContents moves all contents from src directory to dst directory
+func moveContents(src, dst string) error {
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		// Handle existing destination
+		if _, err := os.Stat(dstPath); err == nil {
+			// If it exists, remove it first
+			if err := os.RemoveAll(dstPath); err != nil {
+				return fmt.Errorf("failed to remove existing path %s: %w", dstPath, err)
+			}
+		}
+
+		// Move the file or directory
+		if err := os.Rename(srcPath, dstPath); err != nil {
+			// If rename fails (possibly due to cross-device link), try copy and delete
+			if strings.Contains(err.Error(), "cross-device link") {
+				if entry.IsDir() {
+					if err := copyDir(srcPath, dstPath); err != nil {
+						return err
+					}
+				} else {
+					if err := copyFile(srcPath, dstPath); err != nil {
+						return err
+					}
+				}
+				os.RemoveAll(srcPath)
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = dstFile.ReadFrom(srcFile)
+	return err
+}
+
+// copyDir copies a directory recursively
+func copyDir(src, dst string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // PatchPostmasterC patches the postmaster.c file to allow running as root

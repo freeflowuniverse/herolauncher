@@ -1,25 +1,19 @@
 //- header.pug - Header component for the Freezone Manager
-header.app-header
-  .header-content
+header
+  nav.top-nav
     .brand
-      a.brand-link(href="/")
-        img.brand-logo(src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24")
-        span.brand-name Freezone Manager
+      a(href="/")
+        img.brand-icon(src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24")
+        span Freezone Manager
     
-    nav.main-nav
-      ul.nav-list
-        li.nav-item: a.nav-link(href="/") Home
-        li.nav-item: a.nav-link.active(href="/companies") Companies
-        li.nav-item: a.nav-link(href="/shareholders") Shareholders
-        li.nav-item: a.nav-link(href="/boardmeetings") Board Meetings
-        li.nav-item: a.nav-link(href="/votes") Votes
-        li.nav-item: a.nav-link(href="/sales") Sales
+    .nav-links
+      a.nav-link(href="/") Home
+      a.nav-link(href="/companies") Companies
+      a.nav-link(href="/shareholders") Shareholders
+      a.nav-link(href="/boardmeetings") Meetings
+      a.nav-link(href="/votes") Votes
+      a.nav-link(href="/sales") Sales
     
-    .header-actions
-      .search-container
-        input.search-input(type="search" placeholder="Search..." aria-label="Search")
-        button.search-button(type="button" aria-label="Submit search"): span.search-icon 🔍
-      
-      .user-info
-        span.welcome-text Welcome, User
-        a.logout-button(href="/logout") Logout
+    .nav-right
+      span.welcome Welcome, User
+      a.logout-btn(href="/logout") Logout
