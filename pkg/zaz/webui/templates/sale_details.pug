@@ -10,34 +10,32 @@ block content
         
     .sale-info.grid
       .sale-details
-        h3 | Sale #{{.sale.ID}}
+        h3 Sale #12345
         
         p.company
           strong Company: 
-          a(href="/companies/{{.sale.CompanyID}}") | {{.sale.CompanyName}}
+          a(href="#") Example Company
         p.type
           strong Type: 
-          span | {{.sale.Type}}
+          span Product
         p.status
           strong Status: 
-          span(class="status {{.sale.Status}}") | {{.sale.Status}}
+          span(class="status completed") Completed
         p.date
           strong Date: 
-          span | {{.sale.Date}}
+          span 2025-03-28
         
       .customer-details
         h3 Customer Information
         p
           strong Name: 
-          span | {{.sale.CustomerName}}
+          span John Doe
         p
           strong Email: 
-          a(href="mailto:{{.sale.CustomerEmail}}") | {{.sale.CustomerEmail}}
-        | {{if .sale.CustomerPhone}}
+          a(href="mailto:john.doe@example.com") john.doe@example.com
         p
           strong Phone: 
-          span | {{.sale.CustomerPhone}}
-        | {{end}}
+          span +1 555-123-4567
         
       .payment-details
         h3 Payment Information

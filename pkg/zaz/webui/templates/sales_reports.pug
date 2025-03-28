@@ -14,21 +14,21 @@ block content
             select(id="company_id" name="company_id")
               option(value="") All Companies
               | {{range .companies}}
-              option(value="{{.ID}}" {{if eq $.filter.CompanyID .ID}}selected{{end}}) {{.Name}}
+              option(value="{{.ID}}" | {{ eq $.filter.CompanyID .ID}}selected{{end}}) {{.Name}}
               | {{end}}
           
           div
             label(for="period") Time Period
             select(id="period" name="period")
-              option(value="this_month" {{if eq .filter.Period "this_month"}}selected{{end}}) This Month
-              option(value="last_month" {{if eq .filter.Period "last_month"}}selected{{end}}) Last Month
-              option(value="this_quarter" {{if eq .filter.Period "this_quarter"}}selected{{end}}) This Quarter
-              option(value="last_quarter" {{if eq .filter.Period "last_quarter"}}selected{{end}}) Last Quarter
-              option(value="this_year" {{if eq .filter.Period "this_year"}}selected{{end}}) This Year
-              option(value="last_year" {{if eq .filter.Period "last_year"}}selected{{end}}) Last Year
-              option(value="custom" {{if eq .filter.Period "custom"}}selected{{end}}) Custom Range
+              option(value="this_month" | {{ eq .filter.Period "this_month"}}selected{{end}}) This Month
+              option(value="last_month" | {{ eq .filter.Period "last_month"}}selected{{end}}) Last Month
+              option(value="this_quarter" | {{ eq .filter.Period "this_quarter"}}selected{{end}}) This Quarter
+              option(value="last_quarter" | {{ eq .filter.Period "last_quarter"}}selected{{end}}) Last Quarter
+              option(value="this_year" | {{ eq .filter.Period "this_year"}}selected{{end}}) This Year
+              option(value="last_year" | {{ eq .filter.Period "last_year"}}selected{{end}}) Last Year
+              option(value="custom" | {{ eq .filter.Period "custom"}}selected{{end}}) Custom Range
         
-        .custom-date-range(style="{{if ne .filter.Period 'custom'}}display: none;{{end}}")
+        .custom-date-range(style="| {{ ne .filter.Period 'custom'}}display: none;{{end}}")
           .grid
             div
               label(for="start_date") Start Date
@@ -43,20 +43,20 @@ block content
             label(for="type") Sale Type
             select(id="type" name="type")
               option(value="") All Types
-              option(value="product" {{if eq .filter.Type "product"}}selected{{end}}) Products
-              option(value="service" {{if eq .filter.Type "service"}}selected{{end}}) Services
-              option(value="subscription" {{if eq .filter.Type "subscription"}}selected{{end}}) Subscriptions
-              option(value="other" {{if eq .filter.Type "other"}}selected{{end}}) Other
+              option(value="product" | {{ eq .filter.Type "product"}}selected{{end}}) Products
+              option(value="service" | {{ eq .filter.Type "service"}}selected{{end}}) Services
+              option(value="subscription" | {{ eq .filter.Type "subscription"}}selected{{end}}) Subscriptions
+              option(value="other" | {{ eq .filter.Type "other"}}selected{{end}}) Other
           
           div
             label(for="status") Status
             select(id="status" name="status")
               option(value="") All Statuses
-              option(value="pending" {{if eq .filter.Status "pending"}}selected{{end}}) Pending
-              option(value="paid" {{if eq .filter.Status "paid"}}selected{{end}}) Paid
-              option(value="shipped" {{if eq .filter.Status "shipped"}}selected{{end}}) Shipped
-              option(value="completed" {{if eq .filter.Status "completed"}}selected{{end}}) Completed
-              option(value="cancelled" {{if eq .filter.Status "cancelled"}}selected{{end}}) Cancelled
+              option(value="pending" | {{ eq .filter.Status "pending"}}selected{{end}}) Pending
+              option(value="paid" | {{ eq .filter.Status "paid"}}selected{{end}}) Paid
+              option(value="shipped" | {{ eq .filter.Status "shipped"}}selected{{end}}) Shipped
+              option(value="completed" | {{ eq .filter.Status "completed"}}selected{{end}}) Completed
+              option(value="cancelled" | {{ eq .filter.Status "cancelled"}}selected{{end}}) Cancelled
         
         .filter-actions
           button(type="submit" role="button") Generate Report
@@ -72,7 +72,7 @@ block content
               h4 Total Sales
             p.big-number ${{.report.TotalAmount}}
             p.comparison
-              | {{if gt .report.PercentChange 0}}
+              | | {{ gt .report.PercentChange 0}}
               span.positive +{{.report.PercentChange}}% vs previous period
               | {{else}}
               span.negative {{.report.PercentChange}}% vs previous period
@@ -89,7 +89,7 @@ block content
           article
             header
               h4 Top Performing
-            | {{if .report.TopPerformer}}
+            | | {{ .report.TopPerformer}}
             p.medium-text {{.report.TopPerformer.Name}}
             p.small-text ${{.report.TopPerformer.Amount}} ({{.report.TopPerformer.Percentage}}% of total)
             | {{else}}
@@ -162,7 +162,7 @@ block scripts
           orient: 'vertical',
           right: 10,
           top: 'center',
-          data: [{{range .report.SalesByType}}'{{.Type}}',{{end}}]
+          data: [| {{range .report.SalesByType}}'{{.Type}}',{{end}}]
         },
         series: [
           {
@@ -185,12 +185,12 @@ block scripts
               show: false
             },
             data: [
-              {{range .report.SalesByType}}
+              | {{range .report.SalesByType}}
               {
-                value: {{.Amount}},
-                name: '{{.Type}}'
+                value: | {{.Amount}},
+                name: '| {{.Type}}'
               },
-              {{end}}
+              | {{end}}
             ]
           }
         ]
@@ -211,7 +211,7 @@ block scripts
         },
         xAxis: {
           type: 'category',
-          data: [{{range .report.SalesTrend}}'{{.Period}}',{{end}}]
+          data: [| {{range .report.SalesTrend}}'{{.Period}}',{{end}}]
         },
         yAxis: {
           type: 'value',
@@ -223,7 +223,7 @@ block scripts
           {
             name: 'Sales Amount',
             type: 'line',
-            data: [{{range .report.SalesTrend}}{{.Amount}},{{end}}],
+            data: [| {{range .report.SalesTrend}}{{.Amount}},{{end}}],
             markPoint: {
               data: [
                 { type: 'max', name: 'Max' },
@@ -247,15 +247,15 @@ block scripts
         // Create CSV content
         let csvContent = 'Date,Company,Type,Customer,Amount,Status\n';
         
-        {{range .report.Sales}}
-        csvContent += '{{.Date}},{{.CompanyName}},{{.Type}},{{.CustomerName}},${{.Amount}},{{.Status}}\n';
-        {{end}}
+        | {{range .report.Sales}}
+        csvContent += '| {{.Date}},{{.CompanyName}},{{.Type}},{{.CustomerName}},${{.Amount}},{{.Status}}\n';
+        | {{end}}
         
         // Create download link
         const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'sales_report_{{.report.ExportFileName}}.csv');
+        link.setAttribute('download', 'sales_report_| {{.report.ExportFileName}}.csv');
         document.body.appendChild(link);
         
         // Trigger download
