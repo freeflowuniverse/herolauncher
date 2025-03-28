@@ -8,21 +8,17 @@ import (
 )
 
 // VoteHandler handles vote-related routes
-type VoteHandler struct {
-	store *models.Store
-}
+type VoteHandler struct {}
 
 // NewVoteHandler creates a new VoteHandler
-func NewVoteHandler(store *models.Store) *VoteHandler {
-	return &VoteHandler{
-		store: store,
-	}
+func NewVoteHandler(_ *models.Store) *VoteHandler {
+	return &VoteHandler{}
 }
 
 // GetVotes renders the votes list page
 func (h *VoteHandler) GetVotes(c *fiber.Ctx) error {
-	// Get votes from the store
-	votes := h.store.GetAllVotes()
+	// Get votes using model function directly
+	votes := models.GetAllVotes()
 
 	return c.Render("votes", fiber.Map{
 		"title": "Votes",
@@ -33,21 +29,8 @@ func (h *VoteHandler) GetVotes(c *fiber.Ctx) error {
 
 // GetCreateVote renders the vote creation page
 func (h *VoteHandler) GetCreateVote(c *fiber.Ctx) error {
-	// Get list of companies for dropdown
-	companies := []models.Company{
-		{
-			ID: 1,
-			Name: "TechCorp Inc.",
-		},
-		{
-			ID: 2,
-			Name: "GreenEnergy Ltd.",
-		},
-		{
-			ID: 3,
-			Name: "InnoFinance Corp.",
-		},
-	}
+	// Get list of companies using model function directly
+	companies := models.GetAllCompanies()
 
 	return c.Render("votes_create", fiber.Map{
 		"title": "Create Vote",

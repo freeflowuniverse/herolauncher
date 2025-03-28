@@ -9,21 +9,17 @@ import (
 )
 
 // BoardMeetingHandler handles board meeting-related routes
-type BoardMeetingHandler struct {
-	store *models.Store
-}
+type BoardMeetingHandler struct {}
 
 // NewBoardMeetingHandler creates a new BoardMeetingHandler
-func NewBoardMeetingHandler(store *models.Store) *BoardMeetingHandler {
-	return &BoardMeetingHandler{
-		store: store,
-	}
+func NewBoardMeetingHandler(_ *models.Store) *BoardMeetingHandler {
+	return &BoardMeetingHandler{}
 }
 
 // GetBoardMeetings renders the board meetings list page
 func (h *BoardMeetingHandler) GetBoardMeetings(c *fiber.Ctx) error {
-	// Get meetings from the store
-	meetings := h.store.GetAllBoardMeetings()
+	// Get meetings using model function directly
+	meetings := models.GetAllBoardMeetings()
 
 	return c.Render("boardmeetings", fiber.Map{
 		"title": "Board Meetings",
@@ -34,8 +30,8 @@ func (h *BoardMeetingHandler) GetBoardMeetings(c *fiber.Ctx) error {
 
 // GetCreateBoardMeeting renders the board meeting creation page
 func (h *BoardMeetingHandler) GetCreateBoardMeeting(c *fiber.Ctx) error {
-	// Get list of companies from the store
-	companies := h.store.GetAllCompanies()
+	// Get list of companies using model function directly
+	companies := models.GetAllCompanies()
 
 	return c.Render("boardmeetings_create", fiber.Map{
 		"title": "Schedule Board Meeting",
@@ -55,7 +51,7 @@ func (h *BoardMeetingHandler) PostCreateBoardMeeting(c *fiber.Ctx) error {
 	// Simple validation
 	if title == "" || companyIDStr == "" || dateStr == "" {
 		// Get companies for the form
-		companies := h.store.GetAllCompanies()
+		companies := models.GetAllCompanies()
 		return c.Render("boardmeetings_create", fiber.Map{
 			"title": "Schedule Board Meeting",
 			"companies": companies,
@@ -73,7 +69,7 @@ func (h *BoardMeetingHandler) PostCreateBoardMeeting(c *fiber.Ctx) error {
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		// Get companies for the form
-		companies := h.store.GetAllCompanies()
+		companies := models.GetAllCompanies()
 		return c.Render("boardmeetings_create", fiber.Map{
 			"title": "Schedule Board Meeting",
 			"companies": companies,
@@ -83,7 +79,7 @@ func (h *BoardMeetingHandler) PostCreateBoardMeeting(c *fiber.Ctx) error {
 
 	// Create a new board meeting
 	meeting := models.BoardMeeting{
-		ID:          int64(len(h.store.GetAllBoardMeetings()) + 1),
+		ID:          int64(len(models.GetAllBoardMeetings()) + 1),
 		CompanyID:   companyID,
 		Title:       title,
 		Date:        date,
@@ -94,8 +90,8 @@ func (h *BoardMeetingHandler) PostCreateBoardMeeting(c *fiber.Ctx) error {
 		UpdatedAt:   time.Now(),
 	}
 
-	// Add the meeting to the store
-	h.store.AddBoardMeeting(meeting)
+	// Add the meeting using model function directly
+	models.AddBoardMeeting(meeting)
 
 	return c.Redirect("/boardmeetings")
 }
@@ -108,14 +104,14 @@ func (h *BoardMeetingHandler) GetBoardMeetingDetails(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
 	}
 	
-	// Fetch the meeting from the database
-	meeting, err := h.store.GetBoardMeetingByID(id)
+	// Fetch the meeting using model function directly
+	meeting, err := models.GetBoardMeetingByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
 	}
 
-	// Get company info
-	company, err := h.store.GetCompanyByID(meeting.CompanyID)
+	// Get company info using model function directly
+	company, err := models.GetCompanyByID(meeting.CompanyID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Company not found")
 	}
@@ -135,14 +131,14 @@ func (h *BoardMeetingHandler) GetBoardMeetingMinutes(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
 	}
 	
-	// Fetch the meeting from the database
-	meeting, err := h.store.GetBoardMeetingByID(id)
+	// Fetch the meeting using model function directly
+	meeting, err := models.GetBoardMeetingByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
 	}
 
-	// Get company info
-	company, err := h.store.GetCompanyByID(meeting.CompanyID)
+	// Get company info using model function directly
+	company, err := models.GetCompanyByID(meeting.CompanyID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Company not found")
 	}
@@ -173,8 +169,8 @@ func (h *BoardMeetingHandler) PostBoardMeetingMinutes(c *fiber.Ctx) error {
 		})
 	}
 
-	// Fetch the meeting from the database
-	meeting, err := h.store.GetBoardMeetingByID(id)
+	// Fetch the meeting using model function directly
+	meeting, err := models.GetBoardMeetingByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
 	}
@@ -183,8 +179,8 @@ func (h *BoardMeetingHandler) PostBoardMeetingMinutes(c *fiber.Ctx) error {
 	meeting.Minutes = minutes
 	meeting.Status = "Completed"
 	
-	// Save the updated meeting
-	err = h.store.UpdateBoardMeeting(meeting)
+	// Save the updated meeting using model function directly
+	err = models.UpdateBoardMeeting(meeting)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update meeting")
 	}

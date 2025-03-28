@@ -9,21 +9,17 @@ import (
 )
 
 // ShareholderHandler handles shareholder-related routes
-type ShareholderHandler struct {
-	store *models.Store
-}
+type ShareholderHandler struct {}
 
 // NewShareholderHandler creates a new ShareholderHandler
-func NewShareholderHandler(store *models.Store) *ShareholderHandler {
-	return &ShareholderHandler{
-		store: store,
-	}
+func NewShareholderHandler(_ *models.Store) *ShareholderHandler {
+	return &ShareholderHandler{}
 }
 
 // GetShareholders renders the shareholders list page
 func (h *ShareholderHandler) GetShareholders(c *fiber.Ctx) error {
-	// Get shareholders from the store
-	shareholders := h.store.GetAllShareholders()
+	// Get shareholders using model function directly
+	shareholders := models.GetAllShareholders()
 
 	return c.Render("shareholders", fiber.Map{
 		"title": "Shareholders",
@@ -34,21 +30,8 @@ func (h *ShareholderHandler) GetShareholders(c *fiber.Ctx) error {
 
 // GetCreateShareholder renders the shareholder creation page
 func (h *ShareholderHandler) GetCreateShareholder(c *fiber.Ctx) error {
-	// Get list of companies for dropdown
-	companies := []models.Company{
-		{
-			ID: 1,
-			Name: "TechCorp Inc.",
-		},
-		{
-			ID: 2,
-			Name: "GreenEnergy Ltd.",
-		},
-		{
-			ID: 3,
-			Name: "InnoFinance Corp.",
-		},
-	}
+	// Get list of companies using model function directly
+	companies := models.GetAllCompanies()
 
 	return c.Render("shareholders_create", fiber.Map{
 		"title": "Create Shareholder",
@@ -126,8 +109,8 @@ func (h *ShareholderHandler) GetShareholderDetails(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get shareholder from store
-	shareholder, err := h.store.GetShareholderByID(shareholderID)
+	// Get shareholder using model function directly
+	shareholder, err := models.GetShareholderByID(shareholderID)
 	if err != nil {
 		return c.Status(404).Render("error", fiber.Map{
 			"title": "Not Found",
@@ -135,8 +118,8 @@ func (h *ShareholderHandler) GetShareholderDetails(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get company information
-	company, _ := h.store.GetCompanyByID(shareholder.CompanyID)
+	// Get company information using model function directly
+	company, _ := models.GetCompanyByID(shareholder.CompanyID)
 	
 	return c.Render("shareholder_details", fiber.Map{
 		"title": shareholder.Name + " - Shareholder Details",

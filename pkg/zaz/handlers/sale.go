@@ -9,21 +9,17 @@ import (
 )
 
 // SaleHandler handles sale-related routes
-type SaleHandler struct {
-	store *models.Store
-}
+type SaleHandler struct {}
 
 // NewSaleHandler creates a new SaleHandler
-func NewSaleHandler(store *models.Store) *SaleHandler {
-	return &SaleHandler{
-		store: store,
-	}
+func NewSaleHandler(_ *models.Store) *SaleHandler {
+	return &SaleHandler{}
 }
 
 // GetSales renders the sales list page
 func (h *SaleHandler) GetSales(c *fiber.Ctx) error {
-	// Get sales from the store
-	sales := h.store.GetAllSales()
+	// Get sales using model function directly
+	sales := models.GetAllSales()
 
 	return c.Render("sales", fiber.Map{
 		"title": "Sales",
@@ -34,8 +30,8 @@ func (h *SaleHandler) GetSales(c *fiber.Ctx) error {
 
 // GetProducts renders the products list page
 func (h *SaleHandler) GetProducts(c *fiber.Ctx) error {
-	// Get products from the store
-	products := h.store.GetAllProducts()
+	// Get products using model function directly
+	products := models.GetAllProducts()
 
 	return c.Render("products", fiber.Map{
 		"title": "Products",
@@ -46,8 +42,8 @@ func (h *SaleHandler) GetProducts(c *fiber.Ctx) error {
 
 // GetServices renders the services list page
 func (h *SaleHandler) GetServices(c *fiber.Ctx) error {
-	// Get services (products of type Service) from the store
-	services := h.store.GetProductsByType("Service")
+	// Get services (products of type Service) using model function directly
+	services := models.GetProductsByType("Service")
 
 	return c.Render("services", fiber.Map{
 		"title": "Services",
@@ -58,11 +54,11 @@ func (h *SaleHandler) GetServices(c *fiber.Ctx) error {
 
 // GetCreateSale renders the sale creation page
 func (h *SaleHandler) GetCreateSale(c *fiber.Ctx) error {
-	// Get list of companies from the store
-	companies := h.store.GetAllCompanies()
+	// Get list of companies using model function directly
+	companies := models.GetAllCompanies()
 
-	// Get list of products from the store
-	products := h.store.GetAllProducts()
+	// Get list of products using model function directly
+	products := models.GetAllProducts()
 
 	return c.Render("sales_create", fiber.Map{
 		"title": "Create Sale",
@@ -81,8 +77,8 @@ func (h *SaleHandler) PostCreateSale(c *fiber.Ctx) error {
 	// Simple validation
 	if companyIDStr == "" || buyerName == "" || buyerEmail == "" {
 		// Get data for the form
-		companies := h.store.GetAllCompanies()
-		products := h.store.GetAllProducts()
+		companies := models.GetAllCompanies()
+		products := models.GetAllProducts()
 		return c.Render("sales_create", fiber.Map{
 			"title": "Create Sale",
 			"companies": companies,
@@ -99,7 +95,7 @@ func (h *SaleHandler) PostCreateSale(c *fiber.Ctx) error {
 
 	// Create a new sale
 	sale := models.Sale{
-		ID:          int64(len(h.store.GetAllSales()) + 1),
+		ID:          int64(len(models.GetAllSales()) + 1),
 		CompanyID:   companyID,
 		BuyerName:   buyerName,
 		BuyerEmail:  buyerEmail,
@@ -112,8 +108,8 @@ func (h *SaleHandler) PostCreateSale(c *fiber.Ctx) error {
 		Items:       []models.SaleItem{},
 	}
 
-	// Add the sale to the store
-	h.store.AddSale(sale)
+	// Add the sale using model function directly
+	models.AddSale(sale)
 
 	return c.Redirect("/sales")
 }
@@ -126,14 +122,14 @@ func (h *SaleHandler) GetSaleDetails(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
 	}
 	
-	// Fetch the sale from the database
-	sale, err := h.store.GetSaleByID(id)
+	// Fetch the sale using model function directly
+	sale, err := models.GetSaleByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).SendString("Sale not found")
 	}
 
-	// Get company info
-	company, err := h.store.GetCompanyByID(sale.CompanyID)
+	// Get company info using model function directly
+	company, err := models.GetCompanyByID(sale.CompanyID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("Company not found")
 	}
@@ -147,8 +143,8 @@ func (h *SaleHandler) GetSaleDetails(c *fiber.Ctx) error {
 
 // GetSalesReports renders the sales reports page
 func (h *SaleHandler) GetSalesReports(c *fiber.Ctx) error {
-	// Get all sales from the store
-	sales := h.store.GetAllSales()
+	// Get all sales using model function directly
+	sales := models.GetAllSales()
 	
 	// Calculate monthly sales
 	monthlySales := make(map[string]float64)
@@ -162,7 +158,7 @@ func (h *SaleHandler) GetSalesReports(c *fiber.Ctx) error {
 	// Calculate sales by company
 	companySales := make(map[string]float64)
 	for _, sale := range sales {
-		company, err := h.store.GetCompanyByID(sale.CompanyID)
+		company, err := models.GetCompanyByID(sale.CompanyID)
 		if err == nil {
 			companySales[company.Name] += sale.TotalAmount
 		}
@@ -172,7 +168,7 @@ func (h *SaleHandler) GetSalesReports(c *fiber.Ctx) error {
 	categorySales := make(map[string]float64)
 	for _, sale := range sales {
 		for _, item := range sale.Items {
-			product, err := h.store.GetProductByID(item.ProductID)
+			product, err := models.GetProductByID(item.ProductID)
 			if err == nil {
 				categorySales[product.Category] += item.Subtotal
 			}
@@ -201,8 +197,8 @@ func (h *SaleHandler) GetProductDetails(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get product from store
-	product, err := h.store.GetProductByID(productID)
+	// Get product using model function directly
+	product, err := models.GetProductByID(productID)
 	if err != nil {
 		return c.Status(404).Render("error", fiber.Map{
 			"title": "Not Found",
@@ -218,8 +214,8 @@ func (h *SaleHandler) GetProductDetails(c *fiber.Ctx) error {
 
 // GetSalesAPI returns sales data as JSON for API consumption
 func (h *SaleHandler) GetSalesAPI(c *fiber.Ctx) error {
-	// Get all sales from the store
-	sales := h.store.GetAllSales()
+	// Get all sales using model function directly
+	sales := models.GetAllSales()
 
 	// Filter by company if specified
 	companyID := c.Query("company_id")

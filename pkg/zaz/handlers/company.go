@@ -10,23 +10,19 @@ import (
 )
 
 // CompanyHandler handles company-related routes
-type CompanyHandler struct {
-	store *models.Store
-}
+type CompanyHandler struct {}
 
 // NewCompanyHandler creates a new CompanyHandler
-func NewCompanyHandler(store *models.Store) *CompanyHandler {
-	return &CompanyHandler{
-		store: store,
-	}
+func NewCompanyHandler(_ *models.Store) *CompanyHandler {
+	return &CompanyHandler{}
 }
 
 // GetDashboard renders the dashboard page
 func (h *CompanyHandler) GetDashboard(c *fiber.Ctx) error {
-	// Calculate stats from the store
-	companiesCount := len(h.store.GetAllCompanies())
-	activeCompaniesCount := len(h.store.GetActiveCompanies())
-	shareholderCount := len(h.store.GetAllShareholders())
+	// Calculate stats using model functions directly
+	companiesCount := len(models.GetAllCompanies())
+	activeCompaniesCount := len(models.GetActiveCompanies())
+	shareholderCount := len(models.GetAllShareholders())
 	
 	return RenderWithDefaults(c, "index", fiber.Map{
 		"title": "Dashboard",
@@ -38,8 +34,8 @@ func (h *CompanyHandler) GetDashboard(c *fiber.Ctx) error {
 
 // GetCompanies renders the companies list page
 func (h *CompanyHandler) GetCompanies(c *fiber.Ctx) error {
-	// Get companies from the store
-	companies := h.store.GetAllCompanies()
+	// Get companies using model function directly
+	companies := models.GetAllCompanies()
 	log.Printf("Initial companies count from store: %d", len(companies))
 	
 	// Filter by search query if provided
@@ -133,8 +129,8 @@ func (h *CompanyHandler) GetCompanyDetails(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get company from the store
-	company, err := h.store.GetCompanyByID(id)
+	// Get company using model function directly
+	company, err := models.GetCompanyByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).Render("error", fiber.Map{
 			"title": "Error",
@@ -143,11 +139,11 @@ func (h *CompanyHandler) GetCompanyDetails(c *fiber.Ctx) error {
 	}
 	
 	// Get board meetings for this company
-	boardMeetings := h.store.GetBoardMeetingsByCompanyID(company.ID)
+	boardMeetings := models.GetBoardMeetingsByCompanyID(company.ID)
 	company.BoardMeetings = boardMeetings
 	
 	// Get votes for this company
-	votes := h.store.GetVotesByCompanyID(company.ID)
+	votes := models.GetVotesByCompanyID(company.ID)
 
 	return RenderWithDefaults(c, "company_details", fiber.Map{
 		"title": company.Name,
@@ -167,8 +163,8 @@ func (h *CompanyHandler) GetEditCompany(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get company from the store
-	company, err := h.store.GetCompanyByID(id)
+	// Get company using model function directly
+	company, err := models.GetCompanyByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).Render("error", fiber.Map{
 			"title": "Error",
@@ -204,8 +200,8 @@ func (h *CompanyHandler) PostEditCompany(c *fiber.Ctx) error {
 
 // GetCompaniesAPI returns companies data as JSON for API consumption
 func (h *CompanyHandler) GetCompaniesAPI(c *fiber.Ctx) error {
-	// Get companies from the store
-	companies := h.store.GetAllCompanies()
+	// Get companies using model function directly
+	companies := models.GetAllCompanies()
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -224,8 +220,8 @@ func (h *CompanyHandler) GetCompanyDetailsAPI(c *fiber.Ctx) error {
 		})
 	}
 	
-	// Get company from the store
-	company, err := h.store.GetCompanyByID(id)
+	// Get company using model function directly
+	company, err := models.GetCompanyByID(id)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
@@ -234,7 +230,7 @@ func (h *CompanyHandler) GetCompanyDetailsAPI(c *fiber.Ctx) error {
 	}
 
 	// Get board meetings for this company
-	boardMeetings := h.store.GetBoardMeetingsByCompanyID(company.ID)
+	boardMeetings := models.GetBoardMeetingsByCompanyID(company.ID)
 	company.BoardMeetings = boardMeetings
 
 	return c.JSON(fiber.Map{

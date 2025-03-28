@@ -20,7 +20,6 @@ type Server struct {
 	app       *fiber.App
 	config    Config
 	startTime time.Time
-	store     *models.Store
 	
 	// Handlers
 	authHandler       *handlers.AuthHandler
@@ -33,9 +32,16 @@ type Server struct {
 
 // NewServer creates a new instance of the Freezone Manager UI server
 func NewServer(config Config) *Server {
-	// Initialize the data store with fake data
-	dataStore := models.NewStore()
-	log.Printf("Data store initialized with fake data")
+	// Initialize the database and generate fake data
+	dbPath := config.DatabasePath
+	_, err := models.InitDB(dbPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	
+	// Generate fake data
+	models.GenerateFakeData()
+	log.Printf("Database initialized with fake data")
 
 	// Initialize template engine
 	engine := pug.New(config.TemplatesPath, ".pug")
@@ -55,8 +61,8 @@ func NewServer(config Config) *Server {
 	
 	// Companies function returns a list of sample companies
 	engine.AddFunc("companies", func() []map[string]interface{} {
-		// Get companies from the store
-		companies := dataStore.GetAllCompanies()
+		// Get companies using model function directly
+		companies := models.GetAllCompanies()
 		result := make([]map[string]interface{}, len(companies))
 		
 		// Log the number of companies being passed to the template
@@ -124,17 +130,17 @@ func NewServer(config Config) *Server {
 	
 	// CompaniesCount function for the template
 	engine.AddFunc("companiesCount", func() int {
-		return len(dataStore.GetAllCompanies())
+		return len(models.GetAllCompanies())
 	})
 	
 	// ActiveCompaniesCount function for the template
 	engine.AddFunc("activeCompaniesCount", func() int {
-		return len(dataStore.GetActiveCompanies())
+		return len(models.GetActiveCompanies())
 	})
 	
 	// ShareholdersCount function for the template
 	engine.AddFunc("shareholdersCount", func() int {
-		return len(dataStore.GetAllShareholders())
+		return len(models.GetAllShareholders())
 	})
 	
 	// Error function for the login template
@@ -149,7 +155,7 @@ func NewServer(config Config) *Server {
 	
 	// Company function returns a sample company for the details page
 	engine.AddFunc("company", func() map[string]interface{} {
-		companies := dataStore.GetAllCompanies()
+		companies := models.GetAllCompanies()
 		if len(companies) == 0 {
 			return map[string]interface{}{}
 		}
@@ -236,19 +242,18 @@ func NewServer(config Config) *Server {
 	app.Static("/favicon.ico", filepath.Join(config.StaticFilesPath, "favicon.ico"))
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(dataStore)
-	companyHandler := handlers.NewCompanyHandler(dataStore)
-	shareholderHandler := handlers.NewShareholderHandler(dataStore)
-	boardMeetingHandler := handlers.NewBoardMeetingHandler(dataStore)
-	voteHandler := handlers.NewVoteHandler(dataStore)
-	saleHandler := handlers.NewSaleHandler(dataStore)
+	authHandler := handlers.NewAuthHandler(nil)
+	companyHandler := handlers.NewCompanyHandler(nil)
+	shareholderHandler := handlers.NewShareholderHandler(nil)
+	boardMeetingHandler := handlers.NewBoardMeetingHandler(nil)
+	voteHandler := handlers.NewVoteHandler(nil)
+	saleHandler := handlers.NewSaleHandler(nil)
 
 	// Create server instance
 	srv := &Server{
 		app:       app,
 		config:    config,
 		startTime: time.Now(),
-		store:     dataStore,
 		authHandler: authHandler,
 		companyHandler: companyHandler,
 		shareholderHandler: shareholderHandler,

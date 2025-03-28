@@ -6,15 +6,11 @@ import (
 )
 
 // AuthHandler handles authentication-related routes
-type AuthHandler struct {
-	store *models.Store
-}
+type AuthHandler struct {}
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler(store *models.Store) *AuthHandler {
-	return &AuthHandler{
-		store: store,
-	}
+func NewAuthHandler(_ *models.Store) *AuthHandler {
+	return &AuthHandler{}
 }
 
 // GetLogin renders the login page

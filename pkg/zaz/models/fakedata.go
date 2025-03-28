@@ -471,46 +471,52 @@ func (g *FakeDataGenerator) GenerateSale(companyID int64) Sale {
 	return sale
 }
 
-// GenerateFakeData generates a complete set of fake data
-func GenerateFakeData() ([]User, []Company, []Vote, []Product, []Sale) {
+// GenerateFakeData generates a complete set of fake data and adds it to the database
+func GenerateFakeData() {
 	generator := NewFakeDataGenerator()
 	
 	// Generate users
 	userCount := 20
-	users := make([]User, userCount)
+	var users []User
 	for i := 0; i < userCount; i++ {
-		users[i] = generator.GenerateUser()
+		user := generator.GenerateUser()
+		AddUser(user)
+		users = append(users, user)
 	}
 	
 	// Generate companies
 	companyCount := 10
-	companies := make([]Company, companyCount)
+	var companies []Company
 	for i := 0; i < companyCount; i++ {
-		companies[i] = generator.GenerateCompany()
+		company := generator.GenerateCompany()
+		companyID := AddCompany(company)
+		company.ID = companyID
+		companies = append(companies, company)
 	}
 	
 	// Generate votes
 	voteCount := 15
-	votes := make([]Vote, voteCount)
 	for i := 0; i < voteCount; i++ {
 		companyIndex := generator.rnd.Intn(len(companies))
-		votes[i] = generator.GenerateVote(companies[companyIndex].ID)
+		vote := generator.GenerateVote(companies[companyIndex].ID)
+		AddVote(vote)
 	}
 	
 	// Generate products
 	productCount := 25
-	products := make([]Product, productCount)
+	var products []Product
 	for i := 0; i < productCount; i++ {
-		products[i] = generator.GenerateProduct()
+		product := generator.GenerateProduct()
+		productID := AddProduct(product)
+		product.ID = productID
+		products = append(products, product)
 	}
 	
 	// Generate sales
 	saleCount := 30
-	sales := make([]Sale, saleCount)
 	for i := 0; i < saleCount; i++ {
 		companyIndex := generator.rnd.Intn(len(companies))
-		sales[i] = generator.GenerateSale(companies[companyIndex].ID)
+		sale := generator.GenerateSale(companies[companyIndex].ID)
+		AddSale(sale)
 	}
-	
-	return users, companies, votes, products, sales
 }
