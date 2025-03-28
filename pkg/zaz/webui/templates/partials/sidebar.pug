@@ -1,51 +1,50 @@
-//- sidebar.pug - Vertical navigation menu for the Freezone Manager using PicoCSS defaults
-aside
-  nav
-    details(open)
+//- sidebar.pug - Vertical navigation menu for the Freezone Manager
+aside.sidebar.left-sidebar#freezone-menu
+  header
+    h4 Navigation
+    hr
+  nav.is-sticky
+    details(data-section="dashboard")
       summary Dashboard
       ul
-        li: a(href="/") Overview
-        li: a(href="/stats") Statistics
+        li: a.secondary(href="/" data-path="/") Overview
     
-    details(open)
+    details(data-section="companies")
       summary Companies
       ul
-        li: a(href="/companies") All Companies
-        li: a(href="/companies/create") Register Company
-        li: a(href="/companies/reports") Company Reports
+        li: a.secondary(href="/companies" data-path="/companies") All Companies
+        li: a.secondary(href="/companies/create" data-path="/companies/create") Register Company
     
-    details(open)
+    details(data-section="shareholders")
       summary Shareholders
       ul
-        li: a(href="/shareholders") All Shareholders
-        li: a(href="/shareholders/create") Add Shareholder
-        li: a(href="/shareholders/reports") Shareholder Reports
+        li: a.secondary(href="/shareholders" data-path="/shareholders") All Shareholders
+        li: a.secondary(href="/shareholders/create" data-path="/shareholders/create") Add Shareholder
     
-    details(open)
+    details(data-section="meetings")
       summary Meetings
       ul
-        li: a(href="/boardmeetings") All Meetings
-        li: a(href="/boardmeetings/create") Schedule Meeting
-        li: a(href="/boardmeetings/minutes") Meeting Minutes
+        li: a.secondary(href="/boardmeetings" data-path="/boardmeetings") All Meetings
+        li: a.secondary(href="/boardmeetings/create" data-path="/boardmeetings/create") Schedule Meeting
     
-    details(open)
+    details(data-section="voting")
       summary Voting
       ul
-        li: a(href="/votes") All Votes
-        li: a(href="/votes/create") Create Vote
-        li: a(href="/votes/results") Vote Results
+        li: a.secondary(href="/votes" data-path="/votes") All Votes
+        li: a.secondary(href="/votes/create" data-path="/votes/create") Create Vote
+        li: a.secondary(href="/votes/results" data-path="/votes/results") Vote Results
     
-    details(open)
+    details(data-section="sales")
       summary Sales
       ul
-        li: a(href="/sales") All Sales
-        li: a(href="/sales/products") Products
-        li: a(href="/sales/services") Services
-        li: a(href="/sales/reports") Sales Reports
+        li: a.secondary(href="/sales" data-path="/sales") All Sales
+        li: a.secondary(href="/sales/products" data-path="/sales/products") Products
+        li: a.secondary(href="/sales/services" data-path="/sales/services") Services
+        li: a.secondary(href="/sales/reports" data-path="/sales/reports") Sales Reports
     
-    details(open)
-      summary Administration
+    details(data-section="account")
+      summary Account
       ul
-        li: a(href="/admin") Admin Dashboard
-        li: a(href="/admin/users") User Management
-        li: a(href="/admin/settings") System Settings
+        li: a.secondary(href="/login" data-path="/login") Login
+        li: a.secondary(href="/register" data-path="/register") Register
+        li: a.secondary(href="/logout" data-path="/logout") Logout

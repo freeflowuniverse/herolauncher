@@ -1,0 +1,42 @@
+/* Right sidebar specific styling */
+.right-sidebar {
+  background-color: var(--pico-background-color);
+  border-left: var(--pico-border-width) solid var(--pico-muted-border-color);
+  padding: 0 var(--pico-spacing);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.right-sidebar header {
+  padding-top: var(--pico-spacing);
+}
+
+.right-sidebar nav {
+  position: sticky;
+  top: var(--pico-spacing);
+}
+
+.right-sidebar details {
+  margin-bottom: var(--pico-spacing);
+}
+
+.right-sidebar details summary {
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.right-sidebar ul {
+  margin: 0;
+  padding-left: 0.5rem;
+}
+
+.right-sidebar li {
+  margin-bottom: 0.2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .right-sidebar {
+    display: none;
+  }
+}

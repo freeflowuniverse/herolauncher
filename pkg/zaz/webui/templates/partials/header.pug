@@ -1,19 +1,28 @@
-//- header.pug - Header component for the Freezone Manager
-header
-  nav.top-nav
-    .brand
-      a(href="/")
-        img.brand-icon(src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24")
-        span Freezone Manager
+//- header.pug - Header component for the Freezone Manager using PicoCSS native approach
+header.container
+  nav
+    //- Logo on the left
+    ul
+      li
+        a(href="/")
+          img(src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24")
+          strong  Freezone Manager
     
-    .nav-links
-      a.nav-link(href="/") Home
-      a.nav-link(href="/companies") Companies
-      a.nav-link(href="/shareholders") Shareholders
-      a.nav-link(href="/boardmeetings") Meetings
-      a.nav-link(href="/votes") Votes
-      a.nav-link(href="/sales") Sales
+    //- Navigation items in the center
+    ul
+      li: a.secondary(href="/") Home
+      li: a.secondary(href="/companies") Companies
+      li: a.secondary(href="/shareholders") Shareholders
+      li: a.secondary(href="/boardmeetings") Meetings
+      li: a.secondary(href="/votes") Votes
+      li: a.secondary(href="/sales") Sales
     
-    .nav-right
-      span.welcome Welcome, User
-      a.logout-btn(href="/logout") Logout
+    //- Profile dropdown on the right
+    ul
+      li
+        details.dropdown
+          summary Account
+          ul(dir="rtl")
+            li: a(href="/profile") Profile
+            li: a(href="/settings") Settings
+            li: a(href="/logout") Logout
