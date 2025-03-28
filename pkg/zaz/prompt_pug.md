@@ -1,16 +1,14 @@
-# Go Templating with Fiber and Pug Templates: A Comprehensive Guide
+# Pug Templates: A Comprehensive Guide
 
-## Core Concepts
+IMPORTANT
 
-Your templating system combines:
-1. **Fiber's template engine** (using `gofiber/template/pug/v2`)
-2. **Go's standard HTML template package** (`html/template`)
-3. **Pug template syntax** for concise HTML structure
-4. **Go template delimiters** (`{{ }}`) for dynamic content insertion
+- pug in go uses {{ }} for delimiters for variables
+- for if and else and range need to use | {{ }}
 
 ## Syntax Guide
 
 ### 1. Basic Structure
+
 ```pug
 // Pug syntax for HTML structure
 header
@@ -18,6 +16,7 @@ header
 ```
 
 ### 2. Conditionals
+
 ```pug
 // If statement
 | {{if condition}}
@@ -39,6 +38,7 @@ else
 ```
 
 ### 3. Loops
+
 ```pug
 // Looping through collections
 | {{range .mailPreviews}}
@@ -48,6 +48,9 @@ li
 ```
 
 ### 4. Data Access
+
+**NOTE**: No `|` needed
+
 ```pug
 // Accessing struct fields with dot notation
 h3 {{.mail.Subject}}
@@ -68,14 +71,14 @@ div | .htmlContent
 
 1. **Mixing delimiters**: Always use `{{ }}` for Go templating, not other delimiters
 2. **Indentation issues**: Maintain proper Pug indentation while inserting Go template directives
-3. **Missing end tags**: Every `{{if}}` or `{{range}}` must have a corresponding `{{end}}`
+3. **Missing end tags**: Every `| {{if}}` or `| {{range}}` must have a corresponding `| {{end}}`
 4. **Incorrect field access**: Use dot notation (`.fieldName`) to access struct fields
 5. **Function usage**: Custom functions must be registered with `engine.AddFunc()` before use
 
 ## Example from Your Codebase
 
 ```pug
-if len .mailPreviews
+| {{if len .mailPreviews}}
   ul.mail-preview-list
     | {{range .mailPreviews}}
     li
@@ -102,5 +105,5 @@ else
 
 1. [Go html/template Documentation](https://pkg.go.dev/html/template)
 2. [Fiber Template Documentation](https://docs.gofiber.io/template/html)
-3. [Pug Template Syntax](https://pugjs.org/language/attributes.html)
+3. [Pug Template Syntax](https://pugjs.org/language/attributes.html) - be careful use golang template
 4. [Fiber Pug Template Engine](https://github.com/gofiber/template/tree/master/pug)
