@@ -2,6 +2,7 @@ package redisserver
 
 import (
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -95,16 +96,22 @@ func (s *Server) startRedisServer(addr string, networkType string) {
 					conn.WriteBulkString(k)
 				}
 			case "hset":
-				// Usage: HSET key field value
-				if len(cmd.Args) < 4 {
+				// Usage: HSET key field value [field value ...]
+				if len(cmd.Args) < 4 || len(cmd.Args)%2 != 0 {
 					conn.WriteError("ERR wrong number of arguments for 'hset' command")
 					return
 				}
 				key := string(cmd.Args[1])
-				field := string(cmd.Args[2])
-				value := string(cmd.Args[3])
-				added := s.hset(key, field, value)
-				conn.WriteInt(added)
+				
+				// Process multiple field-value pairs
+				totalAdded := 0
+				for i := 2; i < len(cmd.Args); i += 2 {
+					field := string(cmd.Args[i])
+					value := string(cmd.Args[i+1])
+					added := s.hset(key, field, value)
+					totalAdded += added
+				}
+				conn.WriteInt(totalAdded)
 			case "hget":
 				// Usage: HGET key field
 				if len(cmd.Args) < 3 {
@@ -153,6 +160,38 @@ func (s *Server) startRedisServer(addr string, networkType string) {
 				key := string(cmd.Args[1])
 				length := s.hlen(key)
 				conn.WriteInt(length)
+			case "hgetall":
+				// Usage: HGETALL key
+				if len(cmd.Args) < 2 {
+					conn.WriteError("ERR wrong number of arguments for 'hgetall' command")
+					return
+				}
+				key := string(cmd.Args[1])
+				hash, ok := s.getHash(key)
+				if !ok {
+					// Return empty array if key doesn't exist or is not a hash
+					conn.WriteArray(0)
+					return
+				}
+				// Write field-value pairs
+				conn.WriteArray(len(hash) * 2) // Each field has a corresponding value
+				// Sort fields for consistent output
+				fields := make([]string, 0, len(hash))
+				for field := range hash {
+					fields = append(fields, field)
+				}
+				sort.Strings(fields)
+				for _, field := range fields {
+					conn.WriteBulkString(field)
+					conn.WriteBulkString(hash[field])
+				}
+
+			case "flushdb":
+				// Usage: FLUSHDB
+				s.mu.Lock()
+				s.data = make(map[string]*entry)
+				s.mu.Unlock()
+				conn.WriteString("OK")
 			case "incr":
 				if len(cmd.Args) < 2 {
 					conn.WriteError("ERR wrong number of arguments for 'incr' command")

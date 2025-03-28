@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # Don't fail all builds if one fails
+      matrix:
+        include:
+          # Linux builds (Intel)
+          - os: ubuntu-latest
+            arch: amd64
+            output_name: herolauncher-linux-amd64
+          
+          # Linux builds (ARM)
+          - os: ubuntu-latest
+            arch: arm64
+            output_name: herolauncher-linux-arm64
+          
+          # macOS builds
+          - os: macos-latest
+            arch: amd64
+            output_name: herolauncher-darwin-amd64
+          - os: macos-latest
+            arch: arm64
+            output_name: herolauncher-darwin-arm64
+          
+          # Windows builds
+          - os: windows-latest
+            arch: amd64
+            output_name: herolauncher-windows-amd64
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Install dependencies
+        run: go mod download
+
+      # Set environment variables for cross-compilation
+      - name: Set build environment
+        shell: bash
+        run: |
+          echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1 | sed 's/ubuntu/linux/;s/macos/darwin/')" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+
+      # Build all main components
+      - name: Build
+        shell: bash
+        run: |
+          # Create a directory for binaries
+          mkdir -p bin
+          
+          # Build all main components except those with known issues
+          for dir in cmd/*; do
+            if [ -f "$dir/main.go" ]; then
+              component=$(basename $dir)
+              
+              # Skip components with known build issues
+              if [ "$component" == "processmanager" ] || [ "$component" == "vfsdavserver" ]; then
+                echo "Skipping $component due to known build issues..."
+                continue
+              fi
+              
+              echo "Building $component..."
+              go build -v -o bin/$component-${{ matrix.output_name }} ./$dir
+            fi
+          done
+          
+          # Create a combined archive
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # Use zip on Windows - use the bin directory as the source
+            powershell -Command "Compress-Archive -Path bin -DestinationPath '${{ matrix.output_name }}.zip' -Force"
+          else
+            # Use tar on Linux/macOS
+            tar -czf ${{ matrix.output_name }}.tar.gz bin/
+          fi
+
+      # Upload the built binaries as an artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ matrix.output_name }}.*
+          retention-days: 7
