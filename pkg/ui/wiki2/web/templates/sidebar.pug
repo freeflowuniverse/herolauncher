@@ -1,0 +1,29 @@
+//- sidebar.pug - Navigation sidebar template
+aside.sidebar.left-sidebar#documentation-menu
+  header
+    h4 Content
+    hr
+  nav.is-sticky    
+    //- Render sections from sidebar config
+    | {{range .sidebar}}
+    details
+      summary {{.Title}}
+      | {{template "sidebar_items" .Items}}
+    | {{end}}
+
+//- Template for rendering sidebar items recursively
+| {{define "sidebar_items"}}
+ul
+  | {{range .}}
+  li
+    | {{if .IsDir}}
+    details
+      summary {{.Title}}
+      | {{template "sidebar_items" .Children}}
+    | {{else if .External}}
+    a.secondary(href="{{.Href}}" target="_blank") {{.Title}}
+    | {{else}}
+    a.secondary(href="{{.Href}}" up-target=".content-area, .right-sidebar") {{.Title}}
+    | {{end}}
+  | {{end}}
+| {{end}}

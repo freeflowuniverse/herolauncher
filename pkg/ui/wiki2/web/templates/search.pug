@@ -1,0 +1,104 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Search Results - MD Viewer
+    
+    //- PicoCSS for styling
+    link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css")
+    
+    //- Unpoly for dynamic content loading
+    script(src="https://unpkg.com/unpoly@2.7.1/unpoly.min.js")
+    link(rel="stylesheet", href="https://unpkg.com/unpoly@2.7.1/unpoly.min.css")
+    
+    //- Custom styles
+    link(rel="stylesheet", href="/css/style.css")
+  
+  body
+    .container
+      header.app-header
+        nav
+          ul
+            li
+              strong MD Viewer
+          ul
+            li
+              a(href="/") Home
+      
+      main.app-content.container
+        section.grid
+          //- Left sidebar navigation (files)
+          aside.sidebar.left-sidebar#documentation-menu
+            header
+              h4 Content
+            nav.is-sticky
+              //- Example section 1
+              details(open)
+                summary Documentation
+                ul
+                  | {{range .files}}
+                  li
+                    a.secondary(href="/{{.Name}}" up-target=".content-area") {{.Title}}
+                  | {{else}}
+                  li
+                    a.secondary(href="/") No files found
+                  | {{end}}
+              
+              //- Example section 2
+              details
+                summary Examples
+                ul
+                  li
+                    a.secondary(href="/features") Features
+                  li
+                    a.secondary(href="/about") About
+                  li
+                    a.secondary(href="/getting-started") Getting Started
+              
+              //- Example section 3
+              details
+                summary Resources
+                ul
+                  li
+                    a.secondary(href="https://github.com/picocss/pico" target="_blank") PicoCSS
+                  li
+                    a.secondary(href="https://gofiber.io/" target="_blank") Fiber
+                  li
+                    a.secondary(href="https://unpoly.com/" target="_blank") Unpoly
+          
+          //- Main content area
+          article.content-area
+            div.search-results
+              h2 Search Results for "{{.query}}"
+              p Found {{.count}} results
+              
+              | {{if gt .count 0}}
+              ul.search-result-list
+                | {{range .results}}
+                li.search-result-item
+                  h3
+                    a(href="/{{.File.Name}}") {{.File.Title}}
+                  div.search-excerpt
+                    | {{.Excerpt | unescaped}}
+                | {{end}}
+              | {{else}}
+              p No results found for your search query. Try different keywords.
+              | {{end}}
+          
+          //- Right sidebar (empty for search results)
+          aside.sidebar.right-sidebar
+            h4 Search Tips
+            nav
+              ul
+                li Use specific keywords
+                li Search is case-insensitive
+                li Try different terms if you don't find what you're looking for
+      
+      footer.app-footer
+        p &copy; 2025 MD Viewer - Built with PicoCSS, Pug, and Unpoly
+    
+    //- Back to top button
+    a.back-to-top(href="#" title="Back to top") ↑
+    
+    script(src="/js/main.js")

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bar Chart -->
+  <rect x="50" y="150" width="50" height="30" fill="#4682B4"/>
+  <rect x="120" y="120" width="50" height="60" fill="#4682B4"/>
+  <rect x="190" y="80" width="50" height="100" fill="#4682B4"/>
+  <rect x="260" y="50" width="50" height="130" fill="#4682B4"/>
+  
+  <!-- X and Y Axis -->
+  <line x1="40" y1="30" x2="40" y2="180" stroke="black" stroke-width="2"/>
+  <line x1="40" y1="180" x2="330" y2="180" stroke="black" stroke-width="2"/>
+  
+  <!-- Labels -->
+  <text x="75" y="195" text-anchor="middle" font-family="Arial" font-size="12">Q1</text>
+  <text x="145" y="195" text-anchor="middle" font-family="Arial" font-size="12">Q2</text>
+  <text x="215" y="195" text-anchor="middle" font-family="Arial" font-size="12">Q3</text>
+  <text x="285" y="195" text-anchor="middle" font-family="Arial" font-size="12">Q4</text>
+  
+  <text x="30" y="180" text-anchor="end" font-family="Arial" font-size="10">0</text>
+  <text x="30" y="140" text-anchor="end" font-family="Arial" font-size="10">50</text>
+  <text x="30" y="100" text-anchor="end" font-family="Arial" font-size="10">100</text>
+  <text x="30" y="60" text-anchor="end" font-family="Arial" font-size="10">150</text>
+  
+  <text x="180" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">Quarterly Results</text>
+</svg>

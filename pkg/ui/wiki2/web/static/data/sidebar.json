@@ -1,0 +1,42 @@
+[
+  {
+    "Title": "Examples",
+    "Items": [
+      {
+        "Title": "Features",
+        "Href": "/features",
+        "External": false
+      },
+      {
+        "Title": "About",
+        "Href": "/about",
+        "External": false
+      },
+      {
+        "Title": "Getting Started",
+        "Href": "/getting-started",
+        "External": false
+      }
+    ]
+  },
+  {
+    "Title": "Resources",
+    "Items": [
+      {
+        "Title": "PicoCSS",
+        "Href": "https://github.com/picocss/pico",
+        "External": true
+      },
+      {
+        "Title": "Fiber",
+        "Href": "https://gofiber.io/",
+        "External": true
+      },
+      {
+        "Title": "Unpoly",
+        "Href": "https://unpoly.com/",
+        "External": true
+      }
+    ]
+  }
+]

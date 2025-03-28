@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="400" height="200" xmlns="http://www.w3.org/2000/svg">
+  <rect x="50" y="50" width="100" height="80" fill="#6495ED" stroke="black" stroke-width="2"/>
+  <rect x="250" y="50" width="100" height="80" fill="#9370DB" stroke="black" stroke-width="2"/>
+  <line x1="150" y1="90" x2="250" y2="90" stroke="black" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="100" y="90" text-anchor="middle" fill="white" font-family="Arial" font-size="14">Input</text>
+  <text x="300" y="90" text-anchor="middle" fill="white" font-family="Arial" font-size="14">Output</text>
+  <text x="200" y="80" text-anchor="middle" fill="black" font-family="Arial" font-size="12">Process</text>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="black"/>
+    </marker>
+  </defs>
+</svg>

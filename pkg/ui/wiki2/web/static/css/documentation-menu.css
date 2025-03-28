@@ -1,0 +1,32 @@
+/* Documentation menu styles */
+#documentation-menu {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+#documentation-menu header {
+  padding-top: 1rem;
+}
+
+#documentation-menu details details {
+  margin-bottom: 0;
+}
+
+#documentation-menu details details summary {
+  font-size: calc(0.85rem * var(--text-scale));
+  font-weight: 500;
+}
+
+#documentation-menu summary:hover {
+  background-color: var(--primary-hover);
+  color: var(--primary-inverse);
+}
+
+#documentation-menu ul {
+  margin-left: 0;
+}
+
+/* Nested sidebar styles */
+#documentation-menu details[open] ul {
+  border-left: 1px solid gray;
+}

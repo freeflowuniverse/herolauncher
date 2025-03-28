@@ -1,0 +1,30 @@
+/* Right sidebar specific styling */
+.right-sidebar .anchor-link {
+  padding-left: 0.5rem;
+  font-size: calc(0.85rem * var(--text-scale));
+  font-weight: 400;
+}
+
+.right-sidebar header {
+  padding-top: 1rem;
+}
+
+.right-sidebar .anchor-link[data-level="2"] {
+  padding-left: 1rem;
+}
+
+.right-sidebar .anchor-link[data-level="3"] {
+  padding-left: 1.5rem;
+}
+
+.right-sidebar .anchor-link[data-level="4"] {
+  padding-left: 2rem;
+}
+
+.right-sidebar .anchor-link[data-level="5"] {
+  padding-left: 2.5rem;
+}
+
+.right-sidebar .anchor-link[data-level="6"] {
+  padding-left: 3rem;
+}

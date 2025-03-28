@@ -1,0 +1,37 @@
+/* Markdown content styling */
+.markdown-content {
+  overflow-y: auto !important; /* Force enable scrolling for markdown content */
+  padding: 1.5rem;
+}
+
+.markdown-content h1 {
+  margin-bottom: 1em;
+}
+
+.markdown-content p {
+  margin-bottom: 0.5em;
+  font-size: calc(0.9rem * var(--text-scale));
+}
+
+.markdown-content ul, .markdown-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 1.2em;
+}
+
+.markdown-content pre {
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: calc(0.9rem * var(--text-scale));
+}
+
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: calc(0.95rem * var(--text-scale));
+}

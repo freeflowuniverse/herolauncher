@@ -1,0 +1,60 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title MD Viewer
+    
+    //- PicoCSS for styling
+    link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css")
+    
+    //- Unpoly for dynamic content loading
+    script(src="https://unpkg.com/unpoly@2.7.1/unpoly.min.js")
+    link(rel="stylesheet", href="https://unpkg.com/unpoly@2.7.1/unpoly.min.css")
+    
+    //- Custom styles
+    link(rel="stylesheet", href="/css/style.css")
+    link(rel="stylesheet", href="/css/documentation-menu.css")
+    link(rel="stylesheet", href="/css/right-sidebar.css")
+    link(rel="stylesheet", href="/css/markdown.css")
+  
+  body
+    .container
+      main.app-content.container
+        section.grid
+          //- Include the sidebar template
+          include sidebar
+          
+          //- Main content area
+          article.content-area
+            div.markdown-content
+              | {{if .safe}}
+              | {{.content | unescaped}}
+              | {{else}}
+              | {{.content}}
+              | {{end}}
+              
+          //- Right sidebar (anchors) - make it a separate fragment for Unpoly
+          aside.sidebar.right-sidebar(up-target=".right-sidebar")
+            header
+              h4 On This Page
+              hr
+            nav
+              ul#anchor-list
+                | {{if .anchors}}
+                | {{range .anchors}}
+                li
+                  a(href="#{{.ID}}" class="anchor-link" data-level="{{.Level}}") {{.Text}}
+                | {{end}}
+                | {{else}}
+                li
+                  span No headings found
+                | {{end}}
+      
+      footer.app-footer
+        p &copy; 2025 MD Viewer - Built with PicoCSS, Pug, and Unpoly
+    
+    //- Back to top button
+    a.back-to-top(href="#" title="Back to top") ↑
+    
+    script(src="/js/main.js")

@@ -1,0 +1,24 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Mac specific
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependency directories
+vendor/
