@@ -34,10 +34,15 @@ func (b *GoSPBuilder) WithGoSharedLibDir(dir string) *GoSPBuilder {
 	return b
 }
 
-// run executes a command with the given arguments
+// run executes a command with the given arguments and environment variables
 func (b *GoSPBuilder) run(cmd string, args ...string) error {
 	fmt.Println("Running:", cmd, args)
 	c := exec.Command(cmd, args...)
+	// Set environment variables
+	c.Env = append(os.Environ(), 
+		"GOROOT=/usr/local/go",
+		"GOPATH=/root/go", 
+		"PATH=/usr/local/go/bin:" + os.Getenv("PATH"))
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
@@ -78,6 +83,15 @@ func main() {}
 	}
 
 	// Use the full path to Go rather than relying on PATH
+	fmt.Println("Running Go build with full path:", goExePath)
+	
+	// Show debug information
+	fmt.Println("Environment variables that will be set:")
+	fmt.Println("  GOROOT=/usr/local/go")
+	fmt.Println("  GOPATH=/root/go")
+	fmt.Println("  PATH=/usr/local/go/bin:" + os.Getenv("PATH"))
+	
+	// Use our run helper that includes proper environment variables
 	if err := b.run(goExePath, "build", "-buildmode=c-shared", "-o", filepath.Join(b.InstallPrefix, "lib", "libgosp.so"), libPath); err != nil {
 		return fmt.Errorf("failed to build Go stored procedure: %w", err)
 	}

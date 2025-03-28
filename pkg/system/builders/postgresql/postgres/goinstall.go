@@ -65,6 +65,15 @@ func (g *GoInstaller) GetGoVersion() (string, error) {
 
 // InstallGo installs Go if it's not already installed and returns the path to the Go executable
 func (g *GoInstaller) InstallGo() (string, error) {
+	// First check if Go is available in PATH
+	if path, err := exec.LookPath("go"); err == nil {
+		// Test if it works
+		cmd := exec.Command(path, "version")
+		if output, err := cmd.Output(); err == nil {
+			fmt.Printf("Found working Go in PATH: %s, version: %s\n", path, strings.TrimSpace(string(output)))
+			return path, nil
+		}
+	}
 	// Default Go installation location
 	installDir := "/usr/local"
 	goExePath := filepath.Join(installDir, "go", "bin", "go")
@@ -131,7 +140,7 @@ func (g *GoInstaller) InstallGo() (string, error) {
 	
 	// Verify installation
 	goExePath := filepath.Join(installDir, "go", "bin", "go")
-	if _, err = os.Stat(goExePath); err != nil {
+	if _, err = os.Stat(goExePath); os.IsNotExist(err) {
 		return "", fmt.Errorf("Go installation failed - go executable not found at %s", goExePath)
 	}
 	
