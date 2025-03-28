@@ -1,15 +1,20 @@
 package handlers
 
 import (
+	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
 	"github.com/gofiber/fiber/v2"
 )
 
 // AuthHandler handles authentication-related routes
-type AuthHandler struct {}
+type AuthHandler struct {
+	store *models.Store
+}
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler() *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(store *models.Store) *AuthHandler {
+	return &AuthHandler{
+		store: store,
+	}
 }
 
 // GetLogin renders the login page

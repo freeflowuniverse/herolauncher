@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
@@ -8,42 +9,21 @@ import (
 )
 
 // BoardMeetingHandler handles board meeting-related routes
-type BoardMeetingHandler struct {}
+type BoardMeetingHandler struct {
+	store *models.Store
+}
 
 // NewBoardMeetingHandler creates a new BoardMeetingHandler
-func NewBoardMeetingHandler() *BoardMeetingHandler {
-	return &BoardMeetingHandler{}
+func NewBoardMeetingHandler(store *models.Store) *BoardMeetingHandler {
+	return &BoardMeetingHandler{
+		store: store,
+	}
 }
 
 // GetBoardMeetings renders the board meetings list page
 func (h *BoardMeetingHandler) GetBoardMeetings(c *fiber.Ctx) error {
-	// Sample board meetings for demonstration
-	meetings := []models.BoardMeeting{
-		{
-			ID: 1,
-			CompanyID: 1,
-			Title: "Q2 Financial Review",
-			Date: time.Now().AddDate(0, 1, 0),
-			Location: "Virtual (Zoom)",
-			Status: "Scheduled",
-		},
-		{
-			ID: 2,
-			CompanyID: 1,
-			Title: "Annual General Meeting",
-			Date: time.Now().AddDate(0, -1, 0),
-			Location: "Company HQ",
-			Status: "Completed",
-		},
-		{
-			ID: 3,
-			CompanyID: 2,
-			Title: "Strategic Planning Session",
-			Date: time.Now().AddDate(0, 0, 15),
-			Location: "Conference Center",
-			Status: "Scheduled",
-		},
-	}
+	// Get meetings from the store
+	meetings := h.store.GetAllBoardMeetings()
 
 	return c.Render("boardmeetings", fiber.Map{
 		"title": "Board Meetings",
@@ -54,21 +34,8 @@ func (h *BoardMeetingHandler) GetBoardMeetings(c *fiber.Ctx) error {
 
 // GetCreateBoardMeeting renders the board meeting creation page
 func (h *BoardMeetingHandler) GetCreateBoardMeeting(c *fiber.Ctx) error {
-	// Get list of companies for dropdown
-	companies := []models.Company{
-		{
-			ID: 1,
-			Name: "TechCorp Inc.",
-		},
-		{
-			ID: 2,
-			Name: "GreenEnergy Ltd.",
-		},
-		{
-			ID: 3,
-			Name: "InnoFinance Corp.",
-		},
-	}
+	// Get list of companies from the store
+	companies := h.store.GetAllCompanies()
 
 	return c.Render("boardmeetings_create", fiber.Map{
 		"title": "Schedule Board Meeting",
@@ -80,67 +47,77 @@ func (h *BoardMeetingHandler) GetCreateBoardMeeting(c *fiber.Ctx) error {
 func (h *BoardMeetingHandler) PostCreateBoardMeeting(c *fiber.Ctx) error {
 	// Parse form data
 	title := c.FormValue("title")
-	companyID := c.FormValue("company_id")
-	date := c.FormValue("date")
+	companyIDStr := c.FormValue("company_id")
+	dateStr := c.FormValue("date")
+	location := c.FormValue("location")
+	description := c.FormValue("description")
 	
 	// Simple validation
-	if title == "" || companyID == "" || date == "" {
+	if title == "" || companyIDStr == "" || dateStr == "" {
+		// Get companies for the form
+		companies := h.store.GetAllCompanies()
 		return c.Render("boardmeetings_create", fiber.Map{
 			"title": "Schedule Board Meeting",
+			"companies": companies,
 			"error": "Title, company, and date are required",
 		})
 	}
 
-	// TODO: Implement actual board meeting creation
-	// For now, just redirect to board meetings list
+	// Parse company ID
+	companyID, err := strconv.ParseInt(companyIDStr, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid company ID")
+	}
+
+	// Parse date
+	date, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		// Get companies for the form
+		companies := h.store.GetAllCompanies()
+		return c.Render("boardmeetings_create", fiber.Map{
+			"title": "Schedule Board Meeting",
+			"companies": companies,
+			"error": "Invalid date format",
+		})
+	}
+
+	// Create a new board meeting
+	meeting := models.BoardMeeting{
+		ID:          int64(len(h.store.GetAllBoardMeetings()) + 1),
+		CompanyID:   companyID,
+		Title:       title,
+		Date:        date,
+		Location:    location,
+		Description: description,
+		Status:      "Scheduled",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	// Add the meeting to the store
+	h.store.AddBoardMeeting(meeting)
+
 	return c.Redirect("/boardmeetings")
 }
 
 // GetBoardMeetingDetails renders the board meeting details page
 func (h *BoardMeetingHandler) GetBoardMeetingDetails(c *fiber.Ctx) error {
-	_ = c.Params("id") // Use the parameter to avoid unused variable warning
+	idParam := c.Params("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
+	}
 	
-	// In a real implementation, we would fetch the meeting from the database
-	meeting := models.BoardMeeting{
-		ID: 1,
-		CompanyID: 1,
-		Title: "Q2 Financial Review",
-		Date: time.Now().AddDate(0, 1, 0),
-		Location: "Virtual (Zoom)",
-		Description: "Review of Q2 financial performance and upcoming projections.",
-		Status: "Scheduled",
-		Attendees: []models.Attendee{
-			{
-				ID: 1,
-				BoardMeetingID: 1,
-				UserID: 1,
-				Name: "John Smith",
-				Role: "CEO",
-				Status: "Confirmed",
-			},
-			{
-				ID: 2,
-				BoardMeetingID: 1,
-				UserID: 2,
-				Name: "Jane Doe",
-				Role: "CFO",
-				Status: "Confirmed",
-			},
-			{
-				ID: 3,
-				BoardMeetingID: 1,
-				UserID: 3,
-				Name: "Bob Johnson",
-				Role: "Board Member",
-				Status: "Pending",
-			},
-		},
+	// Fetch the meeting from the database
+	meeting, err := h.store.GetBoardMeetingByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
 	}
 
 	// Get company info
-	company := models.Company{
-		ID: 1,
-		Name: "TechCorp Inc.",
+	company, err := h.store.GetCompanyByID(meeting.CompanyID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Company not found")
 	}
 
 	return c.Render("boardmeeting_details", fiber.Map{
@@ -152,23 +129,22 @@ func (h *BoardMeetingHandler) GetBoardMeetingDetails(c *fiber.Ctx) error {
 
 // GetBoardMeetingMinutes renders the board meeting minutes page
 func (h *BoardMeetingHandler) GetBoardMeetingMinutes(c *fiber.Ctx) error {
-	_ = c.Params("id") // Use the parameter to avoid unused variable warning
+	idParam := c.Params("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
+	}
 	
-	// In a real implementation, we would fetch the meeting from the database
-	meeting := models.BoardMeeting{
-		ID: 1,
-		CompanyID: 1,
-		Title: "Q2 Financial Review",
-		Date: time.Now().AddDate(0, 1, 0),
-		Location: "Virtual (Zoom)",
-		Status: "Completed",
-		Minutes: "Meeting called to order at 10:00 AM.\n\n1. Approval of Q1 minutes\n2. Q2 Financial Review\n   - Revenue increased by 15%\n   - Expenses within budget\n3. New Product Discussion\n   - Timeline approved\n   - Budget allocation confirmed\n\nMeeting adjourned at 11:30 AM.",
+	// Fetch the meeting from the database
+	meeting, err := h.store.GetBoardMeetingByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
 	}
 
 	// Get company info
-	company := models.Company{
-		ID: 1,
-		Name: "TechCorp Inc.",
+	company, err := h.store.GetCompanyByID(meeting.CompanyID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Company not found")
 	}
 
 	return c.Render("boardmeeting_minutes", fiber.Map{
@@ -180,7 +156,11 @@ func (h *BoardMeetingHandler) GetBoardMeetingMinutes(c *fiber.Ctx) error {
 
 // PostBoardMeetingMinutes handles board meeting minutes form submission
 func (h *BoardMeetingHandler) PostBoardMeetingMinutes(c *fiber.Ctx) error {
-	meetingID := c.Params("id")
+	idParam := c.Params("id")
+	id, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid ID")
+	}
 	
 	// Parse form data
 	minutes := c.FormValue("minutes")
@@ -193,9 +173,23 @@ func (h *BoardMeetingHandler) PostBoardMeetingMinutes(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Implement actual minutes saving
-	// For now, just redirect to board meeting details
-	return c.Redirect("/boardmeetings/" + meetingID)
+	// Fetch the meeting from the database
+	meeting, err := h.store.GetBoardMeetingByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).SendString("Meeting not found")
+	}
+	
+	// Update the minutes
+	meeting.Minutes = minutes
+	meeting.Status = "Completed"
+	
+	// Save the updated meeting
+	err = h.store.UpdateBoardMeeting(meeting)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to update meeting")
+	}
+	
+	return c.Redirect("/boardmeetings/" + idParam)
 }
 
 // GetBoardMeetingsAPI returns board meetings data as JSON for API consumption

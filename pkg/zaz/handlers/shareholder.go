@@ -8,45 +8,21 @@ import (
 )
 
 // ShareholderHandler handles shareholder-related routes
-type ShareholderHandler struct {}
+type ShareholderHandler struct {
+	store *models.Store
+}
 
 // NewShareholderHandler creates a new ShareholderHandler
-func NewShareholderHandler() *ShareholderHandler {
-	return &ShareholderHandler{}
+func NewShareholderHandler(store *models.Store) *ShareholderHandler {
+	return &ShareholderHandler{
+		store: store,
+	}
 }
 
 // GetShareholders renders the shareholders list page
 func (h *ShareholderHandler) GetShareholders(c *fiber.Ctx) error {
-	// Sample shareholders for demonstration
-	shareholders := []models.Shareholder{
-		{
-			ID: 1,
-			CompanyID: 1,
-			Name: "John Smith",
-			Shares: 1000,
-			Percentage: 60.0,
-			Type: "Individual",
-			Since: time.Now().AddDate(0, -6, 0),
-		},
-		{
-			ID: 2,
-			CompanyID: 1,
-			Name: "Venture Capital LLC",
-			Shares: 667,
-			Percentage: 40.0,
-			Type: "Corporate",
-			Since: time.Now().AddDate(0, -3, 0),
-		},
-		{
-			ID: 3,
-			CompanyID: 2,
-			Name: "Sarah Johnson",
-			Shares: 500,
-			Percentage: 50.0,
-			Type: "Individual",
-			Since: time.Now().AddDate(-1, 0, 0),
-		},
-	}
+	// Get shareholders from the store
+	shareholders := h.store.GetAllShareholders()
 
 	return c.Render("shareholders", fiber.Map{
 		"title": "Shareholders",

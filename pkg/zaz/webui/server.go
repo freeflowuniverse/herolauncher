@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/zaz/store"
-	handlerpkg "github.com/freeflowuniverse/herolauncher/pkg/zaz/webui/handlers"
+	"github.com/freeflowuniverse/herolauncher/pkg/zaz/handlers"
+	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -20,22 +20,21 @@ type Server struct {
 	app       *fiber.App
 	config    Config
 	startTime time.Time
-	store     *store.Store
+	store     *models.Store
 	
 	// Handlers
-	authHandler       AuthHandler
-	companyHandler    CompanyHandler
-	shareholderHandler ShareholderHandler
-	boardMeetingHandler BoardMeetingHandler
-	voteHandler      VoteHandler
-	saleHandler      SaleHandler
+	authHandler       *handlers.AuthHandler
+	companyHandler    *handlers.CompanyHandler
+	shareholderHandler *handlers.ShareholderHandler
+	boardMeetingHandler *handlers.BoardMeetingHandler
+	voteHandler      *handlers.VoteHandler
+	saleHandler      *handlers.SaleHandler
 }
 
 // NewServer creates a new instance of the Freezone Manager UI server
 func NewServer(config Config) *Server {
-	// Initialize the data store and load fake data
-	dataStore := store.NewStore()
-	dataStore.LoadFakeData()
+	// Initialize the data store with fake data
+	dataStore := models.NewStore()
 	log.Printf("Data store initialized with fake data")
 
 	// Initialize template engine
@@ -56,16 +55,21 @@ func NewServer(config Config) *Server {
 	
 	// Companies function returns a list of sample companies
 	engine.AddFunc("companies", func() []map[string]interface{} {
+		// Get companies from the store
 		companies := dataStore.GetAllCompanies()
 		result := make([]map[string]interface{}, len(companies))
 		
+		// Log the number of companies being passed to the template
+		log.Printf("Passing %d companies to the template", len(companies))
+		
 		for i, company := range companies {
 			result[i] = map[string]interface{}{
-				"id": company.ID,
-				"name": company.Name,
-				"registration_date": company.IncorporationDate.Format("2006-01-02"),
-				"status": company.Status,
-				"shareholders_count": len(company.Shareholders),
+				"ID": company.ID,
+				"Name": company.Name,
+				"IncorporationDate": company.IncorporationDate,
+				"Status": company.Status,
+				"Industry": company.Industry,
+				"Shareholders": company.Shareholders,
 			}
 		}
 		
@@ -191,12 +195,12 @@ func NewServer(config Config) *Server {
 	app.Static("/favicon.ico", filepath.Join(config.StaticFilesPath, "favicon.ico"))
 
 	// Initialize handlers
-	authHandler := handlerpkg.NewAuthHandler()
-	companyHandler := handlerpkg.NewCompanyHandler()
-	shareholderHandler := handlerpkg.NewShareholderHandler()
-	boardMeetingHandler := handlerpkg.NewBoardMeetingHandler()
-	voteHandler := handlerpkg.NewVoteHandler()
-	saleHandler := handlerpkg.NewSaleHandler()
+	authHandler := handlers.NewAuthHandler(dataStore)
+	companyHandler := handlers.NewCompanyHandler(dataStore)
+	shareholderHandler := handlers.NewShareholderHandler(dataStore)
+	boardMeetingHandler := handlers.NewBoardMeetingHandler(dataStore)
+	voteHandler := handlers.NewVoteHandler(dataStore)
+	saleHandler := handlers.NewSaleHandler(dataStore)
 
 	// Create server instance
 	srv := &Server{

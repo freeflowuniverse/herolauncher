@@ -8,42 +8,21 @@ import (
 )
 
 // VoteHandler handles vote-related routes
-type VoteHandler struct {}
+type VoteHandler struct {
+	store *models.Store
+}
 
 // NewVoteHandler creates a new VoteHandler
-func NewVoteHandler() *VoteHandler {
-	return &VoteHandler{}
+func NewVoteHandler(store *models.Store) *VoteHandler {
+	return &VoteHandler{
+		store: store,
+	}
 }
 
 // GetVotes renders the votes list page
 func (h *VoteHandler) GetVotes(c *fiber.Ctx) error {
-	// Sample votes for demonstration
-	votes := []models.Vote{
-		{
-			ID: 1,
-			CompanyID: 1,
-			Title: "Board Member Election",
-			StartDate: time.Now().AddDate(0, 0, -10),
-			EndDate: time.Now().AddDate(0, 0, -3),
-			Status: "Closed",
-		},
-		{
-			ID: 2,
-			CompanyID: 1,
-			Title: "New Investment Approval",
-			StartDate: time.Now().AddDate(0, 0, -5),
-			EndDate: time.Now().AddDate(0, 0, 5),
-			Status: "Open",
-		},
-		{
-			ID: 3,
-			CompanyID: 2,
-			Title: "Company Name Change",
-			StartDate: time.Now().AddDate(0, 0, 2),
-			EndDate: time.Now().AddDate(0, 0, 12),
-			Status: "Open",
-		},
-	}
+	// Get votes from the store
+	votes := h.store.GetAllVotes()
 
 	return c.Render("votes", fiber.Map{
 		"title": "Votes",

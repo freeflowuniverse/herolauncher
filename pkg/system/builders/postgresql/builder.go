@@ -31,7 +31,7 @@ func NewBuilder() *Builder {
 		InstallPrefix:     installPrefix,
 		PostgresBuilder:   postgres.NewPostgresBuilder().WithInstallPrefix(installPrefix),
 		GoSPBuilder:       gosp.NewGoSPBuilder(installPrefix),
-		DependencyManager: dependencies.NewDependencyManager("bison"),
+		DependencyManager: dependencies.NewDependencyManager("bison", "flex", "libreadline-dev"),
 		Verifier:          verification.NewVerifier(installPrefix),
 	}
 }

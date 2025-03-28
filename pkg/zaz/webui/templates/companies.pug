@@ -7,7 +7,7 @@ block content
       p Manage all companies registered in the Freezone
     
     .action-bar
-      a(href="/companies/create" role="button") Add New Company
+      a(href="/companies/create" role="button")
       form.search-form(action="/companies" method="get")
         input(type="search" name="search" placeholder="Search companies...")
         button(type="submit") Search
@@ -20,21 +20,23 @@ block content
             th Name
             th Registration Date
             th Status
+            th Industry
             th Shareholders
             th Actions
         tbody
           each company in companies
             tr
-              td= company.id
-              td= company.name
-              td= company.registration_date
+              td= company.ID
+              td= company.Name
+              td= company.IncorporationDate
               td
-                span.status= company.status
-              td= company.shareholders_count
+                span(class=`status ${company.Status.toLowerCase()}`)= company.Status
+              td= company.Industry
+              td= company.Shareholders ? company.Shareholders.length : 0
               td.actions
-                a.action-button(href="/companies/1" title="View Details") Details
-                a.action-button(href="/companies/1/edit" title="Edit Company") Edit
-                a.action-button(href="/companies/1/shareholders" title="Manage Shareholders") Shareholders
+                a.action-button(href=`/companies/${company.ID}` title="View Details") Details
+                a.action-button(href=`/companies/${company.ID}/edit` title="Edit Company") Edit
+                a.action-button(href=`/companies/${company.ID}/shareholders` title="Manage Shareholders") Shareholders
     else
       .empty-state
         p No companies found

@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/system/builders/postgresql/postgres"
 )
 
 // Constants for Go stored procedure
@@ -44,6 +46,16 @@ func (b *GoSPBuilder) run(cmd string, args ...string) error {
 // Build builds a Go stored procedure
 func (b *GoSPBuilder) Build() error {
 	fmt.Println("Building Go stored procedure...")
+	
+	// Ensure Go is installed before proceeding
+	goInstaller := postgres.NewGoInstaller()
+	goExePath, err := goInstaller.InstallGo()
+	if err != nil {
+		return fmt.Errorf("failed to ensure Go is installed: %w", err)
+	}
+	
+	fmt.Printf("Using Go executable from: %s\n", goExePath)
+	
 	if err := os.MkdirAll(b.GoSharedLibDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -65,7 +77,8 @@ func main() {}
 		return fmt.Errorf("failed to write to file: %w", err)
 	}
 
-	if err := b.run("go", "build", "-buildmode=c-shared", "-o", filepath.Join(b.InstallPrefix, "lib", "libgosp.so"), libPath); err != nil {
+	// Use the full path to Go rather than relying on PATH
+	if err := b.run(goExePath, "build", "-buildmode=c-shared", "-o", filepath.Join(b.InstallPrefix, "lib", "libgosp.so"), libPath); err != nil {
 		return fmt.Errorf("failed to build Go stored procedure: %w", err)
 	}
 

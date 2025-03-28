@@ -2,14 +2,10 @@ package postgres
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"github.com/mholt/archiver/v3"
 )
 
 // Constants for PostgreSQL installation
@@ -59,170 +55,49 @@ func (b *PostgresBuilder) run(cmd string, args ...string) error {
 	return c.Run()
 }
 
-// DownloadPostgres downloads the PostgreSQL source code
-func (b *PostgresBuilder) DownloadPostgres() error {
-	fmt.Println("Downloading PostgreSQL source...")
-	out, err := os.Create(b.PostgresTar)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer out.Close()
-
-	resp, err := http.Get(b.PostgresURL)
-	if err != nil {
-		return fmt.Errorf("failed to download PostgreSQL: %w", err)
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to write to file: %w", err)
-	}
-	return nil
-}
-
-// ExtractTarGz extracts the tar.gz file and returns the top directory
-func (b *PostgresBuilder) ExtractTarGz() (string, error) {
-	fmt.Println("Extracting...")
-
-	// Create a temporary directory to extract to
-	tempDir, err := os.MkdirTemp("", "postgres-extract-")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer os.RemoveAll(tempDir) // Clean up temp dir when function returns
-
-	// Extract the archive using archiver
-	err = archiver.Unarchive(b.PostgresTar, tempDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to extract archive: %w", err)
-	}
-
-	// Find the top-level directory
-	entries, err := os.ReadDir(tempDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to read temp directory: %w", err)
-	}
-
-	if len(entries) == 0 {
-		return "", fmt.Errorf("no files found in extracted archive")
-	}
-
-	// In most cases, a properly packaged tarball will extract to a single top directory
-	topDir := entries[0].Name()
-	topDirPath := filepath.Join(tempDir, topDir)
-
-	// Move the contents to the current directory
-	err = moveContents(topDirPath, ".")
-	if err != nil {
-		return "", fmt.Errorf("failed to move contents from temp directory: %w", err)
-	}
-
-	fmt.Println("Extracted to directory:", topDir)
-	return topDir, nil
-}
-
-// moveContents moves all contents from src directory to dst directory
-func moveContents(src, dst string) error {
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		// Handle existing destination
-		if _, err := os.Stat(dstPath); err == nil {
-			// If it exists, remove it first
-			if err := os.RemoveAll(dstPath); err != nil {
-				return fmt.Errorf("failed to remove existing path %s: %w", dstPath, err)
-			}
-		}
-
-		// Move the file or directory
-		if err := os.Rename(srcPath, dstPath); err != nil {
-			// If rename fails (possibly due to cross-device link), try copy and delete
-			if strings.Contains(err.Error(), "cross-device link") {
-				if entry.IsDir() {
-					if err := copyDir(srcPath, dstPath); err != nil {
-						return err
-					}
-				} else {
-					if err := copyFile(srcPath, dstPath); err != nil {
-						return err
-					}
-				}
-				os.RemoveAll(srcPath)
-			} else {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = dstFile.ReadFrom(srcFile)
-	return err
-}
-
-// copyDir copies a directory recursively
-func copyDir(src, dst string) error {
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
-			}
-		} else {
-			if err := copyFile(srcPath, dstPath); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // PatchPostmasterC patches the postmaster.c file to allow running as root
 func (b *PostgresBuilder) PatchPostmasterC(baseDir string) error {
 	fmt.Println("Patching to allow root...")
+
+	// Look for the postmaster.c file in the expected location
 	file := filepath.Join(baseDir, b.PatchFile)
+
+	// If the file doesn't exist, try to find it
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		fmt.Println("File not found in the expected location, searching for it...")
+
+		// Search for postmaster.c
+		var postmasterPath string
+		err := filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.Name() == "postmaster.c" {
+				postmasterPath = path
+				return filepath.SkipAll
+			}
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to search for postmaster.c: %w", err)
+		}
+
+		if postmasterPath == "" {
+			return fmt.Errorf("could not find postmaster.c in the extracted directory")
+		}
+
+		fmt.Printf("Found postmaster.c at: %s\n", postmasterPath)
+		file = postmasterPath
+	}
+
+	// Read the file
 	input, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
+	// Patch the file
 	modified := strings.Replace(string(input),
 		"if (geteuid() == 0)",
 		"if (false /* patched to allow root */)",
@@ -231,6 +106,8 @@ func (b *PostgresBuilder) PatchPostmasterC(baseDir string) error {
 	if err := os.WriteFile(file, []byte(modified), 0644); err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
 	}
+
+	fmt.Println("Successfully patched postmaster.c")
 	return nil
 }
 
@@ -291,23 +168,49 @@ func (b *PostgresBuilder) CleanInstall() error {
 
 // Build builds PostgreSQL
 func (b *PostgresBuilder) Build() error {
+	// Check if PostgreSQL is already installed
+	binPath := filepath.Join(b.InstallPrefix, "bin", "postgres")
+	if _, err := os.Stat(binPath); err == nil {
+		fmt.Printf("✅ PostgreSQL already installed at %s, skipping build\n", b.InstallPrefix)
+		return nil
+	}
+
+	// Check if install directory exists but is incomplete/corrupt
+	if _, err := os.Stat(b.InstallPrefix); err == nil {
+		fmt.Printf("Found incomplete installation at %s, removing it to start fresh\n", b.InstallPrefix)
+		if err := os.RemoveAll(b.InstallPrefix); err != nil {
+			return fmt.Errorf("failed to clean incomplete installation: %w", err)
+		}
+	}
+
+	// Download PostgreSQL source
 	if err := b.DownloadPostgres(); err != nil {
 		return err
 	}
 
+	// Extract the source code
 	srcDir, err := b.ExtractTarGz()
 	if err != nil {
 		return err
 	}
 
+	// Patch to allow running as root
 	if err := b.PatchPostmasterC(srcDir); err != nil {
 		return err
 	}
 
+	// Build PostgreSQL
 	if err := b.BuildPostgres(srcDir); err != nil {
+		// Clean up on build failure
+		fmt.Printf("Build failed, cleaning up installation directory %s\n", b.InstallPrefix)
+		cleanErr := os.RemoveAll(b.InstallPrefix)
+		if cleanErr != nil {
+			fmt.Printf("Warning: Failed to clean up installation directory: %v\n", cleanErr)
+		}
 		return err
 	}
 
+	// Final cleanup
 	if err := b.CleanInstall(); err != nil {
 		return err
 	}
