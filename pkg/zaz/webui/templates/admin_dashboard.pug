@@ -1,0 +1,188 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Admin Dashboard
+      p System administration and management
+    
+    .grid
+      div
+        article
+          header
+            h3 System Status
+          
+          .grid
+            div
+              h4 Server Uptime
+              p
+                strong {{.stats.Uptime}}
+            
+            div
+              h4 Active Users
+              p
+                strong {{.stats.ActiveUsers}}
+                span  users online
+            
+            div
+              h4 Database Size
+              p
+                strong {{.stats.DatabaseSize}}
+      
+      div
+        article
+          header
+            h3 Recent Activity
+          
+          | {{if .recentActivities}}
+          ul.activity-list
+            | {{range .recentActivities}}
+            li
+              span.activity-time {{.TimeAgo}}
+              span.activity-user {{.User}}
+              span.activity-action {{.Action}}
+            | {{end}}
+          | {{else}}
+          p.no-data No recent activities to display.
+          | {{end}}
+    
+    article
+      header
+        h3 Quick Actions
+      
+      .grid
+        div
+          a(href="/admin/users" role="button") Manage Users
+        
+        div
+          a(href="/admin/settings" role="button" class="secondary") System Settings
+        
+        div
+          a(href="/admin/backup" role="button" class="contrast") Backup Data
+    
+    .grid
+      div
+        article
+          header
+            h3 System Resources
+          
+          .resource-meters
+            .resource-meter
+              label CPU Usage
+              progress(value="{{.stats.CPUUsage}}" max="100") {{.stats.CPUUsage}}%
+              span {{.stats.CPUUsage}}%
+            
+            .resource-meter
+              label Memory Usage
+              progress(value="{{.stats.MemoryUsage}}" max="100") {{.stats.MemoryUsage}}%
+              span {{.stats.MemoryUsage}}%
+            
+            .resource-meter
+              label Disk Usage
+              progress(value="{{.stats.DiskUsage}}" max="100") {{.stats.DiskUsage}}%
+              span {{.stats.DiskUsage}}%
+      
+      div
+        article
+          header
+            h3 User Statistics
+          
+          .chart-container
+            #user-stats-chart(style="width: 100%; height: 300px;")
+    
+    article
+      header
+        h3 System Logs
+      
+      .log-filters
+        .grid
+          div
+            label(for="log_level") Log Level
+            select(id="log_level" name="log_level")
+              option(value="all") All Levels
+              option(value="error") Error
+              option(value="warning") Warning
+              option(value="info") Info
+              option(value="debug") Debug
+          
+          div
+            label(for="log_date") Date
+            input(type="date" id="log_date" name="log_date")
+      
+      | {{if .logs}}
+      .log-container
+        table.logs-table
+          thead
+            tr
+              th Time
+              th Level
+              th Module
+              th Message
+          tbody
+            | {{range .logs}}
+            tr(class="{{.Level}}")
+              td {{.Time}}
+              td {{.Level}}
+              td {{.Module}}
+              td {{.Message}}
+            | {{end}}
+      | {{else}}
+      p.no-data No logs available for the selected filters.
+      | {{end}}
+
+block scripts
+  script.
+    // Initialize user stats chart
+    document.addEventListener('DOMContentLoaded', function() {
+      const userStatsChart = echarts.init(document.getElementById('user-stats-chart'));
+      
+      const userStatsOption = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        legend: {
+          data: ['New Users', 'Active Users']
+        },
+        xAxis: {
+          type: 'category',
+          data: [{{range .userStats.Periods}}'{{.}}',{{end}}]
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            name: 'New Users',
+            type: 'bar',
+            data: [{{range .userStats.NewUsers}}{{.}},{{end}}]
+          },
+          {
+            name: 'Active Users',
+            type: 'bar',
+            data: [{{range .userStats.ActiveUsers}}{{.}},{{end}}]
+          }
+        ]
+      };
+      
+      userStatsChart.setOption(userStatsOption);
+      
+      // Resize chart when window size changes
+      window.addEventListener('resize', function() {
+        userStatsChart.resize();
+      });
+      
+      // Log filter functionality
+      document.getElementById('log_level').addEventListener('change', filterLogs);
+      document.getElementById('log_date').addEventListener('change', filterLogs);
+      
+      function filterLogs() {
+        const level = document.getElementById('log_level').value;
+        const date = document.getElementById('log_date').value;
+        
+        // Redirect to filtered logs
+        window.location.href = '/admin?log_level=' + level + '&log_date=' + date;
+      }
+    });

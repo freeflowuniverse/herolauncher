@@ -1,0 +1,48 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Board Meetings
+      p Manage all board meetings in the Freezone
+
+    .action-bar
+      a(href="/boardmeetings/create" role="button") Schedule Meeting
+      form.search-form(action="/boardmeetings" method="get")
+        input(type="search" name="search" placeholder="Search meetings..." value="{{.search}}")
+        button(type="submit") Search
+    
+    | {{if .boardMeetings}}
+    table
+      thead
+        tr
+          th ID
+          th Company
+          th Title
+          th Date
+          th Status
+          th Actions
+      tbody
+        | {{range .boardMeetings}}
+        tr
+          td {{.ID}}
+          td {{.CompanyName}}
+          td {{.Title}}
+          td {{.Date}}
+          td {{.Status}}
+          td.actions
+            a(href="/boardmeetings/{{.ID}}" title="View Details") Details
+            | {{if eq .Status "Completed"}}
+            a(href="/boardmeetings/{{.ID}}/minutes" title="View Minutes") Minutes
+            | {{end}}
+        | {{end}}
+    | {{else}}
+    .empty-state
+      p No board meetings found
+      | {{if .search}}
+      p No results for "{{.search}}"
+      a(href="/boardmeetings") Clear search
+      | {{else}}
+      a(href="/boardmeetings/create" role="button") Schedule your first meeting
+      | {{end}}
+    | {{end}}

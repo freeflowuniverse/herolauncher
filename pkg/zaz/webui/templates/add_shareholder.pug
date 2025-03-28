@@ -1,0 +1,100 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Add Shareholder to Company
+      p Add an existing or new shareholder to {{.company.Name}}
+    
+    | {{if .formErrors}}
+    .form-errors
+      h4 Please correct the following errors:
+      ul
+        | {{range .formErrors}}
+        li {{.}}
+        | {{end}}
+    | {{end}}
+    
+    form(action="/companies/{{.company.ID}}/shareholders/add" method="post")
+      | {{if .csrfToken}}
+      input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+      | {{end}}
+      
+      fieldset
+        legend Shareholder Information
+        
+        .grid
+          div
+            label(for="shareholder_type") Shareholder Type
+            select(id="shareholder_type" name="shareholder_type")
+              option(value="existing") Existing Shareholder
+              option(value="new") New Shareholder
+        
+        .existing-shareholder-section
+          label(for="existing_shareholder_id") Select Existing Shareholder
+          select(id="existing_shareholder_id" name="existing_shareholder_id")
+            option(value="") Select a shareholder
+            | {{range .shareholders}}
+            option(value="{{.ID}}") {{.Name}} ({{.Email}})
+            | {{end}}
+        
+        .new-shareholder-section(style="display: none;")
+          .grid
+            div
+              label(for="name") Full Name
+              input(type="text" id="name" name="name" placeholder="Enter shareholder name" value="{{.form.Name}}")
+            
+            div
+              label(for="email") Email
+              input(type="email" id="email" name="email" placeholder="shareholder@example.com" value="{{.form.Email}}")
+          
+          .grid
+            div
+              label(for="phone") Phone
+              input(type="tel" id="phone" name="phone" placeholder="+1 234 567 8900" value="{{.form.Phone}}")
+            
+            div
+              label(for="identification") Identification Number
+              input(type="text" id="identification" name="identification" placeholder="ID or Passport number" value="{{.form.Identification}}")
+      
+      fieldset
+        legend Share Information
+        
+        .grid
+          div
+            label(for="shares") Number of Shares
+            input(type="number" id="shares" name="shares" min="1" placeholder="Number of shares" value="{{.form.Shares}}")
+          
+          div
+            label(for="share_price") Share Price
+            .input-group
+              span $
+              input(type="number" id="share_price" name="share_price" min="0.01" step="0.01" placeholder="Price per share" value="{{.form.SharePrice}}")
+        
+        div
+          label(for="acquisition_date") Acquisition Date
+          input(type="date" id="acquisition_date" name="acquisition_date" value="{{.form.AcquisitionDate}}")
+        
+        div
+          label(for="notes") Notes
+          textarea(id="notes" name="notes" placeholder="Additional notes about this share acquisition" rows="3") {{.form.Notes}}
+      
+      .form-actions
+        button(type="submit" role="button") Add Shareholder
+        a(href="/companies/{{.company.ID}}" role="button" class="secondary") Cancel
+
+block scripts
+  script.
+    // Toggle between existing and new shareholder forms
+    document.getElementById('shareholder_type').addEventListener('change', function() {
+      const existingSection = document.querySelector('.existing-shareholder-section');
+      const newSection = document.querySelector('.new-shareholder-section');
+      
+      if (this.value === 'existing') {
+        existingSection.style.display = 'block';
+        newSection.style.display = 'none';
+      } else {
+        existingSection.style.display = 'none';
+        newSection.style.display = 'block';
+      }
+    });

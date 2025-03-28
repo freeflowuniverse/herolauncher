@@ -1,0 +1,118 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Vote Details
+      .header-actions.button-group
+        | {{if eq .vote.Status "Open"}}
+        a(href="/votes/{{.vote.ID}}/cast" role="button" class="primary small") Cast Vote
+        | {{end}}
+        | {{if eq .vote.Status "Completed"}}
+        a(href="/votes/{{.vote.ID}}/results" role="button" class="secondary small") View Results
+        | {{end}}
+        a(href="/votes" role="button" class="outline small") Back to List
+        
+    .vote-info.grid
+      .vote-details
+        h3 {{.vote.Title}}
+        
+        p.company
+          strong Company: 
+          a(href="/companies/{{.vote.CompanyID}}") {{.vote.CompanyName}}
+        p.status
+          strong Status: 
+          span(class="status {{.vote.Status}}") {{.vote.Status}}
+        p.type
+          strong Vote Type: 
+          span {{.vote.Type}}
+        p.majority
+          strong Majority Required: 
+          span {{.vote.MajorityType}}
+        
+      .vote-dates
+        h3 Voting Period
+        p
+          strong Start Date: 
+          span {{.vote.StartDate}}
+        p
+          strong Deadline: 
+          span {{.vote.Deadline}}
+        | {{if .vote.CompletedDate}}
+        p
+          strong Completed Date: 
+          span {{.vote.CompletedDate}}
+        | {{end}}
+        
+      .vote-description
+        h3 Description
+        p {{.vote.Description}}
+      
+    section.vote-options
+      h3 Vote Options
+      
+      | {{if .vote.Options}}
+      .options-list
+        | {{range $index, $option := .vote.Options}}
+        .option-card
+          h4 {{$option.Text}}
+          | {{if $option.Description}}
+          p {{$option.Description}}
+          | {{end}}
+        | {{end}}
+      | {{else}}
+      p.no-data No options available for this vote.
+      | {{end}}
+      
+    section.eligible-voters
+      h3 Eligible Voters
+      
+      | {{if eq .vote.VoterType "all_shareholders"}}
+      p All shareholders of {{.vote.CompanyName}} are eligible to vote.
+      | {{else if eq .vote.VoterType "board_members"}}
+      p Only board members of {{.vote.CompanyName}} are eligible to vote.
+      | {{else if eq .vote.VoterType "specific"}}
+      p Only specific shareholders are eligible to vote:
+      
+      | {{if .vote.EligibleVoters}}
+      ul.voters-list
+        | {{range .vote.EligibleVoters}}
+        li {{.Name}} ({{.Email}})
+        | {{end}}
+      | {{else}}
+      p.no-data No specific voters have been designated.
+      | {{end}}
+      | {{end}}
+      
+    | {{if eq .vote.Status "Open"}}
+    section.cast-vote
+      h3 Cast Your Vote
+      
+      form(action="/votes/{{.vote.ID}}/cast" method="post")
+        | {{if .csrfToken}}
+        input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+        | {{end}}
+        
+        fieldset
+          legend Select Your Vote
+          
+          | {{range $index, $option := .vote.Options}}
+          .radio-item
+            input(type="radio" id="vote_option_{{$index}}" name="vote_option" value="{{$index}}" required)
+            label(for="vote_option_{{$index}}") {{$option.Text}}
+          | {{end}}
+        
+        div
+          label(for="comment") Comment (Optional)
+          textarea(id="comment" name="comment" placeholder="Add an optional comment with your vote" rows="3") {{.form.Comment}}
+        
+        .form-actions
+          button(type="submit" role="button") Submit Vote
+      | {{end}}
+      
+    | {{if eq .vote.Status "Completed"}}
+    section.vote-results
+      h3 Results
+      
+      a(href="/votes/{{.vote.ID}}/results" role="button") View Detailed Results
+    | {{end}}

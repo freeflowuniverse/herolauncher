@@ -1,0 +1,208 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Meeting Minutes
+      .header-actions.button-group
+        a(href="/boardmeetings/{{.meeting.ID}}" role="button" class="outline small") Back to Meeting
+        | {{if eq .meeting.Status "Completed"}}
+        a(href="/boardmeetings/{{.meeting.ID}}/minutes/export" role="button" class="secondary small") Export PDF
+        | {{end}}
+        
+    .meeting-header
+      h3 {{.meeting.Title}}
+      
+      .meeting-meta
+        p
+          strong Company: 
+          a(href="/companies/{{.meeting.CompanyID}}") {{.meeting.CompanyName}}
+        p
+          strong Date: 
+          span {{.meeting.Date}}
+        p
+          strong Location: 
+          span {{.meeting.Location}}
+        p
+          strong Status: 
+          span(class="status {{.meeting.Status}}") {{.meeting.Status}}
+    
+    | {{if eq .meeting.Status "In Progress"}}
+    form(action="/boardmeetings/{{.meeting.ID}}/minutes" method="post")
+      | {{if .csrfToken}}
+      input(type="hidden" name="csrf_token" value="{{.csrfToken}}")
+      | {{end}}
+      
+      fieldset
+        legend Meeting Information
+        
+        .grid
+          div
+            label(for="start_time") Start Time
+            input(type="time" id="start_time" name="start_time" value="{{.minutes.StartTime}}")
+          
+          div
+            label(for="end_time") End Time
+            input(type="time" id="end_time" name="end_time" value="{{.minutes.EndTime}}")
+      
+      fieldset
+        legend Attendees
+        
+        .attendees-section
+          | {{range .meeting.Attendees}}
+          .checkbox-item
+            input(type="checkbox" id="attendee_{{.ID}}" name="attendees[]" value="{{.ID}}" | {{if .Present}}checked{{end}})
+            label(for="attendee_{{.ID}}") {{.Name}} ({{.Role}})
+          | {{end}}
+          
+          div
+            label(for="additional_attendees") Additional Attendees
+            input(type="text" id="additional_attendees" name="additional_attendees" placeholder="Other attendees not listed above" value="{{.minutes.AdditionalAttendees}}")
+      
+      fieldset
+        legend Agenda and Discussion
+        
+        | {{range $index, $item := .meeting.AgendaItems}}
+        .agenda-item
+          h4 {{add $index 1}}. {{$item.Title}}
+          
+          div
+            label(for="discussion_{{$index}}") Discussion
+            textarea(id="discussion_{{$index}}" name="discussions[]" rows="4" placeholder="Record discussion for this agenda item") | {{index $.minutes.Discussions $index}}
+          
+          div
+            label(for="decision_{{$index}}") Decision/Action Item
+            textarea(id="decision_{{$index}}" name="decisions[]" rows="2" placeholder="Record any decisions or action items") | {{index $.minutes.Decisions $index}}
+        | {{end}}
+      
+      fieldset
+        legend Resolutions
+        
+        .resolutions-section
+          .resolution-items
+            | {{range $index, $resolution := .minutes.Resolutions}}
+            .resolution-item
+              div
+                label(for="resolution_title_{{$index}}") Resolution Title
+                input(type="text" id="resolution_title_{{$index}}" name="resolution_titles[]" value="{{$resolution.Title}}" placeholder="Resolution title")
+              
+              div
+                label(for="resolution_text_{{$index}}") Resolution Text
+                textarea(id="resolution_text_{{$index}}" name="resolution_texts[]" rows="3" placeholder="Full text of the resolution") | {{$resolution.Text}}
+              
+              .grid
+                div
+                  label(for="resolution_votes_for_{{$index}}") Votes For
+                  input(type="number" id="resolution_votes_for_{{$index}}" name="resolution_votes_for[]" min="0" value="{{$resolution.VotesFor}}")
+                
+                div
+                  label(for="resolution_votes_against_{{$index}}") Votes Against
+                  input(type="number" id="resolution_votes_against_{{$index}}" name="resolution_votes_against[]" min="0" value="{{$resolution.VotesAgainst}}")
+                
+                div
+                  label(for="resolution_votes_abstained_{{$index}}") Abstained
+                  input(type="number" id="resolution_votes_abstained_{{$index}}" name="resolution_votes_abstained[]" min="0" value="{{$resolution.VotesAbstained}}")
+              
+              div
+                label(for="resolution_result_{{$index}}") Result
+                select(id="resolution_result_{{$index}}" name="resolution_results[]")
+                  option(value="") Select result
+                  option(value="Approved" | {{if eq $resolution.Result "Approved"}}selected{{end}}) Approved
+                  option(value="Rejected" | {{if eq $resolution.Result "Rejected"}}selected{{end}}) Rejected
+                  option(value="Deferred" | {{if eq $resolution.Result "Deferred"}}selected{{end}}) Deferred
+                  option(value="Withdrawn" | {{if eq $resolution.Result "Withdrawn"}}selected{{end}}) Withdrawn
+              
+              button.remove-resolution(type="button") Remove
+            | {{end}}
+          
+          button.add-resolution(type="button") + Add Resolution
+      
+      fieldset
+        legend Additional Notes
+        
+        div
+          label(for="additional_notes") Additional Notes
+          textarea(id="additional_notes" name="additional_notes" rows="5" placeholder="Any additional notes or comments about the meeting") | {{.minutes.AdditionalNotes}}
+      
+      .form-actions
+        button(type="submit" name="action" value="save" role="button") Save Minutes
+        button(type="submit" name="action" value="finalize" role="button" class="secondary") Finalize Minutes
+    | {{else}}
+    // Display completed minutes in read-only format
+    section.minutes-content
+      h3 Meeting Minutes
+      
+      .minutes-meta
+        p
+          strong Start Time: 
+          span {{.minutes.StartTime}}
+        p
+          strong End Time: 
+          span {{.minutes.EndTime}}
+        p
+          strong Recorded By: 
+          span {{.minutes.RecordedBy}}
+      
+      section.attendees-list
+        h4 Attendees
+        
+        | {{if .minutes.Attendees}}
+        ul
+          | {{range .minutes.Attendees}}
+          li {{.Name}} ({{.Role}})
+          | {{end}}
+          | {{if .minutes.AdditionalAttendees}}
+          li.additional {{.minutes.AdditionalAttendees}}
+          | {{end}}
+        | {{else}}
+        p.no-data No attendance recorded.
+        | {{end}}
+      
+      section.agenda-discussions
+        h4 Agenda and Discussions
+        
+        | {{range $index, $item := .meeting.AgendaItems}}
+        .agenda-discussion
+          h5 {{add $index 1}}. {{$item.Title}}
+          
+          | {{if index $.minutes.Discussions $index}}
+          div.discussion
+            h6 Discussion:
+            p {{index $.minutes.Discussions $index}}
+          | {{end}}
+          
+          | {{if index $.minutes.Decisions $index}}
+          div.decision
+            h6 Decision/Action Item:
+            p {{index $.minutes.Decisions $index}}
+          | {{end}}
+        | {{end}}
+      
+      | {{if .minutes.Resolutions}}
+      section.resolutions
+        h4 Resolutions
+        
+        | {{range .minutes.Resolutions}}
+        .resolution
+          h5 {{.Title}}
+          
+          .resolution-text
+            p {{.Text}}
+          
+          .resolution-result
+            p
+              strong Result: 
+              span {{.Result}} (For: {{.VotesFor}}, Against: {{.VotesAgainst}}, Abstained: {{.VotesAbstained}})
+        | {{end}}
+      | {{end}}
+      
+      | {{if .minutes.AdditionalNotes}}
+      section.additional-notes
+        h4 Additional Notes
+        
+        p {{.minutes.AdditionalNotes}}
+      | {{end}}
+    | {{end}}
+
+block scripts
+  script(src="/static/js/boardmeeting-minutes.js")
