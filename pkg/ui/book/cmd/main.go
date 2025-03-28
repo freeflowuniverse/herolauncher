@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/ui/wiki"
+	"github.com/freeflowuniverse/herolauncher/pkg/ui/book"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/vfslocal"
 )
 
@@ -48,18 +48,18 @@ func main() {
 
 	log.Printf("Serving content from: %s", absContentPath)
 
-	// Create a new wiki server
-	wikiServer, err := wiki.NewWikiServer(contentPath, configPath, localVFS)
+	// Create a new book server
+	wikiServer, err := book.NewWikiServer(contentPath, configPath, localVFS)
 	if err != nil {
-		log.Fatalf("Error creating wiki server: %v", err)
+		log.Fatalf("Error creating book server: %v", err)
 	}
 
 	// Setup routes
 	wikiServer.SetupRoutes()
 
 	// Start the server
-	log.Printf("Starting wiki server on port %s", port)
+	log.Printf("Starting book server on port %s", port)
 	if err := wikiServer.Start(port); err != nil {
-		log.Fatalf("Error starting wiki server: %v", err)
+		log.Fatalf("Error starting book server: %v", err)
 	}
 }

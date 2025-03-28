@@ -1,4 +1,4 @@
-package wiki
+package book
 
 import (
 	"html/template"
@@ -13,7 +13,7 @@ import (
 	"github.com/gofiber/template/pug/v2"
 )
 
-// WikiServer represents the wiki server with its configuration and VFS backend
+// WikiServer represents the book server with its configuration and VFS backend
 type WikiServer struct {
 	App            *fiber.App
 	Config         Configuration
@@ -22,7 +22,7 @@ type WikiServer struct {
 	AbsContentPath string
 }
 
-// NewWikiServer creates a new wiki server with the given configuration and VFS backend
+// NewWikiServer creates a new book server with the given configuration and VFS backend
 func NewWikiServer(contentPath string, configPath string, vfsBackend vfs.VFSImplementation) (*WikiServer, error) {
 	// Initialize template engine
 	templatesPath, _ := filepath.Abs("./web/templates")
@@ -69,7 +69,7 @@ func NewWikiServer(contentPath string, configPath string, vfsBackend vfs.VFSImpl
 			// If config file loading fails, use empty sidebar
 			config = Configuration{
 				Sidebar: []SidebarSection{},
-				Title:   "Wiki",
+				Title:   "Book",
 			}
 			log.Printf("Warning: Using empty sidebar due to configuration loading error")
 		}
@@ -77,13 +77,13 @@ func NewWikiServer(contentPath string, configPath string, vfsBackend vfs.VFSImpl
 		// No configuration file provided, use empty sidebar
 		config = Configuration{
 			Sidebar: []SidebarSection{},
-			Title:   "Wiki",
+			Title:   "Book",
 		}
 		log.Printf("Warning: No configuration file provided. Please generate a configuration file with sidebar data.")
 	}
 
-	// Create the wiki server
-	wiki := &WikiServer{
+	// Create the book server
+	book := &WikiServer{
 		App:            app,
 		Config:         config,
 		VFS:            vfsBackend,
@@ -91,12 +91,12 @@ func NewWikiServer(contentPath string, configPath string, vfsBackend vfs.VFSImpl
 		AbsContentPath: contentPath, // This will be the absolute path
 	}
 
-	return wiki, nil
+	return book, nil
 }
 
-// Start starts the wiki server on the given port
+// Start starts the book server on the given port
 func (w *WikiServer) Start(port string) error {
-	log.Printf("Starting wiki server on port %s", port)
+	log.Printf("Starting book server on port %s", port)
 	return w.App.Listen(":" + port)
 }
 

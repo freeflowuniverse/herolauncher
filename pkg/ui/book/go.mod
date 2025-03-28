@@ -1,4 +1,4 @@
-module github.com/freeflowuniverse/herolauncher/pkg/ui/wiki
+module github.com/freeflowuniverse/herolauncher/pkg/ui/book
 
 go 1.24.1
 

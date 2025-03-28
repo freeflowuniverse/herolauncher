@@ -1,6 +1,6 @@
-package wiki
+package book
 
-// MarkdownFile represents a markdown file in the wiki
+// MarkdownFile represents a markdown file in the book
 type MarkdownFile struct {
 	Name  string
 	Path  string
@@ -30,7 +30,7 @@ type SidebarSection struct {
 	Items []SidebarItem `json:"Items"`
 }
 
-// Configuration represents the wiki configuration
+// Configuration represents the book configuration
 type Configuration struct {
 	Sidebar []SidebarSection `json:"Sidebar"`
 	Title   string           `json:"Title,omitempty"`

@@ -1,6 +1,6 @@
-# HeroLib Wiki Server
+# HeroLib Book Server
 
-A modern Markdown wiki server that renders Markdown files with a clean UI, built with Go Fiber and Goldmark. This wiki server is designed to display documentation for the HeroLib project and other related repositories.
+A modern Markdown book server that renders Markdown files with a clean UI, built with Go Fiber and Goldmark. This book server is designed to display documentation for the HeroLib project and other related repositories.
 
 ## Features
 
@@ -14,7 +14,7 @@ A modern Markdown wiki server that renders Markdown files with a clean UI, built
 
 ## Usage
 
-### Running the Wiki Server
+### Running the Book Server
 
 ```bash
 go run main.go <content_path> [config_path] [port]
@@ -27,7 +27,7 @@ Parameters:
 
 ### Configuration File
 
-The wiki server now loads its sidebar structure from a JSON configuration file instead of generating it dynamically. The configuration file should have the following structure:
+The book server now loads its sidebar structure from a JSON configuration file instead of generating it dynamically. The configuration file should have the following structure:
 
 ```json
 {
@@ -55,7 +55,7 @@ The wiki server now loads its sidebar structure from a JSON configuration file i
       ]
     }
   ],
-  "Title": "Wiki Title"
+  "Title": "Book Title"
 }
 ```
 
@@ -74,12 +74,12 @@ A script like `serve_wiki.sh` in the HeroLib manual directory can be used to gen
 2. Scan the content directory and build a hierarchical structure
 3. Ensure paths include the top-level directory name
 4. Write the configuration to the temporary file
-5. Pass the configuration file path to the wiki server
+5. Pass the configuration file path to the book server
 
 ## Project Structure
 
 ```
-wiki/
+book/
 ├── main.go                # Main application file
 ├── templates/             # HTML templates
 │   └── layout.html        # Main layout template

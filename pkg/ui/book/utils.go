@@ -1,4 +1,4 @@
-package wiki
+package book
 
 import ()
 
@@ -26,7 +26,7 @@ func getTitle(markdown string) string {
 	// Implementation of getTitle function
 	// This would typically extract the first heading from the markdown content
 	// For now, we'll return a default title
-	return "Wiki Page"
+	return "Book Page"
 }
 
 // loadConfiguration loads the configuration from a file
@@ -36,6 +36,6 @@ func loadConfiguration(configPath string) (Configuration, error) {
 	// For now, we'll return an empty configuration
 	return Configuration{
 		Sidebar: []SidebarSection{},
-		Title:   "Wiki",
+		Title:   "Book",
 	}, nil
 }

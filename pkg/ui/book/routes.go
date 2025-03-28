@@ -1,10 +1,10 @@
-package wiki
+package book
 
 import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// SetupRoutes configures all the routes for the wiki server
+// SetupRoutes configures all the routes for the book server
 func (w *WikiServer) SetupRoutes() {
 	// Home route - redirects to the first item in the sidebar if available
 	w.App.Get("/", func(c *fiber.Ctx) error {
