@@ -27,7 +27,7 @@ block content
         tr
           td {{.ID}}
           td {{.Name}}
-          td {{.Email}}
+          td {{if .ContactInfo}}{{.ContactInfo.Email}}{{else}}N/A{{end}}
           td {{.CompaniesCount}}
           td {{.TotalShares}}
           td.actions
