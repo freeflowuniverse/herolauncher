@@ -20,7 +20,7 @@ block content
           span {{.shareholder.CompanyID}}
         p.since
           strong Member Since: 
-          span {{.shareholder.Since}}
+          span {{.shareholder.Since.Format "2006-01-02"}}
         p.type
           strong Type: 
           span {{.shareholder.Type}}
@@ -32,15 +32,15 @@ block content
           span {{.shareholder.Shares}}
         p.percentage
           strong Percentage: 
-          span {{.shareholder.Percentage}}%
+          span {{printf "%.1f" .shareholder.Percentage}}%
         p.created
           strong Created At: 
-          span {{.shareholder.CreatedAt}}
+          span {{.shareholder.CreatedAt.Format "2006-01-02"}}
         
       .shareholder-additional
         h3 Additional Information
-        p Created: {{.shareholder.CreatedAt}}
-        p Updated: {{.shareholder.UpdatedAt}}
+        p Created: {{.shareholder.CreatedAt.Format "2006-01-02"}}
+        p Updated: {{.shareholder.UpdatedAt.Format "2006-01-02"}}
       
     section.company-info
       h3 Company Information
@@ -68,6 +68,6 @@ block content
     section.additional-info
       h3 Additional Information
       
-      p This shareholder owns {{.shareholder.Shares}} shares ({{.shareholder.Percentage}}%) of the company.
+      p This shareholder owns {{.shareholder.Shares}} shares ({{printf "%.1f" .shareholder.Percentage}}%) of the company.
       p Shareholder type: {{.shareholder.Type}}
-      p Member since: {{.shareholder.Since}}
+      p Member since: {{.shareholder.Since.Format "2006-01-02"}}

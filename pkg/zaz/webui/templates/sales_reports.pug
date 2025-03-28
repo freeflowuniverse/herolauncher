@@ -59,30 +59,48 @@ block content
           button(type="button" class="secondary" id="export-report") Export CSV
     
     .report-summary
-      h3 Summary: Monthly Sales Report (March 2025)
+      h3 Summary: Sales Report
       
       .grid
         div
           article
             header
               h4 Total Sales
-            p.big-number $45,250
-            p.comparison
-              span.positive +12.5% vs previous period
+            p.big-number
+              | {{if .monthlySales}}
+              | ${{printf "%.2f" (sum .monthlySales)}}
+              | {{else}}
+              | $0.00
+              | {{end}}
         
         div
           article
             header
               h4 Number of Transactions
-            p.big-number 24
-            p.small-text Average: $1,885 per sale
+            p.big-number {{len .companySales}}
+            p.small-text
+              | {{if and .monthlySales (gt (len .companySales) 0)}}
+              | Average: ${{printf "%.2f" (div (sum .monthlySales) (len .companySales))}} per sale
+              | {{else}}
+              | No sales data available
+              | {{end}}
         
         div
           article
             header
               h4 Top Performing
-            p.medium-text Example Company
-            p.small-text $28,500 (63% of total)
+            p.medium-text
+              | {{if .companySales}}
+              | {{topCompany .companySales}}
+              | {{else}}
+              | No data available
+              | {{end}}
+            p.small-text
+              | {{if .companySales}}
+              | ${{printf "%.2f" (topCompanyAmount .companySales)}}
+              | {{else}}
+              | $0.00
+              | {{end}}
     
     .report-charts
       .grid
@@ -111,34 +129,20 @@ block content
             th Amount
             th Status
         tbody
+          | {{if .monthlySales}}
+          | {{range $month, $amount := .monthlySales}}
           tr
-            td 2025-03-05
-            td Example Company
-            td Product
-            td John Smith
-            td $2,500
-            td Completed
+            td {{$month}} 2025
+            td -
+            td -
+            td -
+            td ${{printf "%.2f" $amount}}
+            td -
+          | {{end}}
+          | {{else}}
           tr
-            td 2025-03-12
-            td Another Company
-            td Service
-            td Jane Doe
-            td $1,750
-            td Paid
-          tr
-            td 2025-03-18
-            td Example Company
-            td Subscription
-            td Acme Corp
-            td $5,000
-            td Completed
-          tr
-            td 2025-03-25
-            td Another Company
-            td Product
-            td Global Industries
-            td $3,200
-            td Pending
+            td(colspan="6") No sales data available
+          | {{end}}
 
 block scripts
   script.

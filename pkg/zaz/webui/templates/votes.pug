@@ -26,10 +26,10 @@ block content
         | {{range .votes}}
         tr
           td {{.ID}}
-          td {{.CompanyName}}
+          td {{.CompanyID}}
           td {{.Title}}
           td {{.Status}}
-          td {{.Deadline}}
+          td {{.EndDate.Format "2006-01-02"}}
           td.actions
             a(href="/votes/{{.ID}}" title="View Details") Details
             | {{if eq .Status "Open"}}

@@ -29,7 +29,7 @@ block content
           span(class="status {{.meeting.Status}}") {{.meeting.Status}}
         p.date
           strong Date: 
-          span {{.meeting.Date}}
+          span {{.meeting.Date.Format "2006-01-02"}}
         p.location
           strong Location: 
           span {{.meeting.Location}}

@@ -81,6 +81,47 @@ func NewServer(config Config) *Server {
 		return ""
 	})
 	
+	// Sum function to sum values in a map
+	engine.AddFunc("sum", func(values map[string]float64) float64 {
+		var total float64
+		for _, v := range values {
+			total += v
+		}
+		return total
+	})
+	
+	// Div function to divide two numbers
+	engine.AddFunc("div", func(a, b float64) float64 {
+		if b == 0 {
+			return 0
+		}
+		return a / b
+	})
+	
+	// TopCompany function to get the company with highest sales
+	engine.AddFunc("topCompany", func(companySales map[string]float64) string {
+		var topCompany string
+		var maxSales float64
+		for company, sales := range companySales {
+			if sales > maxSales {
+				maxSales = sales
+				topCompany = company
+			}
+		}
+		return topCompany
+	})
+	
+	// TopCompanyAmount function to get the amount of the top company
+	engine.AddFunc("topCompanyAmount", func(companySales map[string]float64) float64 {
+		var maxSales float64
+		for _, sales := range companySales {
+			if sales > maxSales {
+				maxSales = sales
+			}
+		}
+		return maxSales
+	})
+	
 	// CompaniesCount function for the template
 	engine.AddFunc("companiesCount", func() int {
 		return len(dataStore.GetAllCompanies())
@@ -277,6 +318,10 @@ func (s *Server) setupRoutes() {
 	s.app.Post("/sales/create", s.saleHandler.PostCreateSale)
 	s.app.Get("/sales/:id", s.saleHandler.GetSaleDetails)
 	s.app.Get("/sales/reports", s.saleHandler.GetSalesReports)
+
+	// Product routes
+	s.app.Get("/products", s.saleHandler.GetProducts)
+	s.app.Get("/products/:id", s.saleHandler.GetProductDetails)
 
 	// API routes
 	api := s.app.Group("/api")

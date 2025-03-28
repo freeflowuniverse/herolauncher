@@ -73,21 +73,21 @@ block content
             .grid
               div
                 label(for="option_1") Option 1
-                input(type="text" id="option_1" name="options[]" placeholder="Enter option" value="{{index .form.Options 0}}")
+                input(type="text" id="option_1" name="options[]" placeholder="Enter option" value="{{if and .form.Options (gt (len .form.Options) 0)}}{{index .form.Options 0}}{{end}}")
               
               div
                 label(for="option_1_description") Description (Optional)
-                input(type="text" id="option_1_description" name="option_descriptions[]" placeholder="Brief description" value="{{index .form.OptionDescriptions 0}}")
+                input(type="text" id="option_1_description" name="option_descriptions[]" placeholder="Brief description" value="{{if and .form.OptionDescriptions (gt (len .form.OptionDescriptions) 0)}}{{index .form.OptionDescriptions 0}}{{end}}")
           
           .vote-option
             .grid
               div
                 label(for="option_2") Option 2
-                input(type="text" id="option_2" name="options[]" placeholder="Enter option" value="{{index .form.Options 1}}")
+                input(type="text" id="option_2" name="options[]" placeholder="Enter option" value="{{if and .form.Options (gt (len .form.Options) 1)}}{{index .form.Options 1}}{{end}}")
               
               div
                 label(for="option_2_description") Description (Optional)
-                input(type="text" id="option_2_description" name="option_descriptions[]" placeholder="Brief description" value="{{index .form.OptionDescriptions 1}}")
+                input(type="text" id="option_2_description" name="option_descriptions[]" placeholder="Brief description" value="{{if and .form.OptionDescriptions (gt (len .form.OptionDescriptions) 1)}}{{index .form.OptionDescriptions 1}}{{end}}")
         
         button.add-option(type="button") + Add Another Option
       

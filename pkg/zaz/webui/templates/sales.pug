@@ -27,10 +27,10 @@ block content
         | {{range .sales}}
         tr
           td {{.ID}}
-          td {{.CompanyName}}
-          td {{.Type}}
-          td ${{.Amount}}
-          td {{.Date}}
+          td {{.CompanyID}}
+          td Sale
+          td {{printf "%.2f" .TotalAmount}} {{.Currency}}
+          td {{.SaleDate.Format "2006-01-02"}}
           td {{.Status}}
           td.actions
             a(href="/sales/{{.ID}}" title="View Details") Details

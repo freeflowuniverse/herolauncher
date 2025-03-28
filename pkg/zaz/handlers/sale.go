@@ -187,6 +187,35 @@ func (h *SaleHandler) GetSalesReports(c *fiber.Ctx) error {
 	})
 }
 
+// GetProductDetails renders the product details page
+func (h *SaleHandler) GetProductDetails(c *fiber.Ctx) error {
+	// Get product ID from URL
+	id := c.Params("id")
+	
+	// Convert ID to int64
+	productID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return c.Status(400).Render("error", fiber.Map{
+			"title": "Error",
+			"message": "Invalid product ID",
+		})
+	}
+	
+	// Get product from store
+	product, err := h.store.GetProductByID(productID)
+	if err != nil {
+		return c.Status(404).Render("error", fiber.Map{
+			"title": "Not Found",
+			"message": "Product not found",
+		})
+	}
+	
+	return c.Render("product_details", fiber.Map{
+		"title": product.Name + " - Product Details",
+		"product": product,
+	})
+}
+
 // GetSalesAPI returns sales data as JSON for API consumption
 func (h *SaleHandler) GetSalesAPI(c *fiber.Ctx) error {
 	// Get all sales from the store
