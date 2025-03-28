@@ -13,88 +13,76 @@ block content
             label(for="company_id") Company
             select(id="company_id" name="company_id")
               option(value="") All Companies
-              | {{range .companies}}
-              option(value="{{.ID}}" | {{ eq $.filter.CompanyID .ID}}selected{{end}}) {{.Name}}
-              | {{end}}
+              option(value="1") Example Company
+              option(value="2") Another Company
           
           div
             label(for="period") Time Period
             select(id="period" name="period")
-              option(value="this_month" | {{ eq .filter.Period "this_month"}}selected{{end}}) This Month
-              option(value="last_month" | {{ eq .filter.Period "last_month"}}selected{{end}}) Last Month
-              option(value="this_quarter" | {{ eq .filter.Period "this_quarter"}}selected{{end}}) This Quarter
-              option(value="last_quarter" | {{ eq .filter.Period "last_quarter"}}selected{{end}}) Last Quarter
-              option(value="this_year" | {{ eq .filter.Period "this_year"}}selected{{end}}) This Year
-              option(value="last_year" | {{ eq .filter.Period "last_year"}}selected{{end}}) Last Year
-              option(value="custom" | {{ eq .filter.Period "custom"}}selected{{end}}) Custom Range
+              option(value="this_month") This Month
+              option(value="last_month") Last Month
+              option(value="this_quarter") This Quarter
+              option(value="last_quarter") Last Quarter
+              option(value="this_year") This Year
+              option(value="custom") Custom Range
         
-        .custom-date-range(style="| {{ ne .filter.Period 'custom'}}display: none;{{end}}")
+        .custom-date-range(style="display: none;")
           .grid
             div
               label(for="start_date") Start Date
-              input(type="date" id="start_date" name="start_date" value="{{.filter.StartDate}}")
+              input(type="date" id="start_date" name="start_date" value="2025-03-01")
             
             div
               label(for="end_date") End Date
-              input(type="date" id="end_date" name="end_date" value="{{.filter.EndDate}}")
+              input(type="date" id="end_date" name="end_date" value="2025-03-28")
         
         .grid
           div
             label(for="type") Sale Type
             select(id="type" name="type")
               option(value="") All Types
-              option(value="product" | {{ eq .filter.Type "product"}}selected{{end}}) Products
-              option(value="service" | {{ eq .filter.Type "service"}}selected{{end}}) Services
-              option(value="subscription" | {{ eq .filter.Type "subscription"}}selected{{end}}) Subscriptions
-              option(value="other" | {{ eq .filter.Type "other"}}selected{{end}}) Other
+              option(value="product") Products
+              option(value="service") Services
+              option(value="subscription") Subscriptions
           
           div
             label(for="status") Status
             select(id="status" name="status")
               option(value="") All Statuses
-              option(value="pending" | {{ eq .filter.Status "pending"}}selected{{end}}) Pending
-              option(value="paid" | {{ eq .filter.Status "paid"}}selected{{end}}) Paid
-              option(value="shipped" | {{ eq .filter.Status "shipped"}}selected{{end}}) Shipped
-              option(value="completed" | {{ eq .filter.Status "completed"}}selected{{end}}) Completed
-              option(value="cancelled" | {{ eq .filter.Status "cancelled"}}selected{{end}}) Cancelled
+              option(value="pending") Pending
+              option(value="paid") Paid
+              option(value="completed") Completed
+              option(value="cancelled") Cancelled
         
         .filter-actions
           button(type="submit" role="button") Generate Report
           button(type="button" class="secondary" id="export-report") Export CSV
     
     .report-summary
-      h3 Summary: {{.report.Title}}
+      h3 Summary: Monthly Sales Report (March 2025)
       
       .grid
         div
           article
             header
               h4 Total Sales
-            p.big-number ${{.report.TotalAmount}}
+            p.big-number $45,250
             p.comparison
-              | | {{ gt .report.PercentChange 0}}
-              span.positive +{{.report.PercentChange}}% vs previous period
-              | {{else}}
-              span.negative {{.report.PercentChange}}% vs previous period
-              | {{end}}
+              span.positive +12.5% vs previous period
         
         div
           article
             header
               h4 Number of Transactions
-            p.big-number {{.report.TransactionCount}}
-            p.small-text Average: ${{.report.AverageTransactionValue}} per sale
+            p.big-number 24
+            p.small-text Average: $1,885 per sale
         
         div
           article
             header
               h4 Top Performing
-            | | {{ .report.TopPerformer}}
-            p.medium-text {{.report.TopPerformer.Name}}
-            p.small-text ${{.report.TopPerformer.Amount}} ({{.report.TopPerformer.Percentage}}% of total)
-            | {{else}}
-            p.small-text No data available
-            | {{end}}
+            p.medium-text Example Company
+            p.small-text $28,500 (63% of total)
     
     .report-charts
       .grid
@@ -102,16 +90,17 @@ block content
           h3 Sales by Type
           .chart-container
             #sales-by-type-chart(style="width: 100%; height: 300px;")
+            p.chart-placeholder Sales by Type chart will appear here
         
         div
           h3 Sales Trend
           .chart-container
             #sales-trend-chart(style="width: 100%; height: 300px;")
+            p.chart-placeholder Sales Trend chart will appear here
     
     .report-data
       h3 Detailed Sales Data
       
-      | {{if .report.Sales}}
       table
         thead
           tr
@@ -122,18 +111,34 @@ block content
             th Amount
             th Status
         tbody
-          | {{range .report.Sales}}
           tr
-            td {{.Date}}
-            td {{.CompanyName}}
-            td {{.Type}}
-            td {{.CustomerName}}
-            td ${{.Amount}}
-            td {{.Status}}
-          | {{end}}
-      | {{else}}
-      p.no-data No sales data available for the selected filters.
-      | {{end}}
+            td 2025-03-05
+            td Example Company
+            td Product
+            td John Smith
+            td $2,500
+            td Completed
+          tr
+            td 2025-03-12
+            td Another Company
+            td Service
+            td Jane Doe
+            td $1,750
+            td Paid
+          tr
+            td 2025-03-18
+            td Example Company
+            td Subscription
+            td Acme Corp
+            td $5,000
+            td Completed
+          tr
+            td 2025-03-25
+            td Another Company
+            td Product
+            td Global Industries
+            td $3,200
+            td Pending
 
 block scripts
   script.
@@ -148,120 +153,12 @@ block scripts
       }
     });
     
-    // Initialize charts
+    // Placeholder for chart initialization
     document.addEventListener('DOMContentLoaded', function() {
-      // Sales by Type chart
-      const typeChart = echarts.init(document.getElementById('sales-by-type-chart'));
-      
-      const typeChartOption = {
-        tooltip: {
-          trigger: 'item',
-          formatter: '{a} <br/>{b}: ${c} ({d}%)'
-        },
-        legend: {
-          orient: 'vertical',
-          right: 10,
-          top: 'center',
-          data: [| {{range .report.SalesByType}}'{{.Type}}',{{end}}]
-        },
-        series: [
-          {
-            name: 'Sales Amount',
-            type: 'pie',
-            radius: ['50%', '70%'],
-            avoidLabelOverlap: false,
-            label: {
-              show: false,
-              position: 'center'
-            },
-            emphasis: {
-              label: {
-                show: true,
-                fontSize: '18',
-                fontWeight: 'bold'
-              }
-            },
-            labelLine: {
-              show: false
-            },
-            data: [
-              | {{range .report.SalesByType}}
-              {
-                value: | {{.Amount}},
-                name: '| {{.Type}}'
-              },
-              | {{end}}
-            ]
-          }
-        ]
-      };
-      
-      typeChart.setOption(typeChartOption);
-      
-      // Sales Trend chart
-      const trendChart = echarts.init(document.getElementById('sales-trend-chart'));
-      
-      const trendChartOption = {
-        tooltip: {
-          trigger: 'axis',
-          formatter: function(params) {
-            const param = params[0];
-            return param.name + '<br/>' + param.seriesName + ': $' + param.value;
-          }
-        },
-        xAxis: {
-          type: 'category',
-          data: [| {{range .report.SalesTrend}}'{{.Period}}',{{end}}]
-        },
-        yAxis: {
-          type: 'value',
-          axisLabel: {
-            formatter: '${value}'
-          }
-        },
-        series: [
-          {
-            name: 'Sales Amount',
-            type: 'line',
-            data: [| {{range .report.SalesTrend}}{{.Amount}},{{end}}],
-            markPoint: {
-              data: [
-                { type: 'max', name: 'Max' },
-                { type: 'min', name: 'Min' }
-              ]
-            }
-          }
-        ]
-      };
-      
-      trendChart.setOption(trendChartOption);
-      
-      // Resize charts when window size changes
-      window.addEventListener('resize', function() {
-        typeChart.resize();
-        trendChart.resize();
-      });
+      console.log('Charts would be initialized here');
       
       // Export to CSV functionality
       document.getElementById('export-report').addEventListener('click', function() {
-        // Create CSV content
-        let csvContent = 'Date,Company,Type,Customer,Amount,Status\n';
-        
-        | {{range .report.Sales}}
-        csvContent += '| {{.Date}},{{.CompanyName}},{{.Type}},{{.CustomerName}},${{.Amount}},{{.Status}}\n';
-        | {{end}}
-        
-        // Create download link
-        const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'sales_report_| {{.report.ExportFileName}}.csv');
-        document.body.appendChild(link);
-        
-        // Trigger download
-        link.click();
-        
-        // Clean up
-        document.body.removeChild(link);
+        alert('CSV export functionality would be triggered here');
       });
     });
