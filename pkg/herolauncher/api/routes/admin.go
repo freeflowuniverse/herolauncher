@@ -15,8 +15,6 @@ type UptimeProvider interface {
 	GetUptime() string
 }
 
-
-
 // AdminHandler handles admin-related routes
 type AdminHandler struct {
 	uptimeProvider UptimeProvider
@@ -34,7 +32,7 @@ func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsMan
 			fmt.Printf("Error creating StatsManager: %v\n", err)
 		}
 	}
-	
+
 	return &AdminHandler{
 		uptimeProvider: uptimeProvider,
 		statsManager:   statsManager,
@@ -113,12 +111,82 @@ func (h *AdminHandler) getSystemInfo(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStats()
 	}
-	
-	// Extract the formatted strings
-	cpuInfo = hardwareStats["cpu"].(string)
-	memoryInfo = hardwareStats["memory"].(string)
-	diskInfo = hardwareStats["disk"].(string)
-	networkInfo = hardwareStats["network"].(string)
+
+	// Extract the formatted strings - safely handle different return types
+	if cpuVal, ok := hardwareStats["cpu"]; ok {
+		switch v := cpuVal.(type) {
+		case string:
+			cpuInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			if model, ok := v["model"].(string); ok {
+				usage := 0.0
+				if usagePercent, ok := v["usage_percent"].(float64); ok {
+					usage = usagePercent
+				}
+				cpuInfo = fmt.Sprintf("%s (Usage: %.1f%%)", model, usage)
+			}
+		}
+	}
+
+	if memVal, ok := hardwareStats["memory"]; ok {
+		switch v := memVal.(type) {
+		case string:
+			memoryInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			usedPercent := 0.0
+			if percent, ok := v["used_percent"].(float64); ok {
+				usedPercent = percent
+			}
+			memoryInfo = fmt.Sprintf("%.1f GB / %.1f GB (%.1f%% used)", used, total, usedPercent)
+		}
+	}
+
+	if diskVal, ok := hardwareStats["disk"]; ok {
+		switch v := diskVal.(type) {
+		case string:
+			diskInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			usedPercent := 0.0
+			if percent, ok := v["used_percent"].(float64); ok {
+				usedPercent = percent
+			}
+			diskInfo = fmt.Sprintf("%.1f GB / %.1f GB (%.1f%% used)", used, total, usedPercent)
+		}
+	}
+
+	if netVal, ok := hardwareStats["network"]; ok {
+		switch v := netVal.(type) {
+		case string:
+			networkInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			upload, download := "Unknown", "Unknown"
+			if uploadSpeed, ok := v["upload_speed"].(string); ok {
+				upload = uploadSpeed
+			}
+			if downloadSpeed, ok := v["download_speed"].(string); ok {
+				download = downloadSpeed
+			}
+			networkInfo = fmt.Sprintf("Upload: %s, Download: %s", upload, download)
+		}
+	}
 
 	// Software information
 	// OS and Uptime
@@ -237,7 +305,7 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStats()
 	}
-	
+
 	// Convert to fiber.Map for template rendering
 	hardware := fiber.Map{}
 	for k, v := range hardwareStats {
@@ -265,7 +333,7 @@ func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
 			"error": "Failed to get process stats: " + err.Error(),
 		})
 	}
-	
+
 	// Convert to []fiber.Map for JSON response
 	processStats := make([]fiber.Map, len(processData.Processes))
 	for i, proc := range processData.Processes {
@@ -297,7 +365,7 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 		// Fallback to direct function call if StatsManager is not available
 		hardwareStats = stats.GetHardwareStatsJSON()
 	}
-	
+
 	// Convert to fiber.Map for JSON response
 	response := fiber.Map{}
 	for k, v := range hardwareStats {
@@ -308,22 +376,18 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	return c.JSON(response)
 }
 
-// getProcesses renders the processes page without waiting for process data
+// getProcesses renders the processes page with initial process data
 func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
-	// Initialize with an empty processes array to ensure the variable exists
-	return c.Render("admin/system/processes", fiber.Map{
-		"processes": []fiber.Map{},
-	})
-}
-
-// getProcessesData returns the HTML fragment for processes data
-func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
-	// Get process data from the stats package
-	processData, err := stats.GetProcessStats(0) // Get all processes
+	// Get process data from the StatsManager
+	processData, err := h.statsManager.GetProcessStats(0) // Get all processes
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
+		// If there's an error, still render the page but with empty data
+		return c.Render("admin/system/processes", fiber.Map{
+			"processes": []fiber.Map{},
+			"error":     "Failed to load process data: " + err.Error(),
+		})
 	}
-	
+
 	// Convert to []fiber.Map for template rendering
 	processStats := make([]fiber.Map, len(processData.Processes))
 	for i, proc := range processData.Processes {
@@ -338,10 +402,58 @@ func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 		}
 	}
 
-	// Return only the table fragment with process data
-	return c.Render("admin/system/processes_table", fiber.Map{
+	// Render the full page with initial process data
+	return c.Render("admin/system/processes", fiber.Map{
 		"processes": processStats,
-		"title": "System Processes", // Adding title to ensure variable scope is working
-		"layout": "", // Disable layout for partial template
+	})
+}
+
+// getProcessesData returns the HTML fragment for processes data
+func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
+	// Check if this is a manual refresh request (with X-Requested-With header set)
+	isManualRefresh := c.Get("X-Requested-With") == "XMLHttpRequest"
+	
+	// For manual refresh, always get fresh data by forcing cache invalidation
+	var processData *stats.ProcessStats
+	var err error
+	if isManualRefresh {
+		// Force bypass cache for manual refresh by using fresh data
+		processData, err = h.statsManager.GetProcessStatsFresh(0)
+	} else {
+		// Use cached data for auto-polling
+		processData, err = h.statsManager.GetProcessStats(0)
+	}
+	if err != nil {
+		// Handle AJAX requests differently from regular requests
+		isAjax := c.Get("X-Requested-With") == "XMLHttpRequest"
+		if isAjax {
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to get process data: " + err.Error())
+		}
+		// For regular requests, render the error within the fragment
+		return c.Render("admin/system/processes_fragment", fiber.Map{
+			"error":   "Failed to get process data: " + err.Error(),
+			"layout":  "",
+		})
+	}
+
+	// Convert to []fiber.Map for template rendering
+	processStats := make([]fiber.Map, len(processData.Processes))
+	for i, proc := range processData.Processes {
+		processStats[i] = fiber.Map{
+			"pid":             proc.PID,
+			"name":            proc.Name,
+			"status":          proc.Status,
+			"cpu_percent":     proc.CPUPercent,
+			"memory_mb":       proc.MemoryMB,
+			"create_time_str": proc.CreateTime,
+			"is_current":      proc.IsCurrent,
+		}
+	}
+
+	// Return only the table HTML content directly to be injected into the processes-table-content div
+	return c.Render("admin/system/processes_fragment", fiber.Map{
+		"processes": processStats,
+		"title":     "System Processes", // Adding title to ensure variable scope is working
+		"layout":    "",                 // Disable layout for partial template
 	})
 }

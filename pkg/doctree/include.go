@@ -117,11 +117,6 @@ func processIncludes(content string, currentCollectionName string, dt *DocTree) 
 
 // handleInclude processes the include directive with the given page name and optional collection name
 func handleInclude(pageName, collectionName string, dt *DocTree) (string, error) {
-	// Get the current collection from the DocTree
-	currentCollection, err := dt.GetCollection(collectionName)
-	if err != nil {
-		return "", fmt.Errorf("failed to get current collection: %w", err)
-	}
 	// Check if it's from another collection
 	if collectionName != "" {
 		// Format: othercollection:pagename
@@ -154,6 +149,12 @@ func handleInclude(pageName, collectionName string, dt *DocTree) (string, error)
 
 		return content, nil
 	} else {
+		// For same collection includes, we need to get the current collection
+		currentCollection, err := dt.GetCollection(dt.defaultCollection)
+		if err != nil {
+			return "", fmt.Errorf("failed to get current collection: %w", err)
+		}
+
 		// Include from the same collection
 		// Remove .md extension if present for the API call
 		namefixedPageName := tools.NameFix(pageName)

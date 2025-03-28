@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/client"
 )
 
 func main() {
@@ -54,14 +54,14 @@ func main() {
 	}
 
 	// Create client
-	client := processmanager.NewClient(*socketPath, *secret)
+	pmClient := client.New(*socketPath, *secret)
 
 	// Connect to the process manager
-	err := client.Connect()
+	err := pmClient.Connect()
 	if err != nil {
 		log.Fatalf("Failed to connect to process manager: %v", err)
 	}
-	defer client.Close()
+	defer pmClient.Close()
 
 	// Process command
 	switch flag.Arg(0) {
@@ -70,7 +70,7 @@ func main() {
 		if *startName == "" || *startCommand == "" {
 			log.Fatal("Error: name and command are required for start")
 		}
-		result, err := client.StartProcess(*startName, *startCommand, *startLog, *startDeadline, *startCron, *startJobID)
+		result, err := pmClient.StartProcess(*startName, *startCommand, *startLog, *startDeadline, *startCron, *startJobID)
 		if err != nil {
 			log.Fatalf("Failed to start process: %v", err)
 		}
@@ -78,7 +78,7 @@ func main() {
 
 	case "list":
 		listCmd.Parse(flag.Args()[1:])
-		result, err := client.ListProcesses(*listFormat)
+		result, err := pmClient.ListProcesses(*listFormat)
 		if err != nil {
 			log.Fatalf("Failed to list processes: %v", err)
 		}
@@ -89,7 +89,7 @@ func main() {
 		if *deleteName == "" {
 			log.Fatal("Error: name is required for delete")
 		}
-		result, err := client.DeleteProcess(*deleteName)
+		result, err := pmClient.DeleteProcess(*deleteName)
 		if err != nil {
 			log.Fatalf("Failed to delete process: %v", err)
 		}
@@ -100,7 +100,7 @@ func main() {
 		if *statusName == "" {
 			log.Fatal("Error: name is required for status")
 		}
-		result, err := client.GetProcessStatus(*statusName, *statusFormat)
+		result, err := pmClient.GetProcessStatus(*statusName, *statusFormat)
 		if err != nil {
 			log.Fatalf("Failed to get process status: %v", err)
 		}
@@ -111,7 +111,7 @@ func main() {
 		if *restartName == "" {
 			log.Fatal("Error: name is required for restart")
 		}
-		result, err := client.RestartProcess(*restartName)
+		result, err := pmClient.RestartProcess(*restartName)
 		if err != nil {
 			log.Fatalf("Failed to restart process: %v", err)
 		}
@@ -122,7 +122,7 @@ func main() {
 		if *stopName == "" {
 			log.Fatal("Error: name is required for stop")
 		}
-		result, err := client.StopProcess(*stopName)
+		result, err := pmClient.StopProcess(*stopName)
 		if err != nil {
 			log.Fatalf("Failed to stop process: %v", err)
 		}

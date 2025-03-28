@@ -1,21 +1,71 @@
-package processmanager
+package telnetserver
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
+	"text/tabwriter"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 )
+
+
+
+// FormatError formats an error message
+func FormatError(err error, interactive bool) string {
+	if err == nil {
+		return ""
+	}
+
+	if interactive {
+		return fmt.Sprintf("%sError: %s%s\n", ColorRed, err.Error(), ColorReset)
+	}
+	return fmt.Sprintf("Error: %s\n", err.Error())
+}
+
+// FormatResult formats a command result
+func FormatResult(result, jobID string, interactive bool) string {
+	if jobID != "" {
+		return fmt.Sprintf("jobid: %s\n%s", jobID, result)
+	}
+	return result
+}
+
+// FormatTable formats data as a table
+func FormatTable(headers []string, rows [][]string, interactive bool) string {
+	var buf bytes.Buffer
+	w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+
+	// Write headers
+	if interactive {
+		fmt.Fprintf(w, "%s", Bold)
+	}
+	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	if interactive {
+		fmt.Fprintf(w, "%s", ColorReset)
+	}
+
+	// Write rows
+	for _, row := range rows {
+		fmt.Fprintln(w, strings.Join(row, "\t"))
+	}
+
+	w.Flush()
+	return buf.String()
+}
 
 // TelnetAdapter represents an adapter between the process manager and telnet server
 type TelnetAdapter struct {
-	processManager *ProcessManager
-	telnetServer   *telnet.Server
+	processManager *processmanager.ProcessManager
+	telnetServer   *TelnetServer
 	logEnabled     bool
 }
 
 // NewTelnetAdapter creates a new telnet adapter
-func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
+func NewTelnetAdapter(processManager *processmanager.ProcessManager) *TelnetAdapter {
 	log.Println("Creating new telnet adapter for process manager")
 	adapter := &TelnetAdapter{
 		processManager: processManager,
@@ -23,7 +73,7 @@ func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
 	}
 
 	// Create telnet server with auth and command handlers
-	server := telnet.NewServer(
+	server := NewTelnetServer(
 		// Auth handler
 		func(secret string) bool {
 			return secret == processManager.GetSecret()
@@ -32,6 +82,8 @@ func NewTelnetAdapter(processManager *ProcessManager) *TelnetAdapter {
 		adapter.handleCommand,
 		// Debug mode
 		false,
+		// Process manager
+		processManager,
 	)
 
 	adapter.telnetServer = server
@@ -63,7 +115,7 @@ func (ta *TelnetAdapter) Stop() error {
 }
 
 // handleCommand handles commands from clients
-func (ta *TelnetAdapter) handleCommand(session *telnet.Session, command string) error {
+func (ta *TelnetAdapter) handleCommand(session *Session, command string) error {
 	// Handle empty command
 	if command == "" {
 		return nil
@@ -115,7 +167,7 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 		if ta.logEnabled {
 			log.Println("Error: empty command")
 		}
-		return telnet.FormatError(fmt.Errorf("empty command"), interactive)
+		return FormatError(fmt.Errorf("empty command"), interactive)
 	}
 
 	// Extract job ID if present
@@ -134,7 +186,35 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 		if ta.logEnabled {
 			log.Println("Handling process.start command")
 		}
-		actionResult = "Process start command received\n"
+		
+		// Parse the command parameters
+		name := ""
+		command := ""
+		logEnabled := false
+		deadline := 0
+		cron := ""
+		jobID := ""
+		
+		// Extract parameters from the command string
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "name:") {
+				name = strings.Trim(strings.TrimPrefix(part, "name:"), "'\"")
+			} else if strings.HasPrefix(part, "command:") {
+				command = strings.Trim(strings.TrimPrefix(part, "command:"), "'\"")
+			} else if strings.HasPrefix(part, "log:") {
+				logStr := strings.TrimPrefix(part, "log:")
+				logEnabled = (logStr == "true" || logStr == "t")
+			} else if strings.HasPrefix(part, "deadline:") {
+				deadlineStr := strings.TrimPrefix(part, "deadline:")
+				deadline, _ = strconv.Atoi(deadlineStr)
+			} else if strings.HasPrefix(part, "cron:") {
+				cron = strings.Trim(strings.TrimPrefix(part, "cron:"), "'\"")
+			} else if strings.HasPrefix(part, "jobid:") {
+				jobID = strings.Trim(strings.TrimPrefix(part, "jobid:"), "'\"")
+			}
+		}
+		
+		actionResult = ta.handleProcessStart(name, command, logEnabled, deadline, cron, jobID)
 	case strings.HasPrefix(cmd, "!!process.list"):
 		if ta.logEnabled {
 			log.Println("Handling process.list command")
@@ -160,11 +240,34 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 			log.Println("Handling process.stop command")
 		}
 		actionResult = "Process stop command received\n"
-	case strings.HasPrefix(cmd, "!!process.log"):
+	case strings.HasPrefix(cmd, "!!process.logs"):
 		if ta.logEnabled {
-			log.Println("Handling process.log command")
+			log.Println("Handling process.logs command")
 		}
-		actionResult = "Process log command received\n"
+		// Parse parameters
+		parts := strings.Fields(cmd)
+		var name string
+		lines := 50 // Default to 50 lines
+		
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "name:") {
+				name = strings.Trim(strings.TrimPrefix(part, "name:"), "'\"")
+			} else if strings.HasPrefix(part, "lines:") {
+				linesStr := strings.TrimPrefix(part, "lines:")
+				parsedLines, err := strconv.Atoi(linesStr)
+				if err == nil && parsedLines > 0 {
+					lines = parsedLines
+				}
+			}
+		}
+		
+		// Check required parameters
+		if name == "" {
+			actionResult = "Error: Missing required parameter 'name'\n"
+		} else {
+			// Get process logs
+			actionResult = ta.handleProcessLog(name, lines, false)
+		}
 	case cmd == "!!help" || cmd == "?" || cmd == "h":
 		if ta.logEnabled {
 			log.Println("Handling help command")
@@ -179,7 +282,7 @@ func (ta *TelnetAdapter) executeHeroscript(script string, interactive bool) stri
 
 	result.WriteString(actionResult)
 
-	formattedResult := telnet.FormatResult(result.String(), jobID, interactive)
+	formattedResult := FormatResult(result.String(), jobID, interactive)
 
 	if ta.logEnabled {
 		log.Printf("Command result: %s", strings.ReplaceAll(formattedResult, "\n", " "))
@@ -210,6 +313,15 @@ func (ta *TelnetAdapter) handleProcessStart(name, command string, logEnabled boo
 func (ta *TelnetAdapter) handleProcessList() string {
 	format := "" // Default format
 	processes := ta.processManager.ListProcesses()
+
+	// Log the processes for debugging
+	if ta.logEnabled {
+		log.Printf("Process list requested, found %d processes", len(processes))
+		for i, proc := range processes {
+			log.Printf("Process[%d]: Name=%s, Status=%s, PID=%d, Command=%s", 
+				i, proc.Name, proc.Status, proc.PID, proc.Command)
+		}
+	}
 
 	if format == "json" {
 		jsonData, err := json.MarshalIndent(processes, "", "  ")
@@ -249,7 +361,7 @@ func (ta *TelnetAdapter) handleProcessList() string {
 		})
 	}
 
-	return telnet.FormatTable(headers, rows, false)
+	return FormatTable(headers, rows, false)
 }
 
 // handleProcessDelete handles the process.delete command
@@ -354,8 +466,8 @@ func (ta *TelnetAdapter) handleProcessLog(name string, lines int, interactive bo
 	var output strings.Builder
 	if interactive {
 		output.WriteString(fmt.Sprintf("%sLast %d lines of logs for process '%s':%s\n",
-			telnet.Bold, lines, name, telnet.ColorReset))
-		output.WriteString(fmt.Sprintf("%s%s\n", telnet.ColorGreen, logs))
+			Bold, lines, name, ColorReset))
+		output.WriteString(fmt.Sprintf("%s%s\n", ColorGreen, logs))
 	} else {
 		output.WriteString(fmt.Sprintf("Last %d lines of logs for process '%s':\n", lines, name))
 		output.WriteString(logs)
@@ -377,7 +489,7 @@ func (ta *TelnetAdapter) generateHelpText(interactive bool) string {
 	helpText.WriteString("  !!process.status name:'<name>' [format:'json']\n")
 	helpText.WriteString("  !!process.restart name:'<name>'\n")
 	helpText.WriteString("  !!process.stop name:'<name>'\n")
-	helpText.WriteString("  !!process.log name:'<name>' [lines:20]\n\n")
+	helpText.WriteString("  !!process.logs name:'<name>' [lines:50]\n\n")
 
 	// Special commands
 	helpText.WriteString("Special commands:\n")

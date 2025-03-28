@@ -36,6 +36,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/emersion/go-sasl v0.0.0-20220912192320-0145f2c60ead // indirect
 	github.com/fhs/mux9p v0.3.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -45,10 +46,12 @@ require (
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/gofiber/template v1.8.3 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
+	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/invopop/jsonschema v0.12.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20231016141302-07b5767bb0ed // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -56,7 +59,10 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/metoro-io/mcp-golang v0.8.0 // indirect
+	github.com/mholt/archiver/v3 v3.5.1 // indirect
+	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/pb33f/libopenapi v0.21.8 // indirect
+	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
@@ -73,10 +79,12 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
+	github.com/ulikunitz/xz v0.5.9 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00A8FF" />
+      <stop offset="100%" stop-color="#0077CC" />
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" filter="url(#glow)">
+    <!-- Hero mask/shield shape -->
+    <path d="M12,2 L21,6 C21,13.5 18,19 12,22 C6,19 3,13.5 3,6 L12,2 Z" fill="url(#heroGradient)" />
+    
+    <!-- Stylized H for Hero -->
+    <path d="M8,7 L8,17 M16,7 L16,17 M8,12 L16,12" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Small star/sparkle -->
+    <circle cx="12" cy="5" r="1" fill="#FFFFFF" />
+  </g>
+</svg>

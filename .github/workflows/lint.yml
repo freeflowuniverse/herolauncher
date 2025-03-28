@@ -1,0 +1,30 @@
+name: Go Lint
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      # Uses the official golangci-lint GitHub Action
+      # We're allowing the linter to fail but still complete the workflow
+      # This is useful during the initial implementation phase while code quality is being improved
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        continue-on-error: true  # Allow the workflow to continue even if linting fails
+        with:
+          version: latest
+          args: --timeout=5m --config=.golangci.yml

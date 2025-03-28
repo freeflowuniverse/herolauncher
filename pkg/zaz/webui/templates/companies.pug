@@ -1,0 +1,45 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Companies
+      p Manage all companies registered in the Freezone
+    
+    .action-bar
+      a(href="/companies/create" role="button") Add New Company
+      form.search-form(action="/companies" method="get")
+        input(type="search" name="search" placeholder="Search companies...")
+        button(type="submit") Search
+    
+    if companies
+      table
+        thead
+          tr
+            th ID
+            th Name
+            th Registration Date
+            th Status
+            th Shareholders
+            th Actions
+        tbody
+          each company in companies
+            tr
+              td= company.id
+              td= company.name
+              td= company.registration_date
+              td
+                span.status= company.status
+              td= company.shareholders_count
+              td.actions
+                a.action-button(href="/companies/1" title="View Details") Details
+                a.action-button(href="/companies/1/edit" title="Edit Company") Edit
+                a.action-button(href="/companies/1/shareholders" title="Manage Shareholders") Shareholders
+    else
+      .empty-state
+        p No companies found
+        if search
+          p No results for "#{search}"
+          a(href="/companies") Clear search
+        else
+          a(href="/companies/create" role="button") Register your first company

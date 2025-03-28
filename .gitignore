@@ -27,3 +27,9 @@ go.work.sum
 
 bin/
 build/
+
+*.tar.gz
+*.gz
+
+build/
+*.log

@@ -460,6 +460,27 @@ func (sm *StatsManager) GetProcessStats(limit int) (*ProcessStats, error) {
 	return &result, nil
 }
 
+// GetProcessStatsFresh gets fresh process statistics bypassing the cache
+func (sm *StatsManager) GetProcessStatsFresh(limit int) (*ProcessStats, error) {
+	var result ProcessStats
+
+	// Get fresh data and update cache
+	err := sm.fetchDirectAndCache("process", &result)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply limit if needed
+	if limit > 0 && len(result.Processes) > limit {
+		result.Processes = result.Processes[:limit]
+	}
+
+	// Log that we're bypassing cache
+	sm.logger.Printf("Bypassing cache for process stats with manual refresh")
+	
+	return &result, nil
+}
+
 // GetTopProcesses gets top processes by CPU usage with caching
 func (sm *StatsManager) GetTopProcesses(n int) ([]ProcessInfo, error) {
 	stats, err := sm.GetProcessStats(n)

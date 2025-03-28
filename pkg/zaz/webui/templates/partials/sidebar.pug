@@ -1,0 +1,43 @@
+//- sidebar.pug - Vertical navigation menu for the Freezone Manager
+.sidebar
+  .sidebar-section
+    h3 Dashboard
+    .sidebar-menu
+      a.nav-item.main-item(href="/") Overview
+      a.nav-item.sub-item(href="/stats") Statistics
+  
+  .sidebar-section
+    h3 Companies
+    .sidebar-menu
+      a.nav-item.main-item(href="/companies") All Companies
+      a.nav-item.sub-item(href="/companies/create") Register Company
+      a.nav-item.sub-item(href="/companies/reports") Company Reports
+  
+  .sidebar-section
+    h3 Shareholders
+    .sidebar-menu
+      a.nav-item.main-item(href="/shareholders") All Shareholders
+      a.nav-item.sub-item(href="/shareholders/create") Add Shareholder
+      a.nav-item.sub-item(href="/shareholders/reports") Shareholder Reports
+  
+  .sidebar-section
+    h3 Meetings
+    .sidebar-menu
+      a.nav-item.main-item(href="/boardmeetings") All Meetings
+      a.nav-item.sub-item(href="/boardmeetings/create") Schedule Meeting
+      a.nav-item.sub-item(href="/boardmeetings/minutes") Meeting Minutes
+  
+  .sidebar-section
+    h3 Voting
+    .sidebar-menu
+      a.nav-item.main-item(href="/votes") All Votes
+      a.nav-item.sub-item(href="/votes/create") Create Vote
+      a.nav-item.sub-item(href="/votes/results") Vote Results
+      
+  .sidebar-section
+    h3 Sales
+    .sidebar-menu
+      a.nav-item.main-item(href="/sales") All Sales
+      a.nav-item.sub-item(href="/sales/products") Products
+      a.nav-item.sub-item(href="/sales/services") Services
+      a.nav-item.sub-item(href="/sales/reports") Sales Reports

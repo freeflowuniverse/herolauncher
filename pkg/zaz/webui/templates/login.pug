@@ -1,0 +1,26 @@
+extends layout
+
+block content
+  article.login-form
+    header
+      h2 Login
+      p Please enter your credentials to access the Freezone Manager
+    
+    form(action="/login", method="post")
+      .grid
+        div
+          label(for="email") Email
+          input(type="email", id="email", name="email", placeholder="your.email@example.com", required)
+        
+        div
+          label(for="password") Password
+          input(type="password", id="password", name="password", placeholder="Enter your password", required)
+      
+      .form-actions
+        button(type="submit", role="button") Login
+        a(href="/register", role="button", class="secondary") Register
+        a(href="/forgot-password") Forgot Password?
+      
+      if error
+        .error-message
+          p= error
