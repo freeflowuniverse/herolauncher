@@ -1,9 +1,11 @@
-package processmanager
+// Package client provides a client for interacting with the process manager
+package client
 
 import (
 	"bufio"
 	"fmt"
 	"net"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -16,8 +18,8 @@ type Client struct {
 	secret     string
 }
 
-// NewClient creates a new process manager client
-func NewClient(socketPath, secret string) *Client {
+// New creates a new process manager client
+func New(socketPath, secret string) *Client {
 	return &Client{
 		socketPath: socketPath,
 		secret:     secret,
@@ -78,6 +80,11 @@ func (c *Client) Close() error {
 	return nil
 }
 
+// GetSocketPath returns the socket path used by this client
+func (c *Client) GetSocketPath() string {
+	return c.socketPath
+}
+
 // SendCommand sends a command to the process manager and returns the result
 func (c *Client) SendCommand(command string) (string, error) {
 	if c.conn == nil {
@@ -94,13 +101,13 @@ func (c *Client) SendCommand(command string) (string, error) {
 	var result strings.Builder
 	inResult := false
 	resultComplete := false
-	
+
 	// Set a timeout for reading the response
 	err = c.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	if err != nil {
 		return "", fmt.Errorf("failed to set read deadline: %v", err)
 	}
-	
+
 	// Read until we get the complete result or timeout
 	for !resultComplete {
 		line, err := c.reader.ReadString('\n')
@@ -128,7 +135,7 @@ func (c *Client) SendCommand(command string) (string, error) {
 			result.WriteString(line)
 		}
 	}
-	
+
 	// Reset the read deadline
 	err = c.conn.SetReadDeadline(time.Time{})
 	if err != nil {
@@ -140,31 +147,45 @@ func (c *Client) SendCommand(command string) (string, error) {
 
 // StartProcess starts a new process
 func (c *Client) StartProcess(name, command string, logEnabled bool, deadline int, cron, jobID string) (string, error) {
+	// Validate the command before sending it to the process manager
+	// Extract the main command from the command string
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return "", fmt.Errorf("empty command")
+	}
+
+	// Check if the command exists and is executable
+	mainCmd := parts[0]
+	_, err := exec.LookPath(mainCmd)
+	if err != nil {
+		return "", fmt.Errorf("command '%s' not found or not executable: %v", mainCmd, err)
+	}
+
 	heroscript := fmt.Sprintf("!!process.start name:'%s' command:'%s' log:%t", name, command, logEnabled)
-	
+
 	if deadline > 0 {
 		heroscript += fmt.Sprintf(" deadline:%d", deadline)
 	}
-	
+
 	if cron != "" {
 		heroscript += fmt.Sprintf(" cron:'%s'", cron)
 	}
-	
+
 	if jobID != "" {
 		heroscript += fmt.Sprintf(" jobid:'%s'", jobID)
 	}
-	
+
 	return c.SendCommand(heroscript)
 }
 
 // ListProcesses lists all processes
 func (c *Client) ListProcesses(format string) (string, error) {
 	heroscript := "!!process.list"
-	
+
 	if format != "" {
 		heroscript += fmt.Sprintf(" format:'%s'", format)
 	}
-	
+
 	return c.SendCommand(heroscript)
 }
 
@@ -177,11 +198,11 @@ func (c *Client) DeleteProcess(name string) (string, error) {
 // GetProcessStatus gets the status of a process
 func (c *Client) GetProcessStatus(name, format string) (string, error) {
 	heroscript := fmt.Sprintf("!!process.status name:'%s'", name)
-	
+
 	if format != "" {
 		heroscript += fmt.Sprintf(" format:'%s'", format)
 	}
-	
+
 	return c.SendCommand(heroscript)
 }
 
@@ -194,5 +215,16 @@ func (c *Client) RestartProcess(name string) (string, error) {
 // StopProcess stops a process
 func (c *Client) StopProcess(name string) (string, error) {
 	heroscript := fmt.Sprintf("!!process.stop name:'%s'", name)
+	return c.SendCommand(heroscript)
+}
+
+// GetProcessLogs retrieves logs for a specific process
+func (c *Client) GetProcessLogs(name string, lines int) (string, error) {
+	heroscript := fmt.Sprintf("!!process.logs name:'%s'", name)
+
+	if lines > 0 {
+		heroscript += fmt.Sprintf(" lines:%d", lines)
+	}
+
 	return c.SendCommand(heroscript)
 }

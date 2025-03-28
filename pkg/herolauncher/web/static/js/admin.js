@@ -145,6 +145,64 @@ function setupCollapsibleSections() {
   }
 }
 
+// Refresh processes data without page reload
+function refreshProcesses() {
+  // Show loading indicator
+  const loadingIndicator = document.getElementById('refresh-loading');
+  if (loadingIndicator) {
+    loadingIndicator.style.display = 'inline';
+  }
+  
+  // Disable auto-polling temporarily during manual refresh
+  const tableContent = document.querySelector('.processes-table-content');
+  const originalPollAttribute = tableContent ? tableContent.getAttribute('up-poll') : null;
+  if (tableContent && originalPollAttribute) {
+    tableContent.removeAttribute('up-poll');
+  }
+  
+  // Fetch updated process data
+  fetch('/admin/system/processes-data', {
+    method: 'GET',
+    headers: {
+      'Accept': 'text/html',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    cache: 'no-store'
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok: ' + response.status);
+    }
+    return response.text();
+  })
+  .then(html => {
+    // Update the processes table content
+    if (tableContent) {
+      // Replace the table content with the new HTML
+      tableContent.innerHTML = html;
+      console.log('Process data refreshed successfully');
+    } else {
+      console.error('Could not find processes table content element');
+    }
+  })
+  .catch(error => {
+    console.error('Error refreshing processes data:', error);
+  })
+  .finally(() => {
+    // Hide loading indicator
+    if (loadingIndicator) {
+      loadingIndicator.style.display = 'none';
+    }
+    
+    // Re-enable auto-polling after short delay
+    setTimeout(() => {
+      if (tableContent && originalPollAttribute) {
+        tableContent.setAttribute('up-poll', originalPollAttribute);
+      }
+    }, 1000);
+  });
+}
+
 // Setup logging functionality
 function setupLogging() {
   // Log panel functionality
