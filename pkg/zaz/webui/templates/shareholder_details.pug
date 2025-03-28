@@ -15,83 +15,59 @@ block content
         p.identification
           strong ID: 
           span {{.shareholder.ID}}
+        p.company
+          strong Company ID: 
+          span {{.shareholder.CompanyID}}
         p.since
           strong Member Since: 
           span {{.shareholder.Since}}
-        p.nationality
-          strong Nationality: 
-          span {{.shareholder.Nationality}}
-        p.tax-id
-          strong Tax ID: 
-          span {{.shareholder.TaxID}}
+        p.type
+          strong Type: 
+          span {{.shareholder.Type}}
         
-      .shareholder-contact
-        h3 Contact Information
-        p
-          strong Email: 
-          a(href="mailto:{{.shareholder.Email}}") {{.shareholder.Email}}
-        p
-          strong Phone: 
-          span {{.shareholder.Phone}}
-        p
-          strong Address: 
-          span {{.shareholder.Address}}
+      .shareholder-shares
+        h3 Share Information
+        p.shares
+          strong Shares: 
+          span {{.shareholder.Shares}}
+        p.percentage
+          strong Percentage: 
+          span {{.shareholder.Percentage}}%
+        p.created
+          strong Created At: 
+          span {{.shareholder.CreatedAt}}
         
-      .shareholder-notes
-        h3 Notes
-        | {{if .shareholder.Notes}}
-        p {{.shareholder.Notes}}
-        | {{else}}
-        p No additional notes provided.
-        | {{end}}
+      .shareholder-additional
+        h3 Additional Information
+        p Created: {{.shareholder.CreatedAt}}
+        p Updated: {{.shareholder.UpdatedAt}}
       
-    section.companies
-      h3 Companies
-      | {{if .shareholder.Companies}}
+    section.company-info
+      h3 Company Information
+      | {{if .company}}
       table
         thead
           tr
-            th Company
-            th Shares
-            th Percentage
-            th Since
+            th Company ID
+            th Name
+            th Industry
+            th Status
             th Actions
         tbody
-          | {{range .shareholder.Companies}}
           tr
-            td {{.CompanyName}}
-            td {{.Shares}}
-            td {{.Percentage}}%
-            td {{.Since}}
+            td {{.company.ID}}
+            td {{.company.Name}}
+            td {{.company.Industry}}
+            td {{.company.Status}}
             td.actions
-              a.action-button(href="/companies/{{.CompanyID}}" title="View Company Details") View Company
-          | {{end}}
+              a.action-button(href="/companies/{{.company.ID}}" title="View Company Details") View Company
       | {{else}}
       p.no-data No companies associated with this shareholder.
       | {{end}}
       
-    section.votes
-      h3 Voting History
+    section.additional-info
+      h3 Additional Information
       
-      | {{if .votes}}
-      table
-        thead
-          tr
-            th Date
-            th Company
-            th Resolution
-            th Vote
-            th Actions
-        tbody
-          | {{range .votes}}
-          tr
-            td {{.Date}}
-            td {{.CompanyName}}
-            td {{.Resolution}}
-            td {{.Vote}}
-            td.actions
-              a.action-button(href="/votes/{{.ID}}" title="View Vote Details") Details
-          | {{end}}
-      | {{else}}
-      p.no-data No voting history for this shareholder.
-      | {{end}}
+      p This shareholder owns {{.shareholder.Shares}} shares ({{.shareholder.Percentage}}%) of the company.
+      p Shareholder type: {{.shareholder.Type}}
+      p Member since: {{.shareholder.Since}}

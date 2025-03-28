@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
@@ -109,6 +110,39 @@ func (h *ShareholderHandler) PostAddShareholder(c *fiber.Ctx) error {
 	// TODO: Implement actual shareholder creation
 	// For now, just redirect to company details
 	return c.Redirect("/companies/" + companyID)
+}
+
+// GetShareholderDetails renders the shareholder details page
+func (h *ShareholderHandler) GetShareholderDetails(c *fiber.Ctx) error {
+	// Get shareholder ID from URL
+	id := c.Params("id")
+	
+	// Convert ID to int64
+	shareholderID, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return c.Status(400).Render("error", fiber.Map{
+			"title": "Error",
+			"message": "Invalid shareholder ID",
+		})
+	}
+	
+	// Get shareholder from store
+	shareholder, err := h.store.GetShareholderByID(shareholderID)
+	if err != nil {
+		return c.Status(404).Render("error", fiber.Map{
+			"title": "Not Found",
+			"message": "Shareholder not found",
+		})
+	}
+	
+	// Get company information
+	company, _ := h.store.GetCompanyByID(shareholder.CompanyID)
+	
+	return c.Render("shareholder_details", fiber.Map{
+		"title": shareholder.Name + " - Shareholder Details",
+		"shareholder": shareholder,
+		"company": company,
+	})
 }
 
 // GetShareholdersAPI returns shareholders data as JSON for API consumption

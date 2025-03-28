@@ -56,6 +56,22 @@ func (s *Store) GetAllShareholders() []Shareholder {
 	return allShareholders
 }
 
+// GetShareholderByID returns a shareholder by ID
+func (s *Store) GetShareholderByID(id int64) (Shareholder, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	for _, company := range s.Companies {
+		for _, shareholder := range company.Shareholders {
+			if shareholder.ID == id {
+				return shareholder, nil
+			}
+		}
+	}
+	
+	return Shareholder{}, errors.New("shareholder not found")
+}
+
 // GetUserByID returns a user by ID
 func (s *Store) GetUserByID(id int64) (User, error) {
 	s.mu.RLock()

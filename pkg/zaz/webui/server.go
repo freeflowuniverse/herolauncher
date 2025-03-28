@@ -250,6 +250,7 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/shareholders", s.shareholderHandler.GetShareholders)
 	s.app.Get("/shareholders/create", s.shareholderHandler.GetCreateShareholder)
 	s.app.Post("/shareholders/create", s.shareholderHandler.PostCreateShareholder)
+	s.app.Get("/shareholders/:id", s.shareholderHandler.GetShareholderDetails)
 	s.app.Get("/companies/:companyId/shareholders/add", s.shareholderHandler.GetAddShareholder)
 	s.app.Post("/companies/:companyId/shareholders/add", s.shareholderHandler.PostAddShareholder)
 
