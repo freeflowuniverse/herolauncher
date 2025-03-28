@@ -7,8 +7,10 @@ html(lang="en")
     link(rel="icon", href="/img/freezone-icon.svg", type="image/svg+xml")
     link(rel="shortcut icon", href="/favicon.ico")
     link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap")
+    link(rel="stylesheet", href="/css/style.css")
     link(rel="stylesheet", href="/css/pico.min.css")
     link(rel="stylesheet", href="/css/freezone.css")
+    link(rel="stylesheet", href="/css/right-sidebar.css")
     link(rel="stylesheet", href="/css/unpoly.min.css")
     | {{if .customCSS}}
     style .customCSS
@@ -25,12 +27,16 @@ html(lang="en")
     include partials/header
       
     .container
-      .grid
-        div(style="grid-column: span 3")
-          include partials/sidebar
+      .grid.grid-sidebar
+        //- Left sidebar
+        include partials/sidebar
         
-        main(style="grid-column: span 9")
+        //- Main content area
+        main.content-area
           block content
+          
+        //- Right sidebar
+        include partials/right-sidebar
       
     footer
       .container
