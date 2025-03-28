@@ -17,7 +17,7 @@ block content
           span {{.company.RegistrationNumber}}
         p.incorporation
           strong Incorporated: 
-          span {{.company.IncorporationDate}}
+          span {{.company.IncorporationDate.Format "2006-01-02"}}
         p.status
           strong Status: 
           span(class="status") {{.company.Status}}
@@ -68,8 +68,8 @@ block content
           tr
             td {{.Name}}
             td {{.Shares}}
-            td {{.Percentage}}%
-            td {{.Since}}
+            td {{printf "%.1f" .Percentage}}%
+            td {{.Since.Format "2006-01-02"}}
             td.actions
               a.action-button(href="/shareholders/{{.ID}}" title="View Details") Details
           | {{end}}
@@ -93,7 +93,7 @@ block content
         tbody
           | {{range .boardMeetings}}
           tr
-            td {{.Date}}
+            td {{.Date.Format "2006-01-02"}}
             td {{.Title}}
             td {{len .Attendees}}
             td {{.Status}}

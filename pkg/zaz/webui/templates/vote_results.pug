@@ -20,7 +20,7 @@ block content
           span(class="status {{.vote.Status}}") {{.vote.Status}}
         p.completed
           strong Completed: 
-          span {{.vote.CompletedDate}}
+          span {{.vote.CompletedDate.Format "2006-01-02"}}
         
       .vote-summary
         h3 Result Summary
@@ -57,7 +57,7 @@ block content
           tr
             td {{.Option}}
             td {{.Votes}}
-            td {{.Percentage}}%
+            td {{printf "%.1f" .Percentage}}%
           | {{end}}
       
     section.votes-cast

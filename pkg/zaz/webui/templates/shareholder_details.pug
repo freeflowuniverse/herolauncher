@@ -32,7 +32,7 @@ block content
           span {{.shareholder.Shares}}
         p.percentage
           strong Percentage: 
-          span {{.shareholder.Percentage}}%
+          span {{printf "%.1f" .shareholder.Percentage}}%
         p.created
           strong Created At: 
           span {{.shareholder.CreatedAt.Format "2006-01-02"}}
@@ -68,6 +68,6 @@ block content
     section.additional-info
       h3 Additional Information
       
-      p This shareholder owns {{.shareholder.Shares}} shares ({{.shareholder.Percentage}}%) of the company.
+      p This shareholder owns {{.shareholder.Shares}} shares ({{printf "%.1f" .shareholder.Percentage}}%) of the company.
       p Shareholder type: {{.shareholder.Type}}
       p Member since: {{.shareholder.Since.Format "2006-01-02"}}

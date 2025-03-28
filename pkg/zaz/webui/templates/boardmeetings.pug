@@ -28,7 +28,7 @@ block content
           td {{.ID}}
           td {{.CompanyName}}
           td {{.Title}}
-          td {{.Date}}
+          td {{.Date.Format "2006-01-02"}}
           td {{.Status}}
           td.actions
             a(href="/boardmeetings/{{.ID}}" title="View Details") Details

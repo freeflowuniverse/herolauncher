@@ -53,7 +53,7 @@ block content
         | {{if .sale.PaymentDate}}
         p
           strong Payment Date: 
-          span | {{.sale.PaymentDate}}
+          span | {{.sale.PaymentDate.Format "2006-01-02"}}
         | {{end}}
       
     | {{if eq .sale.Type "product"}}
