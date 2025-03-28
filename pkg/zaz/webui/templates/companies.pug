@@ -2,19 +2,16 @@ extends layout
 
 block content
   article
-    header
-      h2 Companies
-      p Manage all companies registered in the Freezone
-
-    p TEST
+    header.action-header
+      hgroup
+        h2 Companies
+        p Manage all companies registered in the Freezone
+      a(href="/companies/create" role="button") Create Company
 
     .action-bar
-      a(href="/companies/create" role="button") Create Company
-      form.search-form(action="/companies" method="get")
+      form.search-form(role="search" action="/companies" method="get")
         input(type="search" name="search" placeholder="Search companies..." value="{{.search}}")
         button(type="submit") Search
-
-    p TEST
 
     // Debug info
     p Found {{.count}} companies in the database

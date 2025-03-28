@@ -4,17 +4,17 @@ html:where(:not(.pico-skip)) {
   --pico-font-size: 80% !important;
   --pico-font-weight: 500 !important;
   --pico-line-height: 1.3 !important;
-  --pico-spacing: 0.6rem !important;
+  --pico-spacing: 0.8rem !important;
   
   /* Spacing */
   --pico-typography-spacing-vertical: 0.6rem !important;
   --pico-block-spacing-vertical: var(--pico-spacing) !important;
   --pico-block-spacing-horizontal: var(--pico-spacing) !important;
-  --pico-nav-element-spacing-vertical: 0.4rem !important;
-  --pico-nav-element-spacing-horizontal: 0.3rem !important;
-  --pico-nav-link-spacing-vertical: 0.3rem !important;
-  --pico-nav-link-spacing-horizontal: 0.3rem !important;
-  --pico-form-element-spacing-vertical: 0.5rem !important;
+  --pico-nav-element-spacing-vertical: 0.5rem !important;
+  --pico-nav-element-spacing-horizontal: 0.4rem !important;
+  --pico-nav-link-spacing-vertical: 0.4rem !important;
+  --pico-nav-link-spacing-horizontal: 0.4rem !important;
+  --pico-form-element-spacing-vertical: 0.6rem !important;
   --pico-form-element-spacing-horizontal: 0.6rem !important;
   
   /* Font sizes */
@@ -73,12 +73,35 @@ body {
   font-weight: var(--pico-font-weight);
   line-height: var(--pico-line-height);
   letter-spacing: 0.01em;
+  min-height: 100vh; /* Ensure body takes at least full viewport height */
+}
+
+/* Main container */
+.container {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--pico-spacing);
+}
+
+/* Footer styling */
+footer {
+  flex-shrink: 0;
+  text-align: center;
+  padding: var(--pico-spacing);
+  margin-top: auto;
+  width: 100%;
+  background-color: var(--pico-background-color);
+  border-top: var(--pico-border-width) solid var(--pico-muted-border-color);
 }
 
 /* Content area styling */
 .content-area {
   padding: var(--pico-spacing);
   overflow-y: auto;
+  flex: 1 1 auto;
+  height: 0; /* This forces the flex item to respect overflow */
 }
 
 /* Responsive adjustments */
@@ -90,4 +113,22 @@ body {
   .grid-sidebar {
     grid-template-columns: 1fr;
   }
+
+  .container {
+    padding: 0 var(--pico-spacing);
+  }
+}
+
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-header a {
+  height: 100%;
+}
+
+header nav {
+  margin-top: 10px;
 }

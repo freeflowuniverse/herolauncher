@@ -5,7 +5,8 @@
   display: grid;
   grid-template-columns: 250px 1fr 250px;
   gap: 1rem;
-  height: 100%;
+  height: calc(100vh - 120px); /* Account for header and footer */
+  overflow: hidden; /* Prevent grid overflow */
 }
 
 .content-area {
@@ -13,6 +14,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  padding-bottom: 1rem; /* Add some bottom padding for content */
 }
 
 /* Sidebar styles */
@@ -23,7 +25,8 @@ aside.sidebar {
   height: 100%;
   overflow-y: auto;
   position: sticky;
-  top: 0;
+  top: var(--pico-spacing);
+  max-height: calc(100vh - 120px); /* Match grid height */
 }
 
 aside.sidebar header {
