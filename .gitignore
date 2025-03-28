@@ -30,3 +30,6 @@ build/
 
 *.tar.gz
 *.gz
+
+build/
+*.log

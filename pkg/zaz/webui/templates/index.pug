@@ -1,0 +1,57 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Freezone Manager Dashboard
+      p Welcome to the Freezone Management System
+    
+    .grid
+      div
+        article
+          header
+            h3 Company Statistics
+          
+          .grid
+            div
+              h4 Total Companies
+              p
+                strong= companiesCount
+                span  registered
+            
+            div
+              h4 Active Companies
+              p
+                strong= activeCompaniesCount
+                span  companies
+            
+            div
+              h4 Total Shareholders
+              p
+                strong= shareholdersCount
+                span  shareholders
+      
+      div
+        article
+          header
+            h3 Recent Activity
+          
+          ul
+            li Board meeting scheduled for Company A (2 days from now)
+            li New shareholder registered (3 hours ago)
+            li Voting period for Resolution #42 ended (1 day ago)
+            li New product added to catalog (2 days ago)
+    
+    article
+      header
+        h3 Quick Actions
+      
+      .grid
+        div
+          a(href="/companies/create", role="button") Register Company
+        
+        div
+          a(href="/boardmeetings/create", role="button", class="secondary") Schedule Meeting
+        
+        div
+          a(href="/votes/create", role="button", class="contrast") Create Vote

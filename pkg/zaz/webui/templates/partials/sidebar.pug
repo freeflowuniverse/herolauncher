@@ -1,0 +1,43 @@
+//- sidebar.pug - Vertical navigation menu for the Freezone Manager
+.sidebar
+  .sidebar-section
+    h3 Dashboard
+    ul.sidebar-menu
+      li: a(href="/") Overview
+      li: a(href="/stats") Statistics
+  
+  .sidebar-section
+    h3 Companies
+    ul.sidebar-menu
+      li: a(href="/companies") All Companies
+      li: a(href="/companies/create") Register Company
+      li: a(href="/companies/reports") Company Reports
+  
+  .sidebar-section
+    h3 Shareholders
+    ul.sidebar-menu
+      li: a(href="/shareholders") All Shareholders
+      li: a(href="/shareholders/create") Add Shareholder
+      li: a(href="/shareholders/reports") Shareholder Reports
+  
+  .sidebar-section
+    h3 Meetings
+    ul.sidebar-menu
+      li: a(href="/boardmeetings") All Meetings
+      li: a(href="/boardmeetings/create") Schedule Meeting
+      li: a(href="/boardmeetings/minutes") Meeting Minutes
+  
+  .sidebar-section
+    h3 Voting
+    ul.sidebar-menu
+      li: a(href="/votes") All Votes
+      li: a(href="/votes/create") Create Vote
+      li: a(href="/votes/results") Vote Results
+      
+  .sidebar-section
+    h3 Sales
+    ul.sidebar-menu
+      li: a(href="/sales") All Sales
+      li: a(href="/sales/products") Products
+      li: a(href="/sales/services") Services
+      li: a(href="/sales/reports") Sales Reports

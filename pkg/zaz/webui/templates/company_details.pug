@@ -1,0 +1,113 @@
+doctype html
+html
+  head
+    title Freezone Manager - Company Details
+    link(rel="stylesheet" href="/css/pico.min.css")
+    link(rel="stylesheet" href="/css/freezone.css")
+  
+  body
+    header
+      h1 Freezone Manager
+      nav
+        a(href="/") Home
+        a(href="/companies") Companies
+    
+    main.container
+      article
+        header.company-header
+          h2 Company Details
+          .header-actions
+            a(href="/companies/1/edit" role="button" class="secondary") Edit Company
+            a(href="/companies" role="button" class="outline") Back to List
+        
+        .company-info.grid
+          .company-profile
+            h3 TechCorp Inc.
+            
+            p.registration
+              strong Registration #: 
+              span BRN12345678
+            p.incorporation
+              strong Incorporated: 
+              span 2024-09-28
+            p.status
+              strong Status: 
+              span.status Active
+            p.business-type
+              strong Business Type: 
+              span Limited Liability Company
+            p.industry
+              strong Industry: 
+              span Technology
+            
+          .company-contact
+            h3 Contact Information
+            p
+              strong Email: 
+              a(href="mailto:info@techcorp.com") info@techcorp.com
+            p
+              strong Phone: 
+              span +1 234 567 8900
+            p
+              strong Website: 
+              a(href="https://techcorp.com" target="_blank") techcorp.com
+            
+          .company-description
+            h3 Description
+            p TechCorp is a leading technology company specializing in AI solutions and cloud services.
+          
+        section.shareholders
+          h3 Shareholders
+          table
+            thead
+              tr
+                th Name
+                th Shares
+                th Percentage
+                th Since
+                th Actions
+            tbody
+              tr
+                td John Smith
+                td 1000
+                td 50%
+                td 2024-09-28
+                td.actions
+                  a.action-button(href="/shareholders/1" title="View Details") Details
+              tr
+                td Jane Doe
+                td 500
+                td 25%
+                td 2024-09-28
+                td.actions
+                  a.action-button(href="/shareholders/2" title="View Details") Details
+          
+        section.board-meetings
+          h3 Board Meetings
+          a(href="/companies/1/boardmeetings/schedule" role="button" class="outline") Schedule Meeting
+          
+          table
+            thead
+              tr
+                th Date
+                th Title
+                th Attendees
+                th Status
+                th Actions
+            tbody
+              tr
+                td 2025-04-15
+                td Quarterly Board Meeting
+                td 5
+                td Scheduled
+                td.actions
+                  a.action-button(href="/boardmeetings/1" title="View Details") Details
+                  a.action-button(href="/boardmeetings/1/minutes" title="Meeting Minutes") Minutes
+              tr
+                td 2025-02-28
+                td Annual General Meeting
+                td 8
+                td Completed
+                td.actions
+                  a.action-button(href="/boardmeetings/2" title="View Details") Details
+                  a.action-button(href="/boardmeetings/2/minutes" title="Meeting Minutes") Minutes
