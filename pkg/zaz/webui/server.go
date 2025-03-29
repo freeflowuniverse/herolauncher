@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/zaz/handlers"
 	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
+	"github.com/freeflowuniverse/herolauncher/pkg/zaz/webhandlers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -21,13 +21,15 @@ type Server struct {
 	config    Config
 	startTime time.Time
 	
+	// Store for database operations
+	store     *models.Store
+	
 	// Handlers
-	authHandler       *handlers.AuthHandler
-	companyHandler    *handlers.CompanyHandler
-	shareholderHandler *handlers.ShareholderHandler
-	boardMeetingHandler *handlers.BoardMeetingHandler
-	voteHandler      *handlers.VoteHandler
-	saleHandler      *handlers.SaleHandler
+	authHandler        *webhandlers.AuthHandler
+	companyHandler     *webhandlers.CompanyHandler
+	shareholderHandler *webhandlers.ShareholderHandler
+	boardMeetingHandler *webhandlers.BoardMeetingHandler
+	voteHandler        *webhandlers.VoteHandler
 }
 
 // NewServer creates a new instance of the Freezone Manager UI server
@@ -39,6 +41,9 @@ func NewServer(config Config) *Server {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	
+	// Create store
+	store := models.NewStore("default")
+	
 	// Generate fake data
 	models.GenerateFakeData()
 	log.Printf("Database initialized with fake data")
@@ -47,6 +52,13 @@ func NewServer(config Config) *Server {
 	engine := pug.New(config.TemplatesPath, ".pug")
 	engine.Debug(true)  // Enable debug mode
 	engine.Reload(true) // Reload templates on each render
+	
+	// Initialize handlers
+	authHandler := webhandlers.NewAuthHandler(store)
+	companyHandler := webhandlers.NewCompanyHandler(store)
+	shareholderHandler := webhandlers.NewShareholderHandler(store)
+	boardMeetingHandler := webhandlers.NewBoardMeetingHandler(store)
+	voteHandler := webhandlers.NewVoteHandler(store)
 	
 	// Add template functions
 	// User function returns a mock user for demonstration
@@ -241,25 +253,19 @@ func NewServer(config Config) *Server {
 	app.Static("/img", filepath.Join(config.StaticFilesPath, "img"))
 	app.Static("/favicon.ico", filepath.Join(config.StaticFilesPath, "favicon.ico"))
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(nil)
-	companyHandler := handlers.NewCompanyHandler(nil)
-	shareholderHandler := handlers.NewShareholderHandler(nil)
-	boardMeetingHandler := handlers.NewBoardMeetingHandler(nil)
-	voteHandler := handlers.NewVoteHandler(nil)
-	saleHandler := handlers.NewSaleHandler(nil)
+	// Note: we already initialized the store earlier
 
 	// Create server instance
 	srv := &Server{
-		app:       app,
-		config:    config,
-		startTime: time.Now(),
-		authHandler: authHandler,
-		companyHandler: companyHandler,
+		app:                app,
+		config:             config,
+		startTime:          time.Now(),
+		store:              store,
+		authHandler:        authHandler,
+		companyHandler:     companyHandler,
 		shareholderHandler: shareholderHandler,
 		boardMeetingHandler: boardMeetingHandler,
-		voteHandler: voteHandler,
-		saleHandler: saleHandler,
+		voteHandler:        voteHandler,
 	}
 
 	// Setup routes
@@ -277,11 +283,6 @@ func (s *Server) setupRoutes() {
 	// Auth routes
 	s.app.Get("/login", s.authHandler.GetLogin)
 	s.app.Post("/login", s.authHandler.PostLogin)
-	s.app.Get("/register", s.authHandler.GetRegister)
-	s.app.Post("/register", s.authHandler.PostRegister)
-	s.app.Get("/logout", s.authHandler.Logout)
-	s.app.Get("/forgot-password", s.authHandler.GetForgotPassword)
-	s.app.Post("/forgot-password", s.authHandler.PostForgotPassword)
 
 	// Company routes
 	s.app.Get("/", s.companyHandler.GetDashboard)
@@ -313,20 +314,8 @@ func (s *Server) setupRoutes() {
 	s.app.Get("/votes/create", s.voteHandler.GetCreateVote)
 	s.app.Post("/votes/create", s.voteHandler.PostCreateVote)
 	s.app.Get("/votes/:id", s.voteHandler.GetVoteDetails)
-	s.app.Get("/votes/results", s.voteHandler.GetVoteResults)
 
-	// Sales routes
-	s.app.Get("/sales", s.saleHandler.GetSales)
-	s.app.Get("/sales/products", s.saleHandler.GetProducts)
-	s.app.Get("/sales/services", s.saleHandler.GetServices)
-	s.app.Get("/sales/create", s.saleHandler.GetCreateSale)
-	s.app.Post("/sales/create", s.saleHandler.PostCreateSale)
-	s.app.Get("/sales/:id", s.saleHandler.GetSaleDetails)
-	s.app.Get("/sales/reports", s.saleHandler.GetSalesReports)
 
-	// Product routes
-	s.app.Get("/products", s.saleHandler.GetProducts)
-	s.app.Get("/products/:id", s.saleHandler.GetProductDetails)
 
 	// API routes
 	api := s.app.Group("/api")
@@ -335,7 +324,6 @@ func (s *Server) setupRoutes() {
 	api.Get("/shareholders", s.shareholderHandler.GetShareholdersAPI)
 	api.Get("/boardmeetings", s.boardMeetingHandler.GetBoardMeetingsAPI)
 	api.Get("/votes", s.voteHandler.GetVotesAPI)
-	api.Get("/sales", s.saleHandler.GetSalesAPI)
 }
 
 // GetUptime returns the uptime of the Freezone Manager UI server

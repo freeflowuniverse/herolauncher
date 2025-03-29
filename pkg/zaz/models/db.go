@@ -21,7 +21,7 @@ var dbMutex sync.RWMutex
 // It uses SQLite for now but can be changed to PostgreSQL in the future
 func InitDB(dbPath string) (*gorm.DB, error) {
 	var err error
-	
+
 	dbOnce.Do(func() {
 		// Create directory if it doesn't exist
 		dir := filepath.Dir(dbPath)
@@ -61,6 +61,18 @@ func GetDB() *gorm.DB {
 	return DB
 }
 
+// Db is a wrapper around gorm.DB
+type Db struct {
+	DB *gorm.DB
+}
+
+// GetDbObject returns a new Db object with the current database connection
+func GetDbObject() *Db {
+	return &Db{
+		DB: GetDB(),
+	}
+}
+
 // autoMigrate automatically creates and updates database tables based on model structs
 func autoMigrate() error {
 	// Auto migrate all models
@@ -78,7 +90,3 @@ func autoMigrate() error {
 		&SaleItem{},
 	)
 }
-
-
-
-

@@ -1,4 +1,4 @@
-package handlers
+package webhandlers
 
 import (
 	"github.com/freeflowuniverse/herolauncher/pkg/zaz/models"
@@ -6,11 +6,15 @@ import (
 )
 
 // AuthHandler handles authentication-related routes
-type AuthHandler struct {}
+type AuthHandler struct {
+	store *models.Store
+}
 
 // NewAuthHandler creates a new AuthHandler
-func NewAuthHandler(_ *models.Store) *AuthHandler {
-	return &AuthHandler{}
+func NewAuthHandler(store *models.Store) *AuthHandler {
+	return &AuthHandler{
+		store: store,
+	}
 }
 
 // GetLogin renders the login page
@@ -34,7 +38,7 @@ func (h *AuthHandler) PostLogin(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Implement actual authentication
+	// TODO: Implement actual authentication using the store
 	// For now, just redirect to dashboard
 	return c.Redirect("/")
 }
@@ -69,20 +73,34 @@ func (h *AuthHandler) PostRegister(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Implement actual user registration
-	// For now, just redirect to login
+	// Create user using the store
+	user := models.User{
+		Name:     name,
+		Email:    email,
+		Password: password, // In a real app, this would be hashed
+	}
+	
+	_, err := h.store.UserHandler.Create(user)
+	if err != nil {
+		return c.Render("register", fiber.Map{
+			"title": "Register",
+			"error": "Failed to create user: " + err.Error(),
+		})
+	}
+
+	// Redirect to login page
 	return c.Redirect("/login")
 }
 
 // Logout handles user logout
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	// TODO: Implement actual logout (clear session, etc.)
+	// TODO: Implement actual logout
 	return c.Redirect("/login")
 }
 
 // GetForgotPassword renders the forgot password page
 func (h *AuthHandler) GetForgotPassword(c *fiber.Ctx) error {
-	return c.Render("forgot_password", fiber.Map{
+	return c.Render("forgot-password", fiber.Map{
 		"title": "Forgot Password",
 	})
 }
@@ -94,14 +112,14 @@ func (h *AuthHandler) PostForgotPassword(c *fiber.Ctx) error {
 
 	// Simple validation
 	if email == "" {
-		return c.Render("forgot_password", fiber.Map{
+		return c.Render("forgot-password", fiber.Map{
 			"title": "Forgot Password",
 			"error": "Email is required",
 		})
 	}
 
-	// TODO: Implement actual password reset flow
-	// For now, just redirect to login with a message
+	// TODO: Implement actual password reset
+	// For now, just redirect to login page with a success message
 	return c.Render("login", fiber.Map{
 		"title": "Login",
 		"message": "Password reset instructions have been sent to your email",

@@ -1,4 +1,4 @@
-package handlers
+package webhandlers
 
 import (
 	"github.com/gofiber/fiber/v2"
