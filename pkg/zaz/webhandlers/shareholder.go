@@ -214,11 +214,202 @@ func (h *ShareholderHandler) GetShareholderDetails(c *fiber.Ctx) error {
 		return c.Status(404).SendString("Company not found")
 	}
 	
+	// For now, we'll create sample activities and documents
+	// In a real application, these would come from the database
+	activities := []map[string]interface{}{
+		{
+			"Date":    time.Now().AddDate(0, -1, 0),
+			"Action":  "Share Purchase",
+			"Details": "Purchased 100 additional shares",
+		},
+		{
+			"Date":    time.Now().AddDate(0, -3, 0),
+			"Action":  "Dividend Payment",
+			"Details": "Received quarterly dividend",
+		},
+	}
+	
+	documents := []map[string]interface{}{
+		{
+			"Name": "Share Certificate",
+			"URL":  "#",
+			"Date": time.Now().AddDate(0, -6, 0),
+		},
+		{
+			"Name": "Shareholder Agreement",
+			"URL":  "#",
+			"Date": time.Now().AddDate(-1, 0, 0),
+		},
+	}
+	
 	return RenderWithDefaults(c, "shareholders_details", fiber.Map{
-		"title": shareholder.Name,
+		"title":       shareholder.Name,
+		"shareholder":  shareholder,
+		"company":     company,
+		"activities":  activities,
+		"documents":   documents,
+	})
+}
+
+// GetEditShareholder renders the shareholder edit page
+func (h *ShareholderHandler) GetEditShareholder(c *fiber.Ctx) error {
+	// Parse shareholder ID from URL
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(400).SendString("Invalid shareholder ID")
+	}
+	
+	// Get shareholder from store
+	shareholder, err := h.store.ShareholderHandler.GetByID(id)
+	if err != nil {
+		return c.Status(404).SendString("Shareholder not found")
+	}
+	
+	// Get company from store
+	company, err := h.store.CompanyHandler.GetByID(shareholder.CompanyID)
+	if err != nil {
+		return c.Status(404).SendString("Company not found")
+	}
+	
+	// Get all companies for the dropdown
+	companies := h.store.CompanyHandler.GetAll()
+	
+	return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+		"title": "Edit " + shareholder.Name,
 		"shareholder": shareholder,
 		"company": company,
+		"companies": companies,
 	})
+}
+
+// PostEditShareholder handles shareholder edit form submission
+func (h *ShareholderHandler) PostEditShareholder(c *fiber.Ctx) error {
+	// Parse shareholder ID from URL
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(400).SendString("Invalid shareholder ID")
+	}
+	
+	// Get existing shareholder from store
+	shareholder, err := h.store.ShareholderHandler.GetByID(id)
+	if err != nil {
+		return c.Status(404).SendString("Shareholder not found")
+	}
+	
+	// Get company for error handling
+	company, err := h.store.CompanyHandler.GetByID(shareholder.CompanyID)
+	if err != nil {
+		company = models.Company{} // Empty company if not found
+	}
+	
+	// Parse form data
+	name := c.FormValue("name")
+	companyIDStr := c.FormValue("company_id")
+	sharesStr := c.FormValue("shares")
+	percentageStr := c.FormValue("percentage")
+	shareholderType := c.FormValue("type")
+	sinceStr := c.FormValue("since")
+	
+	// Simple validation
+	if name == "" {
+		companies := h.store.CompanyHandler.GetAll()
+		return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+			"title": "Edit " + shareholder.Name,
+			"shareholder": shareholder,
+			"company": company,
+			"companies": companies,
+			"error": "Name is required",
+		})
+	}
+	
+	// Parse company ID
+	companyID, err := strconv.ParseInt(companyIDStr, 10, 64)
+	if err != nil {
+		companies := h.store.CompanyHandler.GetAll()
+		return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+			"title": "Edit " + shareholder.Name,
+			"shareholder": shareholder,
+			"company": company,
+			"companies": companies,
+			"error": "Invalid company ID",
+		})
+	}
+	
+	// Parse shares
+	shares := 0
+	if sharesStr != "" {
+		shares, err = strconv.Atoi(sharesStr)
+		if err != nil {
+			companies := h.store.CompanyHandler.GetAll()
+			return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+				"title": "Edit " + shareholder.Name,
+				"shareholder": shareholder,
+				"company": company,
+				"companies": companies,
+				"error": "Invalid shares value",
+			})
+		}
+	}
+	
+	// Parse percentage
+	percentage := 0.0
+	if percentageStr != "" {
+		percentage, err = strconv.ParseFloat(percentageStr, 64)
+		if err != nil {
+			companies := h.store.CompanyHandler.GetAll()
+			return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+				"title": "Edit " + shareholder.Name,
+				"shareholder": shareholder,
+				"company": company,
+				"companies": companies,
+				"error": "Invalid percentage value",
+			})
+		}
+	}
+	
+	// Parse since date
+	var since time.Time
+	if sinceStr != "" {
+		since, err = time.Parse("2006-01-02", sinceStr)
+		if err != nil {
+			companies := h.store.CompanyHandler.GetAll()
+			return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+				"title": "Edit " + shareholder.Name,
+				"shareholder": shareholder,
+				"company": company,
+				"companies": companies,
+				"error": "Invalid date format. Please use YYYY-MM-DD",
+			})
+		}
+	} else {
+		// Keep the existing date if not provided
+		since = shareholder.Since
+	}
+	
+	// Update shareholder fields
+	shareholder.Name = name
+	shareholder.CompanyID = companyID
+	shareholder.Shares = shares
+	shareholder.Percentage = percentage
+	shareholder.Type = shareholderType
+	shareholder.Since = since
+	shareholder.UpdatedAt = time.Now()
+	
+	// Save to database using the store
+	err = h.store.ShareholderHandler.Update(shareholder)
+	if err != nil {
+		companies := h.store.CompanyHandler.GetAll()
+		return RenderWithDefaults(c, "shareholders_edit", fiber.Map{
+			"title": "Edit " + shareholder.Name,
+			"shareholder": shareholder,
+			"company": company,
+			"companies": companies,
+			"error": "Failed to update shareholder: " + err.Error(),
+		})
+	}
+	
+	// Redirect to shareholder details
+	return c.Redirect("/shareholders/" + c.Params("id"))
 }
 
 // GetShareholdersAPI returns shareholders data as JSON for API consumption

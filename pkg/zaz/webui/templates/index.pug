@@ -35,8 +35,8 @@ block content
         article
           header
             h3 Recent Activity
-          
-          | {{if .recentActivities}}
+                      
+            | {{if .recentActivities}}
           ul
             | {{range .recentActivities}}
             li {{.Description}} ({{.TimeAgo}})
