@@ -1,0 +1,44 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Mail Client
+    
+    //- PicoCSS for styling
+    link(rel="stylesheet", href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css")
+    
+    //- Unpoly for dynamic content loading
+    script(src="https://unpkg.com/unpoly@2.7.1/unpoly.min.js")
+    link(rel="stylesheet", href="https://unpkg.com/unpoly@2.7.1/unpoly.min.css")
+    
+    //- Custom styles
+    link(rel="stylesheet", href="/css/style.css")
+  
+  body
+    .container
+      main.app-content.container
+        section.mail-grid
+          article
+            //- Combined sidebar for mailboxes and mail list
+            aside.sidebar.combined-sidebar(up-target=".combined-sidebar")
+              | {{if eq .view "mailboxes"}}
+              include mailbox-sidebar
+              | {{else}}
+              include mail-list
+              | {{end}}
+              
+          //- Mail content area
+          article.mail-content(up-target=".mail-content")
+            | {{if eq .view "mail"}}
+            include mail-view
+            | {{else}}
+            .mail-placeholder
+              h3 Select an email to view
+              p Click on an email in the list to view its contents.
+            | {{end}}
+      
+      footer.app-footer
+        p &copy; 2025 Mail Client - Built with PicoCSS, Pug, and Unpoly
+    
+    script(src="/js/main.js")

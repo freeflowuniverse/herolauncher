@@ -1,0 +1,31 @@
+header
+  h2 Mailboxes
+  hr
+nav.is-sticky
+  ul.mailbox-list
+    | {{range .mailboxes}}
+    li
+      a.mailbox-link(
+        href="/mailbox/{{.ID}}" 
+        up-target=".combined-sidebar, .mail-content" 
+      )
+        span.mailbox-icon
+          | {{if eq .Type "inbox"}}
+          img(src="/icons/inbox.svg" alt="Inbox")
+          | {{else if eq .Type "sent"}}
+          img(src="/icons/sent.svg" alt="Sent")
+          | {{else if eq .Type "drafts"}}
+          img(src="/icons/drafts.svg" alt="Drafts")
+          | {{else if eq .Type "trash"}}
+          img(src="/icons/trash.svg" alt="Trash")
+          | {{else if eq .Type "spam"}}
+          img(src="/icons/spam.svg" alt="Spam")
+          | {{else}}
+          img(src="/icons/folder.svg" alt="Folder")
+          | {{end}}
+        h3.mailbox-name {{.Name}}
+        | {{if gt .Count 0}}
+        span.mailbox-count {{.Count}}
+        | {{end}}
+    hr
+    | {{end}}

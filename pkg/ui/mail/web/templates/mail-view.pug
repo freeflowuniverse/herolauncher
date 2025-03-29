@@ -1,0 +1,39 @@
+article.mail-detail
+  header.mail-header
+    h2.mail-subject {{.activeMail.Subject}}
+    .mail-meta
+      .mail-from
+        strong From: 
+        span {{.activeMail.From}}
+      .mail-to
+        strong To: 
+        | {{range $index, $to := .activeMail.To}}
+        | {{if $index}}, {{end}}
+        span {{$to}}
+        | {{end}}
+      | {{if .activeMail.Cc}}
+      .mail-cc
+        strong Cc: 
+        | {{range $index, $cc := .activeMail.Cc}}
+        | {{if $index}}, {{end}}
+        span {{$cc}}
+        | {{end}}
+      | {{end}}
+      .mail-date
+        strong Date: 
+        span {{.activeMail.Date}}
+    
+    | {{if .activeMail.Attachments}}
+    .mail-attachments
+      strong Attachments:
+      ul.attachment-list
+        | {{range .activeMail.Attachments}}
+        li
+          a(href="#") {{.}}
+        | {{end}}
+    | {{end}}
+  
+  hr
+  
+  .mail-body
+    | {{.activeMail.BodyHTML | unescaped}}

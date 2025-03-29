@@ -1,0 +1,33 @@
+header
+  h2
+    a.back-icon(href="/" up-target=".combined-sidebar, .mail-content")
+      img(src="/icons/back.svg" alt="Back")
+    | {{.activeMailbox.Name}}
+  hr
+
+if len .mailPreviews
+  ul.mail-preview-list
+    | {{range .mailPreviews}}
+    li
+      a.mail-preview(
+        href="/mail/{{.ID}}" 
+        up-target=".mail-content" 
+        class="{{if not .Read}}unread{{end}}"
+      )
+        hgroup
+          h3.mail-preview-from {{.From}}
+          small.mail-preview-date {{.Date}}
+        .mail-preview-subject
+          | {{if .Starred}}
+          span.star ★
+          | {{end}}
+          | {{.Subject}}
+          | {{if .HasAttach}}
+          span.attachment 📎
+          | {{end}}
+        .mail-preview-body {{.Preview}}
+        hr
+    | {{end}}
+else
+  .empty-mailbox
+    p No emails in this mailbox.
