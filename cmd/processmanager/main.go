@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/telnetserver"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/interfaces/telnet"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	processManager := processmanager.NewProcessManager(*secret)
 
 	// Create telnet adapter
-	telnetAdapter := telnetserver.NewTelnetAdapter(processManager)
+	telnetAdapter := telnet.NewTelnetAdapter(processManager)
 
 	// Start telnet server
 	fmt.Printf("Starting process manager telnet server on socket: %s\n", *socketPath)
