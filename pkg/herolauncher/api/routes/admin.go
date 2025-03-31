@@ -3,9 +3,11 @@ package routes
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/openrpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/shirou/gopsutil/v3/host"
 )
@@ -65,6 +67,11 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 	admin.Get("/api/hardware-stats", h.getHardwareStatsJSON)
 	admin.Get("/api/process-stats", h.getProcessStatsJSON)
 	admin.Get("/system/settings", h.getSystemSettings)
+
+	// OpenRPC routes
+	admin.Get("/openrpc", h.getOpenRPCManager)
+	admin.Get("/openrpc/vfs", h.getOpenRPCVFS)
+	admin.Get("/openrpc/vfs/logs", h.getOpenRPCVFSLogs)
 
 	// Redirect root to admin
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -406,6 +413,252 @@ func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
 	return c.Render("admin/system/processes", fiber.Map{
 		"processes": processStats,
 	})
+}
+
+// getOpenRPCManager renders the OpenRPC Manager view page
+func (h *AdminHandler) getOpenRPCManager(c *fiber.Ctx) error {
+	return c.Render("admin/openrpc/index", fiber.Map{
+		"title": "OpenRPC Manager",
+	})
+}
+
+// getOpenRPCVFS renders the OpenRPC VFS view page
+func (h *AdminHandler) getOpenRPCVFS(c *fiber.Ctx) error {
+	return c.Render("admin/openrpc/vfs", fiber.Map{
+		"title": "Virtual File System API",
+	})
+}
+
+// getOpenRPCVFSLogs renders the OpenRPC logs content for Unpoly or direct access
+func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
+	// Get the OpenRPC manager name and endpoint from query parameters or use defaults
+	managerName := c.Query("manager", "Virtual Filesystem")
+	managerEndpoint := c.Query("endpoint", "/api/vfs/logs")
+
+	// Get VFS client
+	vfsClient := openrpc.NewClient("/tmp/vfs.sock", "")
+	defer vfsClient.Close()
+
+	// Get available methods from the OpenRPC schema
+	methods := []string{}
+	schema, err := vfsClient.Discover()
+	if err == nil {
+		for _, method := range schema.Methods {
+			// Skip internal RPC methods
+			if method.Name != "rpc.discover" && method.Name != "rpc.introspect" {
+				methods = append(methods, method.Name)
+			}
+		}
+	} else {
+		// If we couldn't get the schema, add some default methods
+		servicePrefix := "vfs"
+		methods = append(methods, 
+			servicePrefix+".list", 
+			servicePrefix+".get", 
+			servicePrefix+".create", 
+			servicePrefix+".update", 
+			servicePrefix+".delete")
+	}
+	
+	// Create a map of method names and their display names for the template
+	methodDisplayNames := make(map[string]string)
+	for _, method := range methods {
+		// Extract the method name after the last dot and replace underscores with spaces
+		parts := strings.Split(method, ".")
+		if len(parts) > 0 {
+			name := parts[len(parts)-1]
+			methodDisplayNames[method] = strings.ReplaceAll(name, "_", " ")
+		} else {
+			methodDisplayNames[method] = method
+		}
+	}
+
+	// Create the data map with required variables
+	data := fiber.Map{
+		"title":             "OpenRPC VFS Logs",
+		"managerName":       managerName,
+		"managerEndpoint":   managerEndpoint,
+		"methods":           methods,
+		"methodDisplayNames": methodDisplayNames,
+	}
+
+	// Check if this is an Unpoly request
+	if c.Get("X-Up-Target", "") != "" {
+		// Only render the content of the logs tab without the layout
+		data["layout"] = false
+	}
+	
+	// If accessed directly, render with the full layout
+	data["title"] = managerName + " Logs"
+	
+	// Create a temporary HTML file with the template variables replaced
+	tmplContent := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>%s - HeroLauncher</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/custom.css">
+  <script src="/static/js/jquery.min.js"></script>
+  <script src="/static/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/js/unpoly.min.js"></script>
+</head>
+<body>
+  <div class="container-fluid p-4">
+    <div class="row mb-4">
+      <div class="col">
+        <h2>%s Logs</h2>
+        <p>View and filter logs from the %s service.</p>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Filter Logs</h5>
+          </div>
+          <div class="card-body">
+            <form id="filter-form">
+              <input type="hidden" id="manager" name="manager" value="%s">
+              <input type="hidden" id="endpoint" name="endpoint" value="%s">
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <label for="method-filter">Filter by Method:</label>
+                  <select class="form-control" id="method-filter">
+                    <option value="">All Methods</option>
+                    %s
+                  </select>
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="status-filter">Filter by Status:</label>
+                  <select class="form-control" id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="success">Success</option>
+                    <option value="error">Error</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="date-filter">Filter by Date:</label>
+                  <input type="date" class="form-control" id="date-filter">
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="limit-filter">Limit Results:</label>
+                  <select class="form-control" id="limit-filter">
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col">
+                  <button type="button" id="apply-filters" class="btn btn-primary">Apply Filters</button>
+                  <button type="button" id="reset-filters" class="btn btn-secondary">Reset Filters</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Logs</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-table-body">
+                  <!-- Logs will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      // Apply filters when the button is clicked
+      $('#apply-filters').click(function() {
+        const queryParams = new URLSearchParams();
+        
+        // Get filter values
+        const methodFilter = $('#method-filter').val();
+        const statusFilter = $('#status-filter').val();
+        const dateFilter = $('#date-filter').val();
+        const limitFilter = $('#limit-filter').val();
+        
+        // Add filters to query parameters if they are set
+        if (methodFilter) queryParams.append('method', methodFilter);
+        if (statusFilter) queryParams.append('status', statusFilter);
+        if (dateFilter) queryParams.append('date', dateFilter);
+        if (limitFilter) queryParams.append('limit', limitFilter);
+        
+        // Add the manager and endpoint parameters to preserve them when reloading
+        queryParams.append('manager', document.getElementById('manager').value);
+        queryParams.append('endpoint', document.getElementById('endpoint').value);
+        
+        // Redirect to the same page with new query parameters
+        window.location.href = '/admin/openrpc/vfs/logs?' + queryParams.toString();
+      });
+      
+      // Reset filters when the button is clicked
+      $('#reset-filters').click(function() {
+        // Clear all filter inputs
+        $('#method-filter').val('');
+        $('#status-filter').val('');
+        $('#date-filter').val('');
+        $('#limit-filter').val('50');
+        
+        // Redirect to the base URL with only manager and endpoint parameters
+        const queryParams = new URLSearchParams();
+        queryParams.append('manager', document.getElementById('manager').value);
+        queryParams.append('endpoint', document.getElementById('endpoint').value);
+        window.location.href = '/admin/openrpc/vfs/logs?' + queryParams.toString();
+      });
+    });
+  </script>
+</body>
+</html>`, 
+		data["title"], managerName, managerName, managerName, managerEndpoint, generateMethodOptions(methods, methodDisplayNames))
+	
+	return c.Type("html").SendString(tmplContent)
+}
+
+// generateMethodOptions generates HTML option tags for method dropdown
+func generateMethodOptions(methods []string, methodDisplayNames map[string]string) string {
+	options := ""
+	for _, method := range methods {
+		displayName := method
+		if name, ok := methodDisplayNames[method]; ok {
+			displayName = name
+		}
+		options += fmt.Sprintf("<option value=\"%s\">%s</option>\n", method, displayName)
+	}
+	return options
 }
 
 // getProcessesData returns the HTML fragment for processes data

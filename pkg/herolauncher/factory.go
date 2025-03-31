@@ -18,6 +18,9 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/client"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/mock"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/openrpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -35,6 +38,8 @@ type Config struct {
 	StaticFilesPath      string
 	PMSocketPath         string // ProcessManager socket path
 	PMSecret             string // ProcessManager authentication secret
+	VFSSocketPath        string // VFS OpenRPC socket path
+	VFSSecret            string // VFS OpenRPC authentication secret
 }
 
 // DefaultConfig returns a default configuration for the HeroLauncher server
@@ -55,6 +60,8 @@ func DefaultConfig() Config {
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		PMSocketPath:    "/tmp/processmanager.sock", // Default ProcessManager socket path
 		PMSecret:        "secret123", // Default ProcessManager secret
+		VFSSocketPath:   "/tmp/vfs.sock", // Default VFS socket path
+		VFSSecret:       "vfs_secret", // Default VFS secret
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
 		StaticFilesPath: filepath.Join(projectRoot, "pkg/herolauncher/web/static"),
 	}
@@ -68,6 +75,9 @@ type HeroLauncher struct {
 	packageManager  *packagemanager.PackageManager
 	pmClient        *client.Client
 	pmProcess       *os.Process    // Process for the process manager
+	vfsManager      interfaces.VFSManager // VFS manager implementation
+	vfsClient       *openrpc.Client // VFS OpenRPC client
+	vfsServer       *openrpc.Server // VFS OpenRPC server
 	config          Config
 	startTime       time.Time
 }
@@ -84,6 +94,10 @@ func New(config Config) *HeroLauncher {
 	
 	// Initialize process manager client
 	pmClient := client.New(config.PMSocketPath, config.PMSecret)
+	
+	// Initialize VFS manager and client
+	vfsManager := mock.NewMockVFSManager() // Using mock implementation for now
+	vfsClient := openrpc.NewClient(config.VFSSocketPath, config.VFSSecret)
 
 	// Initialize template engine with debugging enabled
 	// Use absolute path for templates to avoid path resolution issues
@@ -122,6 +136,13 @@ func New(config Config) *HeroLauncher {
 	app.Static("/img", config.StaticFilesPath+"/img")
 	app.Static("/favicon.ico", config.StaticFilesPath+"/favicon.ico")
 
+	// Initialize VFS OpenRPC server
+	vfsServer, err := openrpc.NewServer(vfsManager, config.VFSSocketPath, config.VFSSecret)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize VFS OpenRPC server: %v\n", err)
+		vfsServer = nil
+	}
+
 	// Create HeroLauncher instance
 	hl := &HeroLauncher{
 		app:             app,
@@ -129,6 +150,9 @@ func New(config Config) *HeroLauncher {
 		executorService: executorService,
 		packageManager:  packageManagerService,
 		pmClient:        pmClient,
+		vfsManager:      vfsManager,
+		vfsClient:       vfsClient,
+		vfsServer:       vfsServer,
 		config:          config,
 		startTime:       time.Now(),
 	}
@@ -146,6 +170,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
 	redisHandler := routes.NewRedisHandler(hl.redisServer)
 	serviceHandler := routes.NewServiceHandler(hl.pmClient, log.Default())
+	vfsHandler := routes.NewVFSHandler(hl.vfsClient, log.Default())
 	// Initialize StatsManager
 	statsManager, err := stats.NewStatsManagerWithDefaults()
 	if err != nil {
@@ -162,6 +187,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	redisHandler.RegisterRoutes(hl.app)
 	adminHandler.RegisterRoutes(hl.app)
 	serviceHandler.RegisterRoutes(hl.app)
+	vfsHandler.RegisterRoutes(hl.app)
 }
 
 // GetUptime returns the uptime of the HeroLauncher server as a formatted string
@@ -250,6 +276,14 @@ func (hl *HeroLauncher) startProcessManager() error {
 
 // Start starts the HeroLauncher server
 func (hl *HeroLauncher) Start() error {
+	// Start VFS OpenRPC server if available
+	if hl.vfsServer != nil {
+		if err := hl.vfsServer.Start(); err != nil {
+			log.Printf("Warning: Failed to start VFS OpenRPC server: %v\n", err)
+		} else {
+			log.Printf("VFS OpenRPC server started on socket: %s\n", hl.config.VFSSocketPath)
+		}
+	}
 	// Start the process manager first
 	err := hl.startProcessManager()
 	if err != nil {

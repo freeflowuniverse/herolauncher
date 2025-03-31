@@ -1,0 +1,527 @@
+{
+  "openrpc": "1.2.6",
+  "info": {
+    "title": "Virtual File System API",
+    "version": "1.0.0",
+    "description": "API for interacting with a local virtual file system"
+  },
+  "methods": [
+    {
+      "name": "vfs.upload_file",
+      "description": "Upload a file to the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "filepath",
+          "description": "Path to the local file to upload",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Upload result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.upload_dir",
+      "description": "Upload a directory to the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dirpath",
+          "description": "Path to the local directory to upload",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Upload result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "files_processed": {
+              "type": "integer"
+            },
+            "total_size": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.download_file",
+      "description": "Download a file from the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "destpath",
+          "description": "Destination path for the downloaded file",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Download result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.export_meta",
+      "description": "Export metadata from the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "destpath",
+          "description": "Destination path for the exported metadata",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Export result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "entries": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.import_meta",
+      "description": "Import metadata to the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sourcepath",
+          "description": "Source path for the metadata to import",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Import result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "entries_imported": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.export_dedupe",
+      "description": "Export dedupe information from the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "destpath",
+          "description": "Destination path for the exported dedupe information",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Export result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "hashes_exported": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.import_dedupe",
+      "description": "Import dedupe information to the virtual file system",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "sourcepath",
+          "description": "Source path for the dedupe information to import",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Import result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "hashes_imported": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.send",
+      "description": "Send files based on dedupe hashes to a destination",
+      "params": [
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pubkeydest",
+          "description": "Public key of the destination",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "hashlist",
+          "description": "List of hashes to send",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "name": "secret",
+          "description": "Secret for authentication",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Send result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "hashes_sent": {
+              "type": "integer"
+            },
+            "total_size": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.send_exist",
+      "description": "Check which dedupe hashes exist and return a list",
+      "params": [
+        {
+          "name": "dedupepath",
+          "description": "Path to the dedupe store",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pubkeydest",
+          "description": "Public key of the destination",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "hashlist",
+          "description": "List of hashes to check",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "name": "secret",
+          "description": "Secret for authentication",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "List of existing hashes",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "existing_hashes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.expose_webdav",
+      "description": "Expose the virtual file system via WebDAV",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system to expose",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "port",
+          "description": "Port to expose WebDAV on",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "username",
+          "description": "Username for WebDAV authentication (optional)",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "password",
+          "description": "Password for WebDAV authentication (optional)",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "WebDAV exposure result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "vfs.expose_9p",
+      "description": "Expose the virtual file system via 9P protocol",
+      "params": [
+        {
+          "name": "vfspath",
+          "description": "Path in the virtual file system to expose",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "port",
+          "description": "Port to expose 9P on",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "readonly",
+          "description": "Whether to expose as read-only",
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "9P exposure result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

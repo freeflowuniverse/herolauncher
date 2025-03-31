@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.title}} - HeroLauncher</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/css/custom.css">
+  <script src="/static/js/jquery.min.js"></script>
+  <script src="/static/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/js/unpoly.min.js"></script>
+</head>
+<body>
+  <div class="container-fluid p-4">
+    <div class="row mb-4">
+      <div class="col">
+        <h2>{{.managerName}} Logs</h2>
+        <p>View and filter logs from the {{.managerName}} service.</p>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Filter Logs</h5>
+          </div>
+          <div class="card-body">
+            <form id="filter-form">
+              <input type="hidden" id="manager" name="manager" value="{{.managerName}}">
+              <input type="hidden" id="endpoint" name="endpoint" value="{{.managerEndpoint}}">
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <label for="method-filter">Filter by Method:</label>
+                  <select class="form-control" id="method-filter">
+                    <option value="">All Methods</option>
+                    {{range .methods}}
+                    <option value="{{.}}">{{index $.methodDisplayNames .}}</option>
+                    {{end}}
+                  </select>
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="status-filter">Filter by Status:</label>
+                  <select class="form-control" id="status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="success">Success</option>
+                    <option value="error">Error</option>
+                  </select>
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="date-filter">Filter by Date:</label>
+                  <input type="date" class="form-control" id="date-filter">
+                </div>
+                
+                <div class="col-md-3">
+                  <label for="limit-filter">Limit Results:</label>
+                  <select class="form-control" id="limit-filter">
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col">
+                  <button type="button" id="apply-filters" class="btn btn-primary">Apply Filters</button>
+                  <button type="button" id="reset-filters" class="btn btn-secondary">Reset Filters</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Logs</h5>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logs-table-body">
+                  <!-- Logs will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      // Apply filters when the button is clicked
+      $('#apply-filters').click(function() {
+        const queryParams = new URLSearchParams();
+        
+        // Get filter values
+        const methodFilter = $('#method-filter').val();
+        const statusFilter = $('#status-filter').val();
+        const dateFilter = $('#date-filter').val();
+        const limitFilter = $('#limit-filter').val();
+        
+        // Add filters to query parameters if they are set
+        if (methodFilter) queryParams.append('method', methodFilter);
+        if (statusFilter) queryParams.append('status', statusFilter);
+        if (dateFilter) queryParams.append('date', dateFilter);
+        if (limitFilter) queryParams.append('limit', limitFilter);
+        
+        // Add the manager and endpoint parameters to preserve them when reloading
+        queryParams.append('manager', document.getElementById('manager').value);
+        queryParams.append('endpoint', document.getElementById('endpoint').value);
+        
+        // Redirect to the same page with new query parameters
+        window.location.href = '/admin/openrpc/vfs/logs?' + queryParams.toString();
+      });
+      
+      // Reset filters when the button is clicked
+      $('#reset-filters').click(function() {
+        // Clear all filter inputs
+        $('#method-filter').val('');
+        $('#status-filter').val('');
+        $('#date-filter').val('');
+        $('#limit-filter').val('50');
+        
+        // Redirect to the base URL with only manager and endpoint parameters
+        const queryParams = new URLSearchParams();
+        queryParams.append('manager', document.getElementById('manager').value);
+        queryParams.append('endpoint', document.getElementById('endpoint').value);
+        window.location.href = '/admin/openrpc/vfs/logs?' + queryParams.toString();
+      });
+    });
+  </script>
+</body>
+</html>
