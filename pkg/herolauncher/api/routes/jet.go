@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strings"
+
 	"github.com/CloudyKit/jet/v6"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
 	"github.com/gofiber/fiber/v2"
@@ -30,9 +32,8 @@ func NewJetHandler() *JetHandler {
 
 // RegisterRoutes registers Jet template routes to the fiber app
 func (h *JetHandler) RegisterRoutes(app *fiber.App) {
-	group := app.Group("/api/jet")
-
-	group.Post("/checkjet", h.validateTemplate)
+	// Register the checkjet endpoint directly at the root level
+	app.Post("/checkjet", h.validateTemplate)
 }
 
 // @Summary Validate a Jet template
@@ -74,6 +75,22 @@ func (h *JetHandler) validateTemplate(c *fiber.Ctx) error {
 	if err != nil {
 		// Extract meaningful error information
 		errMsg := err.Error()
+
+		// Ignore errors related to extended or included files not found
+		// These aren't syntax errors but dependency errors we want to ignore
+		if strings.Contains(errMsg, "no template") ||
+			strings.Contains(errMsg, "unable to locate template") ||
+			strings.Contains(errMsg, "template not found") ||
+			strings.Contains(errMsg, "extends|import") ||
+			strings.Contains(errMsg, "could not be found") ||
+			strings.Contains(errMsg, "template /") {
+			// Still valid since it's only a dependency error, not a syntax error
+			return c.JSON(JetTemplateResponse{
+				Valid:   true,
+				Message: "Template syntax is valid (ignoring extends/include errors)",
+			})
+		}
+
 		return c.JSON(JetTemplateResponse{
 			Valid: false,
 			Error: errMsg,

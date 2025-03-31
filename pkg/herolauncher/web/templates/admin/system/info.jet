@@ -1,0 +1,77 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+  <article class="system-info">
+    <header>
+      <h2 class="title">System Information</h2>
+      <p class="description text-muted">Overview of system resources and configuration</p>
+    </header>
+
+    <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+      <div>
+        <article class="hardware-info">
+          <header>
+            <h3 id="hardware-title">Hardware</h3>
+          </header>
+          
+          <table class="table table-striped" up:poll="/admin/system/hardware-stats" up:target=".hardware-stats" up:poll-interval="1000">
+            <tbody>
+              <tr>
+                <th scope="row">CPU</th>
+                <td>{{ .system.hardware.cpu }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Memory</th>
+                <td>{{ .system.hardware.memory }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Disk</th>
+                <td>{{ .system.hardware.disk }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Network</th>
+                <td style="white-space: pre-line;">{{ .system.hardware.network }}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          {{ include "./partials/__network_chart.jet" }}
+        </article>
+      </div>
+
+      <div>
+        <article class="software-info">
+          <header>
+            <h3 id="software-title">Software</h3>
+          </header>
+          
+          <table class="table table-bordered" data:type="software-info">
+            <tbody>
+              <tr>
+                <th scope="row">OS</th>
+                <td>{{ .system.software.os }}</td>
+              </tr>
+              <tr>
+                <th scope="row">HeroLauncher</th>
+                <td>{{ .system.software.herolauncher }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Uptime</th>
+                <td>{{ .system.software.uptime }}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          {{ include "./partials/__cpu_chart.jet" }}
+          {{ include "./partials/__memory_chart.jet" }}
+        </article>
+      </div>
+    </div>
+  </article>
+{{ end }}
+
+{{ block scripts() }}
+  {{ script(src="/js/echarts/echarts.min.js") }}
+  
+  {{ include "./partials/__stats_fetcher.jet" }}
+{{ end }}

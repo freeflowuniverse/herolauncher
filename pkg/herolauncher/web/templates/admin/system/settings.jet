@@ -1,0 +1,77 @@
+{{ extends "./layout.jet" }}
+
+{{ block "content" }}
+<article>
+  <header>
+    <h2>System Settings</h2>
+    <p>Configure system parameters and preferences</p>
+  </header>
+  <form>
+    <div class="grid">
+      <div>
+        <article>
+          <header>
+            <h3>Server Settings</h3>
+          </header>
+          <label for="server-port">Server Port</label>
+          <input id="server-port" type="number" value="9001">
+          
+          <label for="log-level">Default Log Level</label>
+          <select id="log-level">
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="error">Error</option>
+            <option value="debug">Debug</option>
+          </select>
+          
+          <label for="max-connections">Max Connections</label>
+          <input id="max-connections" type="number" value="100">
+        </article>
+      </div>
+      <div>
+        <article>
+          <header>
+            <h3>Security Settings</h3>
+          </header>
+          <label for="enable-auth">Enable Authentication</label>
+          <input id="enable-auth" type="checkbox" checked>
+          
+          <label for="session-timeout">Session Timeout (minutes)</label>
+          <input id="session-timeout" type="number" value="30">
+          
+          <label for="allowed-origins">Allowed Origins (CORS)</label>
+          <input id="allowed-origins" type="text" value="*">
+        </article>
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <article>
+          <header>
+            <h3>Redis Settings</h3>
+          </header>
+          <label for="redis-port">Redis Port</label>
+          <input id="redis-port" type="number" value="6378">
+          
+          <label for="redis-max-memory">Max Memory (MB)</label>
+          <input id="redis-max-memory" type="number" value="512">
+        </article>
+      </div>
+      <div>
+        <article>
+          <header>
+            <h3>Executor Settings</h3>
+          </header>
+          <label for="executor-timeout">Command Timeout (seconds)</label>
+          <input id="executor-timeout" type="number" value="60">
+          
+          <label for="executor-max-processes">Max Concurrent Processes</label>
+          <input id="executor-max-processes" type="number" value="10">
+        </article>
+      </div>
+    </div>
+    <button type="submit">Save Settings</button>
+    <button class="secondary" type="reset">Reset</button>
+  </form>
+</article>
+{{ end }}

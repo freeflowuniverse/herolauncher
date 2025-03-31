@@ -1,0 +1,56 @@
+{{ if .warning }}
+    <div class="alert alert-warning">{{ .warning }}</div>
+{{ end }}
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Status</th>
+            <th>PID</th>
+            <th>CPU</th>
+            <th>Memory</th>
+            <th>Uptime</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{ if .error }}
+        <tr>
+            <td colspan="7">
+                <div class="alert alert-danger">{{ .error }}</div>
+            </td>
+        </tr>
+        {{ else if .processes }}
+        {{ range .processes }}
+        <tr>
+            <td>{{ .Name }}</td>
+            <td>
+                {{ if eq(.Status, "running") }}
+                <span class="badge success">Running</span>
+                {{ else if eq(.Status, "stopped") }}
+                <span class="badge danger">Stopped</span>
+                {{ else }}
+                <span class="badge warning">{{ .Status }}</span>
+                {{ end }}
+            </td>
+            <td>{{ .ID }}</td>
+            <td>{{ if eq(.Status, "running") }}{{ .CPU }}{{ else }}-{{ end }}</td>
+            <td>{{ if eq(.Status, "running") }}{{ .Memory }}{{ else }}-{{ end }}</td>
+            <td>{{ if eq(.Status, "running") }}{{ .Uptime }}{{ else }}-{{ end }}</td>
+            <td>
+                <div class="button-group">
+                    <button class="button" onclick="restartProcess({{ .Name }})">Restart</button>
+                    <button class="button secondary" onclick="stopProcess({{ .Name }})">Stop</button>
+                    <button class="button danger" style="background-color: #e53935 !important; color: #fff !important;" onclick="deleteProcess({{ .Name }})">Delete</button>
+                    <button class="button info" onclick="showProcessLogs({{ .Name }})">Logs</button>
+                </div>
+            </td>
+        </tr>
+        {{ end }}
+        {{ else }}
+        <tr>
+            <td colspan="7">No services found</td>
+        </tr>
+        {{ end }}
+    </tbody>
+</table>

@@ -1,0 +1,36 @@
+<!-- This template contains just the process table content for AJAX updates -->
+{{ if .error }}
+<div class="alert alert-danger">{{ .error }}</div>
+{{ end }}
+
+<!-- Process data table - regenerated on each refresh -->
+<table class="table table-striped" id="processes-table">
+  <thead>
+    <tr>
+      <th scope='col'>PID</th>
+      <th scope='col'>Name</th>
+      <th scope='col'>Status</th>
+      <th scope='col'>CPU (%)</th>
+      <th scope='col'>Memory (MB)</th>
+      <th scope='col'>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ if .processes }}
+      {{ range .processes }}
+        <tr{{ if .is_current }} class="table-primary"{{ end }}>
+          <td>{{ .pid }}</td>
+          <td>{{ .name }}</td>
+          <td>{{ .status }}</td>
+          <td>{{ .cpu_percent | printf("%.1f%%") }}</td>
+          <td>{{ .memory_mb | printf("%.1f MB") }}</td>
+          <td>{{ .create_time_str }}</td>
+        </tr>
+      {{ end }}
+    {{ else }}
+      <tr>
+        <td colspan="6">No process data available.</td>
+      </tr>
+    {{ end }}
+  </tbody>
+</table>
