@@ -1,0 +1,62 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+  <header>
+    <h2>Sales</h2>
+    <p>Manage all sales transactions in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/sales/create" role="button">Create Sale</a>
+    <form class="search-form" action="/sales" method="get">
+      <input type="search" name="search" placeholder="Search sales..." value="{{.search}}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .sales }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Company</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .sales }}
+      <tr>
+        <td>{{.ID}}</td>
+        <td>{{.CompanyID}}</td>
+        <td>Sale</td>
+        <td>{{printf "%.2f" .TotalAmount}} {{.Currency}}</td>
+        <td>{{.SaleDate.Format "2006-01-02"}}</td>
+        <td>{{.Status}}</td>
+        <td class="actions">
+          <a href="/sales/{{.ID}}" title="View Details">Details</a>
+          {{ if ne .Status "Completed" }}
+          <a href="/sales/{{.ID}}/edit" title="Edit Sale">Edit</a>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No sales found</p>
+    {{ if .search }}
+    <p>No results for "{{.search}}"</p>
+    <a href="/sales">Clear search</a>
+    {{ else }}
+    <a href="/sales/create" role="button">Create your first sale</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

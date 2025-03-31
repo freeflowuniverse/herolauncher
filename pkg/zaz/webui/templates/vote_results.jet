@@ -1,0 +1,166 @@
+{{ extends "./layout.jet" }}
+
+{{ block "content" }}
+<article class="compact">
+  <header class="slim-header">
+    <h2>Vote Results</h2>
+    <div class="header-actions button-group">
+      <a href="/votes/{{.vote.ID}}" role="button" class="outline small">Back to Vote Details</a>
+      <a href="/votes" role="button" class="outline small">Back to List</a>
+    </div>
+  </header>
+
+  <div class="vote-info grid">
+    <div class="vote-details">
+      <h3>{{.vote.Title}}</h3>
+      
+      <p class="company">
+        <strong>Company: </strong>
+        <a href="/companies/{{.vote.CompanyID}}">{{.vote.CompanyName}}</a>
+      </p>
+      <p class="status">
+        <strong>Status: </strong>
+        <span class="status {{.vote.Status}}">{{.vote.Status}}</span>
+      </p>
+      <p class="completed">
+        <strong>Completed: </strong>
+        <span>{{.vote.CompletedDate.Format "2006-01-02"}}</span>
+      </p>
+    </div>
+
+    <div class="vote-summary">
+      <h3>Result Summary</h3>
+      <p>
+        <strong>Total Eligible Voters: </strong>
+        <span>{{.vote.TotalEligibleVoters}}</span>
+      </p>
+      <p>
+        <strong>Total Votes Cast: </strong>
+        <span>{{.vote.TotalVotesCast}}</span>
+      </p>
+      <p>
+        <strong>Participation Rate: </strong>
+        <span>{{.vote.ParticipationRate}}%</span>
+      </p>
+      <p>
+        <strong>Outcome: </strong>
+        <span class="outcome">{{.vote.Outcome}}</span>
+      </p>
+    </div>
+  </div>
+
+  <section class="results-chart">
+    <h3>Results Visualization</h3>
+    <div class="chart-container">
+      <div id="results-chart" style="width: 100%; height: 400px;"></div>
+    </div>
+  </section>
+
+  <section class="results-table">
+    <h3>Detailed Results</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Votes</th>
+          <th>Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .vote.Results }}
+        <tr>
+          <td>{{.Option}}</td>
+          <td>{{.Votes}}</td>
+          <td>{{printf "%.1f" .Percentage}}%</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="votes-cast">
+    <h3>Individual Votes</h3>
+    {{ if .vote.VotesCast }}
+    <table>
+      <thead>
+        <tr>
+          <th>Voter</th>
+          <th>Vote</th>
+          <th>Time</th>
+          <th>Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .vote.VotesCast }}
+        <tr>
+          <td>{{.VoterName}}</td>
+          <td>{{.Option}}</td>
+          <td>{{.Timestamp}}</td>
+          <td>{{ if .Comment }}{{.Comment}}{{ else }}-{{ end }}</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ else }}
+    <p class="no-data">No individual votes to display.</p>
+    {{ end }}
+  </section>
+</article>
+
+{{ block "scripts" }}
+<script>
+  // Initialize the results chart
+  document.addEventListener('DOMContentLoaded', function() {
+    const chart = echarts.init(document.getElementById('results-chart'));
+    
+    const options = {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)'
+      },
+      legend: {
+        orient: 'vertical',
+        left: 10,
+        data: [{{ range .vote.Results }}'{{.Option}}',{{ end }}]
+      },
+      series: [
+        {
+          name: 'Vote Results',
+          type: 'pie',
+          radius: ['50%', '70%'],
+          avoidLabelOverlap: false,
+          label: {
+            show: false,
+            position: 'center'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: '18',
+              fontWeight: 'bold'
+            }
+          },
+          labelLine: {
+            show: false
+          },
+          data: [
+            {{ range .vote.Results }}
+            {
+              value: {{.Votes}},
+              name: '{{.Option}}'
+            },
+            {{ end }}
+          ]
+        }
+      ]
+    };
+    
+    chart.setOption(options);
+    
+    // Resize chart when window size changes
+    window.addEventListener('resize', function() {
+      chart.resize();
+    });
+  });
+</script>
+{{ end }}

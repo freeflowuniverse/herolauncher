@@ -1,0 +1,166 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+  <header>
+    <h2>User Management</h2>
+    <p>Manage users and permissions in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/admin/users/create" role="button">Add User</a>
+    <form class="search-form" action="/admin/users" method="get">
+      <input type="search" name="search" placeholder="Search users..." value="{{.search}}"/>
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .users }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Last Login</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .users }}
+      <tr>
+        <td>{{.ID}}</td>
+        <td>{{.Name}}</td>
+        <td>{{.Email}}</td>
+        <td>{{.Role}}</td>
+        <td>{{.Status}}</td>
+        <td>{{.LastLogin}}</td>
+        <td class="actions">
+          <a href="/admin/users/{{.ID}}" title="View Details">Details</a>
+          <a href="/admin/users/{{.ID}}/edit" title="Edit User">Edit</a>
+          {{ if eq .Status "Active" }}
+          <a href="/admin/users/{{.ID}}/disable" title="Disable User" class="warning-action">Disable</a>
+          {{ else }}
+          <a href="/admin/users/{{.ID}}/enable" title="Enable User">Enable</a>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No users found</p>
+    {{ if .search }}
+    <p>No results for "{{.search}}"</p>
+    <a href="/admin/users">Clear search</a>
+    {{ else }}
+    <a href="/admin/users/create" role="button">Add your first user</a>
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <article>
+    <header>
+      <h3>Role Management</h3>
+    </header>
+
+    <div class="grid">
+      <div>
+        <h4>Available Roles</h4>
+        {{ if .roles }}
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Users</th>
+              <th>Permissions</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{ range .roles }}
+            <tr>
+              <td>{{.Name}}</td>
+              <td>{{.UserCount}}</td>
+              <td>{{.PermissionCount}}</td>
+              <td class="actions">
+                <a href="/admin/roles/{{.ID}}/edit" title="Edit Role">Edit</a>
+                {{ if gt .UserCount 0 }}
+                <a href="/admin/roles/{{.ID}}/users" title="View Users">Users</a>
+                {{ end }}
+              </td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
+        {{ else }}
+        <p class="no-data">No roles defined.</p>
+        {{ end }}
+      </div>
+
+      <div>
+        <h4>User Activity</h4>
+        <div class="chart-container">
+          <div id="user-activity-chart" style="width: 100%; height: 300px;"></div>
+        </div>
+      </div>
+    </div>
+  </article>
+</article>
+
+{{ block scripts() }}
+<script>
+  // Initialize user activity chart
+  document.addEventListener('DOMContentLoaded', function() {
+    const activityChart = echarts.init(document.getElementById('user-activity-chart'));
+    
+    const activityOption = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        }
+      },
+      xAxis: {
+        type: 'category',
+        data: [{{range .activityStats.Days}}'{{.}}',{{end}}]
+      },
+      yAxis: {
+        type: 'value'
+      },
+      series: [
+        {
+          name: 'Active Users',
+          type: 'line',
+          data: [{{range .activityStats.ActiveUsers}}{{.}},{{end}}],
+          markPoint: {
+            data: [
+              { type: 'max', name: 'Max' },
+              { type: 'min', name: 'Min' }
+            ]
+          }
+        }
+      ]
+    };
+    
+    activityChart.setOption(activityOption);
+    
+    // Resize chart when window size changes
+    window.addEventListener('resize', function() {
+      activityChart.resize();
+    });
+    
+    // Confirm user disable/enable
+    document.querySelectorAll('.warning-action').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to disable this user?')) {
+          e.preventDefault();
+        }
+      });
+    });
+  });
+</script>
+{{ end }}

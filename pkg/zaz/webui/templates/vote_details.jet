@@ -1,0 +1,111 @@
+{{ extends "layout" }}
+
+{{ block content() }}
+<article class="compact">
+    <header class="slim-header">
+        <h2>Vote Details</h2>
+        <div class="header-actions button-group">
+            <a href="#" role="button" class="primary small">Cast Vote</a>
+            <a href="#" role="button" class="secondary small">View Results</a>
+            <a href="/votes" role="button" class="outline small">Back to List</a>
+        </div>
+    </header>
+
+    <div class="vote-info grid">
+        <div class="vote-details">
+            <h3>Example Vote Title</h3>
+            
+            <p class="company">
+                <strong>Company:</strong>
+                <a href="#">Example Company</a>
+            </p>
+            <p class="status">
+                <strong>Status:</strong>
+                <span class="status Open">Open</span>
+            </p>
+            <p class="type">
+                <strong>Vote Type:</strong>
+                <span>Board Resolution</span>
+            </p>
+            <p class="majority">
+                <strong>Majority Required:</strong>
+                <span>Simple Majority</span>
+            </p>
+        </div>
+
+        <div class="vote-dates">
+            <h3>Voting Period</h3>
+            <p>
+                <strong>Start Date:</strong>
+                <span>2025-03-20</span>
+            </p>
+            <p>
+                <strong>Deadline:</strong>
+                <span>2025-04-05</span>
+            </p>
+        </div>
+
+        <div class="vote-description">
+            <h3>Description</h3>
+            <p>This is an example vote description for testing purposes. It outlines the purpose of the vote and provides context for voters.</p>
+        </div>
+    </div>
+
+    <section class="vote-options">
+        <h3>Vote Options</h3>
+        
+        <div class="options-list">
+            <div class="option-card">
+                <h4>Option 1: Approve</h4>
+                <p>Approve the proposed resolution</p>
+            </div>
+            <div class="option-card">
+                <h4>Option 2: Reject</h4>
+                <p>Reject the proposed resolution</p>
+            </div>
+            <div class="option-card">
+                <h4>Option 3: Abstain</h4>
+                <p>Abstain from voting</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="eligible-voters">
+        <h3>Eligible Voters</h3>
+        
+        <p>All shareholders of Example Company are eligible to vote.</p>
+    </section>
+
+    <section class="cast-vote">
+        <h3>Cast Your Vote</h3>
+        
+        <form action="#" method="post">
+            <fieldset>
+                <legend>Select Your Vote</legend>
+                
+                <div class="radio-item">
+                    <input type="radio" id="vote_option_0" name="vote_option" value="0">
+                    <label for="vote_option_0">Option 1: Approve</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="vote_option_1" name="vote_option" value="1">
+                    <label for="vote_option_1">Option 2: Reject</label>
+                </div>
+                <div class="radio-item">
+                    <input type="radio" id="vote_option_2" name="vote_option" value="2">
+                    <label for="vote_option_2">Option 3: Abstain</label>
+                </div>
+            </fieldset>
+
+            <div>
+                <label for="comment">Comment (Optional)</label>
+                <textarea id="comment" name="comment" placeholder="Add an optional comment with your vote" rows="3"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" role="button">Submit Vote</button>
+            </div>
+        </form>
+    </section>
+</article>
+{{ end }}

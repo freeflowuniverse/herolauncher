@@ -1,0 +1,118 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+    <header>
+        <h2>Create New Company</h2>
+        <p>Register a new company in the Freezone</p>
+    </header>
+
+    {{- if .formErrors -}}
+    <div class="form-errors">
+        <h4>Please correct the following errors:</h4>
+        <ul>
+            {{ range .formErrors }}
+            <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+    {{- end -}}
+
+    <form action="/companies/create" method="post">
+        <section>
+            <h3>Company Information</h3>
+            {{- if .csrfToken -}}
+            <input type="hidden" name="csrf_token" value="{{.csrfToken}}" />
+            {{- end -}}
+
+            <div class="grid">
+                <div>
+                    <label for="name">Company Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter company name" value="{{.form.Name}}" />
+                </div>
+                <div>
+                    <label for="registration_number">Registration Number</label>
+                    <input type="text" id="registration_number" name="registration_number" placeholder="e.g. BRN12345678" value="{{.form.RegistrationNumber}}" />
+                </div>
+            </div>
+        </section>
+
+        <div class="grid">
+            <div>
+                <label for="incorporation_date">Incorporation Date</label>
+                <input type="date" id="incorporation_date" name="incorporation_date" value="{{.form.IncorporationDate}}" />
+            </div>
+            <div>
+                <label for="fiscal_year_end">Fiscal Year End</label>
+                <select id="fiscal_year_end" name="fiscal_year_end">
+                    <option value="">Select month</option>
+                    {{ range $month := .months }}
+                    <option value="{{ $month.Value }}">{{ $month.Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+        </div>
+
+        <hr />
+
+        <section>
+            <h3>Contact Information</h3>
+            <div class="grid">
+                <div>
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="company@example.com" value="{{.form.Email}}" />
+                </div>
+                <div>
+                    <label for="phone">Phone</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+1 234 567 8900" value="{{.form.Phone}}" />
+                </div>
+            </div>
+
+            <div class="grid">
+                <div>
+                    <label for="website">Website</label>
+                    <input type="url" id="website" name="website" placeholder="https://example.com" value="{{.form.Website}}" />
+                </div>
+                <div>
+                    <label for="address">Address</label>
+                    <textarea id="address" name="address" placeholder="Company Address" rows="3">{{.form.Address}}</textarea>
+                </div>
+            </div>
+        </section>
+
+        <fieldset>
+            <legend>Company Details</legend>
+            <div class="grid">
+                <div>
+                    <label for="business_type">Business Type</label>
+                    <select id="business_type" name="business_type">
+                        <option value="">Select type</option>
+                        {{ range $type := .businessTypes }}
+                        <option value="{{ $type.Value }}">{{ $type.Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+                <div>
+                    <label for="industry">Industry</label>
+                    <select id="industry" name="industry">
+                        <option value="">Select industry</option>
+                        {{ range $industry := .industries }}
+                        <option value="{{ $industry.Value }}">{{ $industry.Name }}</option>
+                        {{ end }}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label for="description">Company Description</label>
+                <textarea id="description" name="description" placeholder="Brief description of the company" rows="4">{{.form.Description}}</textarea>
+            </div>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" role="button">Create Company</button>
+            <a href="/companies" role="button" class="secondary">Cancel</a>
+        </div>
+    </form>
+</article>
+{{ end }}

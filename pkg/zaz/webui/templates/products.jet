@@ -1,0 +1,58 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+  <header>
+    <h2>Products</h2>
+    <p>Manage all products available in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/products/create" role="button">Add Product</a>
+    <form class="search-form" action="/products" method="get">
+      <input type="search" name="search" placeholder="Search products..." value="{{.search}}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .products }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .products }}
+      <tr>
+        <td>{{.ID}}</td>
+        <td>{{.Name}}</td>
+        <td>{{.Category}}</td>
+        <td>{{printf "%.2f" .Price}} {{.Currency}}</td>
+        <td>{{.Status}}</td>
+        <td class="actions">
+          <a href="/products/{{.ID}}" title="View Details">Details</a>
+          <a href="/products/{{.ID}}/edit" title="Edit Product">Edit</a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No products found</p>
+    {{ if .search }}
+    <p>No results for "{{.search}}"</p>
+    <a href="/products">Clear search</a>
+    {{ else }}
+    <a href="/products/create" role="button">Add your first product</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

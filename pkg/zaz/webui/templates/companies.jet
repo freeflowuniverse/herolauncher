@@ -1,0 +1,61 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+  <header class="action-header">
+    <hgroup>
+      <h2>Companies</h2>
+      <p>Manage all companies registered in the Freezone</p>
+    </hgroup>
+    <a href="/companies/create" role="button">Create Company</a>
+  </header>
+
+  <div class="action-bar">
+    <form class="search-form" role="search" action="/companies" method="get">
+      <input type="search" name="search" placeholder="Search companies..." value="{{ .search }}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  <!-- Debug info -->
+  <p>Found {{ .count }} companies in the database</p>
+  
+  {{ if .companies }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Industry</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .companies }}
+      <tr>
+        <td>{{ .ID }}</td>
+        <td>{{ .Name }}</td>
+        <td>{{ .Status }}</td>
+        <td>{{ .Industry }}</td>
+        <td class="actions">
+          <a href="/companies/{{ .ID }}" title="View Details">Details</a>
+          <a href="/companies/{{ .ID }}/edit" title="Edit Company">Edit</a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No companies found</p>
+    {{ if .search }}
+    <p>No results for "{{ .search }}"</p>
+    <a href="/companies">Clear search</a>
+    {{ else }}
+    <a href="/companies/create" role="button">Register your first company</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

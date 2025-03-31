@@ -1,0 +1,90 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article class="compact">
+    <header class="slim-header">
+        <h2>Edit Company</h2>
+        <div class="header-actions button-group">
+            <a href="/companies/{{ .company.ID }}" role="button" class="outline small">Cancel</a>
+            <a href="/companies" role="button" class="outline small">Back to List</a>
+        </div>
+    </header>
+
+    <form action="/companies/{{ .company.ID }}/edit" method="POST">
+        <div class="grid">
+            <div class="form-group">
+                <label for="name">Company Name</label>
+                <input type="text" id="name" name="name" value="{{ .company.Name }}">
+            </div>
+
+            <div class="form-group">
+                <label for="registration_number">Registration Number</label>
+                <input type="text" id="registration_number" name="registration_number" value="{{ .company.RegistrationNumber }}">
+            </div>
+
+            <div class="form-group">
+                <label for="business_type">Business Type</label>
+                <select id="business_type" name="business_type">
+                    <option value="Corporation">Corporation</option>
+                    <option value="LLC">LLC</option>
+                    <option value="Partnership">Partnership</option>
+                    <option value="Sole Proprietorship">Sole Proprietorship</option>
+                    <option value="Non-Profit">Non-Profit</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="industry">Industry</label>
+                <input type="text" id="industry" name="industry" value="{{ .company.Industry }}">
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Dissolved">Dissolved</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ .company.Email }}">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone" value="{{ .company.Phone }}">
+            </div>
+
+            <div class="form-group">
+                <label for="website">Website</label>
+                <input type="url" id="website" name="website" value="{{ .company.Website }}">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" rows="2">{{ .company.Address }}</textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="4">{{ .company.Description }}</textarea>
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="primary">Save Changes</button>
+            <a href="/companies/{{ .company.ID }}" role="button" class="secondary">Cancel</a>
+        </div>
+
+        {{ if .error }}
+        <div class="error-message">
+            <p>{{ .error }}</p>
+        </div>
+        {{ end }}
+    </form>
+</article>
+{{ end }}

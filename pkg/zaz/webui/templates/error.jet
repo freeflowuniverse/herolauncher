@@ -1,0 +1,25 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article class="error-page">
+    <header>
+        <h2>Error</h2>
+        <p>Something went wrong</p>
+    </header>
+    
+    <div class="error-container">
+        {{ if .error }}
+            <p class="error-message">{{ .error }}</p>
+        {{ else }}
+            <p class="error-message">An unexpected error occurred.</p>
+        {{ end }}
+    </div>
+    
+    <div class="error-actions">
+        <a href="/" role="button">Return to Dashboard</a>
+        {{ if .backUrl }}
+            <a href="{{ .backUrl }}" role="button" class="secondary">Go Back</a>
+        {{ end }}
+    </div>
+</article>
+{{ end }}

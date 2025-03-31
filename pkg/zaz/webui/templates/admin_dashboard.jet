@@ -1,0 +1,224 @@
+{{ extends "./layout.jet" }}
+
+{{ block content }}
+  <article>
+    <header>
+      <h2>Admin Dashboard</h2>
+      <p>System administration and management</p>
+    </header>
+
+    <div class="grid">
+      <div>
+        <article>
+          <header>
+            <h3>System Status</h3>
+          </header>
+          <div class="grid">
+            <div>
+              <h4>Server Uptime</h4>
+              <p>
+                <strong>{{ .stats.Uptime }}</strong>
+              </p>
+            </div>
+            <div>
+              <h4>Active Users</h4>
+              <p>
+                <strong>{{ .stats.ActiveUsers }}</strong>
+                <span> users online</span>
+              </p>
+            </div>
+            <div>
+              <h4>Database Size</h4>
+              <p>
+                <strong>{{ .stats.DatabaseSize }}</strong>
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div>
+        <article>
+          <header>
+            <h3>Recent Activity</h3>
+          </header>
+          {{ if .recentActivities }}
+          <ul class="activity-list">
+            {{ range .recentActivities }}
+            <li>
+              <span class="activity-time">{{ .TimeAgo }}</span>
+              <span class="activity-user">{{ .User }}</span>
+              <span class="activity-action">{{ .Action }}</span>
+            </li>
+            {{ end }}
+          </ul>
+          {{ else }}
+          <p class="no-data">No recent activities to display.</p>
+          {{ end }}
+        </article>
+      </div>
+    </div>
+
+    <article>
+      <header>
+        <h3>Quick Actions</h3>
+      </header>
+      <div class="grid">
+        <div>
+          <a href="/admin/users" role="button">Manage Users</a>
+        </div>
+        <div>
+          <a href="/admin/settings" role="button" class="secondary">System Settings</a>
+        </div>
+        <div>
+          <a href="/admin/backup" role="button" class="contrast">Backup Data</a>
+        </div>
+      </div>
+    </article>
+
+    <div class="grid">
+      <div>
+        <article>
+          <header>
+            <h3>System Resources</h3>
+          </header>
+          <div class="resource-meters">
+            <div class="resource-meter">
+              <label>CPU Usage</label>
+              <progress value="{{ .stats.CPUUsage }}" max="100">{{ .stats.CPUUsage }}%</progress>
+              <span>{{ .stats.CPUUsage }}%</span>
+            </div>
+            <div class="resource-meter">
+              <label>Memory Usage</label>
+              <progress value="{{ .stats.MemoryUsage }}" max="100">{{ .stats.MemoryUsage }}%</progress>
+              <span>{{ .stats.MemoryUsage }}%</span>
+            </div>
+            <div class="resource-meter">
+              <label>Disk Usage</label>
+              <progress value="{{ .stats.DiskUsage }}" max="100">{{ .stats.DiskUsage }}%</progress>
+              <span>{{ .stats.DiskUsage }}%</span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div>
+        <article>
+          <header>
+            <h3>User Statistics</h3>
+          </header>
+          <div class="chart-container">
+            <div id="user-stats-chart" style="width: 100%; height: 300px;"></div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <article>
+      <header>
+        <h3>System Logs</h3>
+      </header>
+      <div class="log-filters">
+        <div class="grid">
+          <div>
+            <label for="log_level">Log Level</label>
+            <select id="log_level" name="log_level">
+              <option value="all">All Levels</option>
+              <option value="error">Error</option>
+              <option value="warning">Warning</option>
+              <option value="info">Info</option>
+              <option value="debug">Debug</option>
+            </select>
+          </div>
+          <div>
+            <label for="log_date">Date</label>
+            <input type="date" id="log_date" name="log_date">
+          </div>
+        </div>
+      </div>
+      {{ if .logs }}
+      <div class="log-container">
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Level</th>
+              <th>Module</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{ range .logs }}
+            <tr class="{{ .Level }}">
+              <td>{{ .Time }}</td>
+              <td>{{ .Level }}</td>
+              <td>{{ .Module }}</td>
+              <td>{{ .Message }}</td>
+            </tr>
+            {{ end }}
+          </tbody>
+        </table>
+      </div>
+      {{ else }}
+      <p class="no-data">No logs available for the selected filters.</p>
+      {{ end }}
+    </article>
+  </article>
+{{ end }}
+
+{{ block scripts }}
+  <script>
+    // Initialize user stats chart
+    document.addEventListener('DOMContentLoaded', function() {
+      const userStatsChart = echarts.init(document.getElementById('user-stats-chart'));
+      
+      const userStatsOption = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'shadow'
+          }
+        },
+        legend: {
+          data: ['New Users', 'Active Users']
+        },
+        xAxis: {
+          type: 'category',
+          data: [{{range .userStats.Periods}}'{{.}}',{{end}}]
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            name: 'New Users',
+            type: 'bar',
+            data: [{{range .userStats.NewUsers}}{{.}},{{end}}]
+          },
+          {
+            name: 'Active Users',
+            type: 'bar',
+            data: [{{range .userStats.ActiveUsers}}{{.}},{{end}}]
+          }
+        ]
+      };
+      
+      userStatsChart.setOption(userStatsOption);
+      
+      // Resize chart when window size changes
+      window.addEventListener('resize', function() {
+        userStatsChart.resize();
+      });
+      
+      // Log filter functionality
+      document.getElementById('log_level').addEventListener('change', filterLogs);
+      document.getElementById('log_date').addEventListener('change', filterLogs);
+      
+      function filterLogs() {
+        const level = document.getElementById('log_level').value;
+        const date = document.getElementById('log_date').value;
+        
+        // Redirect to filtered logs
+        window.location.href = '/admin?log_level=' + level + '&log_date=' + date;
+      }
+    });
+  </script>
+{{ end }}

@@ -1,0 +1,60 @@
+{{ extends "./layout.jet" }}
+
+{{ block content() }}
+<article>
+  <header>
+    <h2>Services</h2>
+    <p>Manage all services offered in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/sales/services/create" role="button">Add Service</a>
+    <form class="search-form" action="/sales/services" method="get">
+      <input type="search" name="search" placeholder="Search services..." value="{{ .search }}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .services }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Company</th>
+        <th>Category</th>
+        <th>Rate</th>
+        <th>Duration</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .services }}
+      <tr>
+        <td>{{ .ID }}</td>
+        <td>{{ .Name }}</td>
+        <td>{{ .CompanyName }}</td>
+        <td>{{ .Category }}</td>
+        <td>${{ .Rate }}</td>
+        <td>{{ .Duration }}</td>
+        <td class="actions">
+          <a href="/sales/services/{{ .ID }}" title="View Details">Details</a>
+          <a href="/sales/services/{{ .ID }}/edit" title="Edit Service">Edit</a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No services found</p>
+    {{ if .search }}
+    <p>No results for "{{ .search }}"</p>
+    <a href="/sales/services">Clear search</a>
+    {{ else }}
+    <a href="/sales/services/create" role="button">Add your first service</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}
