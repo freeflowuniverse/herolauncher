@@ -31,15 +31,15 @@ import (
 
 // Config holds the configuration for the HeroLauncher server
 type Config struct {
-	Port                 string
-	RedisTCPPort         string
-	RedisSocketPath      string
-	TemplatesPath        string
-	StaticFilesPath      string
-	PMSocketPath         string // ProcessManager socket path
-	PMSecret             string // ProcessManager authentication secret
-	VFSSocketPath        string // VFS OpenRPC socket path
-	VFSSecret            string // VFS OpenRPC authentication secret
+	Port            string
+	RedisTCPPort    string
+	RedisSocketPath string
+	TemplatesPath   string
+	StaticFilesPath string
+	PMSocketPath    string // ProcessManager socket path
+	PMSecret        string // ProcessManager authentication secret
+	VFSSocketPath   string // VFS OpenRPC socket path
+	VFSSecret       string // VFS OpenRPC authentication secret
 }
 
 // DefaultConfig returns a default configuration for the HeroLauncher server
@@ -47,7 +47,7 @@ func DefaultConfig() Config {
 	// Get the absolute path to the project root
 	_, filename, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Join(filepath.Dir(filename), "../..")
-	
+
 	// Check for PORT environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -59,9 +59,9 @@ func DefaultConfig() Config {
 		RedisTCPPort:    "6379",
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		PMSocketPath:    "/tmp/processmanager.sock", // Default ProcessManager socket path
-		PMSecret:        "secret123", // Default ProcessManager secret
-		VFSSocketPath:   "/tmp/vfs.sock", // Default VFS socket path
-		VFSSecret:       "vfs_secret", // Default VFS secret
+		PMSecret:        "secret123",                // Default ProcessManager secret
+		VFSSocketPath:   "/tmp/vfs.sock",            // Default VFS socket path
+		VFSSecret:       "vfs_secret",               // Default VFS secret
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
 		StaticFilesPath: filepath.Join(projectRoot, "pkg/herolauncher/web/static"),
 	}
@@ -74,10 +74,10 @@ type HeroLauncher struct {
 	executorService *executor.Executor
 	packageManager  *packagemanager.PackageManager
 	pmClient        *client.Client
-	pmProcess       *os.Process    // Process for the process manager
+	pmProcess       *os.Process           // Process for the process manager
 	vfsManager      interfaces.VFSManager // VFS manager implementation
-	vfsClient       *openrpc.Client // VFS OpenRPC client
-	vfsServer       *openrpc.Server // VFS OpenRPC server
+	vfsClient       *openrpc.Client       // VFS OpenRPC client
+	vfsServer       *openrpc.Server       // VFS OpenRPC server
 	config          Config
 	startTime       time.Time
 }
@@ -91,10 +91,10 @@ func New(config Config) *HeroLauncher {
 	})
 	executorService := executor.NewExecutor()
 	packageManagerService := packagemanager.NewPackageManager()
-	
+
 	// Initialize process manager client
 	pmClient := client.New(config.PMSocketPath, config.PMSecret)
-	
+
 	// Initialize VFS manager and client
 	vfsManager := mock.NewMockVFSManager() // Using mock implementation for now
 	vfsClient := openrpc.NewClient(config.VFSSocketPath, config.VFSSecret)
@@ -171,6 +171,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	redisHandler := routes.NewRedisHandler(hl.redisServer)
 	serviceHandler := routes.NewServiceHandler(hl.pmClient, log.Default())
 	vfsHandler := routes.NewVFSHandler(hl.vfsClient, log.Default())
+	jetHandler := routes.NewJetHandler()
 	// Initialize StatsManager
 	statsManager, err := stats.NewStatsManagerWithDefaults()
 	if err != nil {
@@ -188,6 +189,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	adminHandler.RegisterRoutes(hl.app)
 	serviceHandler.RegisterRoutes(hl.app)
 	vfsHandler.RegisterRoutes(hl.app)
+	jetHandler.RegisterRoutes(hl.app)
 }
 
 // GetUptime returns the uptime of the HeroLauncher server as a formatted string
@@ -240,7 +242,7 @@ func (hl *HeroLauncher) startProcessManager() error {
 	cmd := exec.Command("go", "run", processManagerPath, "-socket", hl.config.PMSocketPath, "-secret", hl.config.PMSecret)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	err := cmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start process manager: %v", err)
@@ -298,13 +300,13 @@ func (hl *HeroLauncher) Start() error {
 	go func() {
 		<-c
 		log.Println("Shutting down server...")
-		
+
 		// Kill the process manager if we started it
 		if hl.pmProcess != nil {
 			log.Println("Stopping process manager...")
 			_ = hl.pmProcess.Kill()
 		}
-		
+
 		_ = hl.app.Shutdown()
 	}()
 

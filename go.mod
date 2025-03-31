@@ -25,6 +25,8 @@ require (
 
 require (
 	9fans.net/go v0.0.2 // indirect
+	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
+	github.com/CloudyKit/jet/v6 v6.3.1 // indirect
 	github.com/Joker/hpp v1.0.0 // indirect
 	github.com/Joker/jade v1.1.3 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
