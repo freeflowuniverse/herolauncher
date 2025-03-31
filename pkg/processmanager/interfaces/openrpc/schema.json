@@ -1,0 +1,333 @@
+{
+  "openrpc": "1.2.6",
+  "info": {
+    "title": "Process Manager API",
+    "version": "1.0.0",
+    "description": "API for managing and monitoring processes"
+  },
+  "methods": [
+    {
+      "name": "process.start",
+      "description": "Start a new process with the given name and command",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "command",
+          "description": "Command to execute",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "log_enabled",
+          "description": "Whether to enable logging for the process",
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "deadline",
+          "description": "Deadline in seconds after which the process will be automatically stopped (0 for no deadline)",
+          "schema": {
+            "type": "integer"
+          }
+        },
+        {
+          "name": "cron",
+          "description": "Cron expression for scheduled execution",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "job_id",
+          "description": "Optional job ID for tracking",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process start result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "pid": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.stop",
+      "description": "Stop a running process",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process to stop",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process stop result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.restart",
+      "description": "Restart a process",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process to restart",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process restart result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "pid": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.delete",
+      "description": "Delete a process from the manager",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process to delete",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process delete result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.status",
+      "description": "Get the status of a process",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "format",
+          "description": "Output format (json or text)",
+          "schema": {
+            "type": "string",
+            "enum": ["json", "text"]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process status information",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            },
+            "pid": {
+              "type": "integer"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["running", "stopped", "failed", "completed"]
+            },
+            "cpu_percent": {
+              "type": "number"
+            },
+            "memory_mb": {
+              "type": "number"
+            },
+            "start_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "log_enabled": {
+              "type": "boolean"
+            },
+            "cron": {
+              "type": "string"
+            },
+            "job_id": {
+              "type": "string"
+            },
+            "deadline": {
+              "type": "integer"
+            },
+            "error": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.list",
+      "description": "List all processes",
+      "params": [
+        {
+          "name": "format",
+          "description": "Output format (json or text)",
+          "schema": {
+            "type": "string",
+            "enum": ["json", "text"]
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "List of processes",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "pid": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["running", "stopped", "failed", "completed"]
+              },
+              "cpu_percent": {
+                "type": "number"
+              },
+              "memory_mb": {
+                "type": "number"
+              },
+              "start_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "log_enabled": {
+                "type": "boolean"
+              },
+              "cron": {
+                "type": "string"
+              },
+              "job_id": {
+                "type": "string"
+              },
+              "deadline": {
+                "type": "integer"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "process.log",
+      "description": "Get logs for a process",
+      "params": [
+        {
+          "name": "name",
+          "description": "Name of the process",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "lines",
+          "description": "Number of log lines to retrieve",
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "Process logs",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "logs": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

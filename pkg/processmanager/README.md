@@ -19,6 +19,46 @@ The Process Manager consists of the following components:
 2. **Telnet Server**: Provides a telnet interface for remote management
 3. **Client Library**: Provides a Go API for interacting with the Process Manager
 4. **Command-line Client**: Provides a command-line interface for managing processes
+5. **Interfaces**: Various interface implementations for interacting with the Process Manager
+
+## Interfaces
+
+The Process Manager provides several interfaces for integration and extension:
+
+### ProcessManagerInterface
+
+The core interface that defines all process management operations. This interface allows for dependency injection and easier testing.
+
+```go
+type ProcessManagerInterface interface {
+	// Authentication
+	GetSecret() string
+
+	// Process management
+	StartProcess(name, command string, logEnabled bool, deadline int, cron, jobID string) error
+	StopProcess(name string) error
+	RestartProcess(name string) error
+	DeleteProcess(name string) error
+	GetProcessStatus(name string) (*ProcessInfo, error)
+	ListProcesses() []*ProcessInfo
+	GetProcessLogs(name string, lines int) (string, error)
+}
+```
+
+### Interface Implementations
+
+The Process Manager includes the following interface implementations:
+
+1. **Telnet Interface**: Provides a telnet-based interface for remote management
+   - Located in `pkg/processmanager/interfaces/telnet`
+   - Allows command execution via heroscript syntax
+   - Supports authentication and secure communication
+
+2. **OpenRPC Interface**: Provides a JSON-RPC 2.0 interface following the OpenRPC specification
+   - Located in `pkg/processmanager/interfaces/openrpc`
+   - Enables programmatic access via HTTP or WebSockets
+   - Includes auto-generated client libraries
+   - Provides a standardized API schema
 
 ## Usage
 
