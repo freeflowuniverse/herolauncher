@@ -1,5 +1,9 @@
-use rustclients::{FakeHandlerClient, Result};
 use std::time::Duration;
+
+// Import directly from the lib.rs
+use rustclients::FakeHandlerClient;
+use rustclients::Result;
+
 
 fn main() -> Result<()> {
     // Create a new fake handler client
@@ -7,7 +11,7 @@ fn main() -> Result<()> {
     let socket_path = "/tmp/herolauncher/fakehandler.sock";
     
     // Initialize the client with a timeout
-    let mut client = FakeHandlerClient::new(socket_path)
+    let client = FakeHandlerClient::new(socket_path)
         .with_timeout(Duration::from_secs(5));
     
     println!("Connecting to fake handler at {}", socket_path);

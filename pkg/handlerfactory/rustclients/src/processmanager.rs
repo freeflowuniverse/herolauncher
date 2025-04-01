@@ -54,17 +54,17 @@ impl ProcessManagerClient {
     }
     
     /// Connect to the server
-    pub fn connect(&mut self) -> Result<()> {
+    pub fn connect(&self) -> Result<()> {
         self.client.connect()
     }
     
     /// Close the connection
-    pub fn close(&mut self) -> Result<()> {
+    pub fn close(&self) -> Result<()> {
         self.client.close()
     }
 
     /// Start a new process
-    pub fn start(&mut self, name: &str, command: &str, log_enabled: bool, deadline: Option<i32>, cron: Option<&str>, job_id: Option<&str>) -> Result<String> {
+    pub fn start(&self, name: &str, command: &str, log_enabled: bool, deadline: Option<i32>, cron: Option<&str>, job_id: Option<&str>) -> Result<String> {
         let mut script = format!("!!process.start name:'{}' command:'{}' log:{}", name, command, log_enabled);
         
         if let Some(deadline_val) = deadline {
@@ -83,25 +83,25 @@ impl ProcessManagerClient {
     }
     
     /// Stop a running process
-    pub fn stop(&mut self, name: &str) -> Result<String> {
+    pub fn stop(&self, name: &str) -> Result<String> {
         let script = format!("!!process.stop name:'{}'", name);
         self.client.send_command(&script)
     }
     
     /// Restart a process
-    pub fn restart(&mut self, name: &str) -> Result<String> {
+    pub fn restart(&self, name: &str) -> Result<String> {
         let script = format!("!!process.restart name:'{}'", name);
         self.client.send_command(&script)
     }
     
     /// Delete a process
-    pub fn delete(&mut self, name: &str) -> Result<String> {
+    pub fn delete(&self, name: &str) -> Result<String> {
         let script = format!("!!process.delete name:'{}'", name);
         self.client.send_command(&script)
     }
     
     /// List all processes
-    pub fn list(&mut self) -> Result<Vec<ProcessInfo>> {
+    pub fn list(&self) -> Result<Vec<ProcessInfo>> {
         let script = "!!process.list format:'json'";
         let response = self.client.send_command(&script)?;
         
@@ -132,7 +132,7 @@ impl ProcessManagerClient {
     }
     
     /// Get the status of a specific process
-    pub fn status(&mut self, name: &str) -> Result<ProcessInfo> {
+    pub fn status(&self, name: &str) -> Result<ProcessInfo> {
         let script = format!("!!process.status name:'{}' format:'json'", name);
         
         // Use the send_command_json method which handles JSON parsing with better error handling
@@ -140,7 +140,7 @@ impl ProcessManagerClient {
     }
     
     /// Get the logs of a specific process
-    pub fn logs(&mut self, name: &str, lines: Option<i32>) -> Result<String> {
+    pub fn logs(&self, name: &str, lines: Option<i32>) -> Result<String> {
         let mut script = format!("!!process.logs name:'{}'", name);
         
         if let Some(lines_val) = lines {
@@ -151,13 +151,13 @@ impl ProcessManagerClient {
     }
     
     /// Set the logs path for the process manager
-    pub fn set_logs_path(&mut self, path: &str) -> Result<String> {
+    pub fn set_logs_path(&self, path: &str) -> Result<String> {
         let script = format!("!!process.set_logs_path path:'{}'", path);
         self.client.send_command(&script)
     }
     
     /// Get help information for the process manager
-    pub fn help(&mut self) -> Result<String> {
+    pub fn help(&self) -> Result<String> {
         let script = "!!process.help";
         self.client.send_command(&script)
     }

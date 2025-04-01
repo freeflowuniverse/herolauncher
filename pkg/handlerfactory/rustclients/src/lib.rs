@@ -5,11 +5,9 @@ use thiserror::Error;
 use std::fmt;
 use std::error::Error as StdError;
 
-mod client;
 mod processmanager;
 mod fakehandler;
 
-pub use client::{Client, ClientError, Result};
 pub use processmanager::ProcessManagerClient;
 pub use fakehandler::FakeHandlerClient;
 
@@ -28,7 +26,7 @@ impl fmt::Display for ServerError {
 
 impl StdError for ServerError {}
 
-/// Error type for the improved client
+/// Error type for the client
 #[derive(Error, Debug)]
 pub enum ClientError {
     #[error("IO error: {0}")]
@@ -52,7 +50,6 @@ pub type Result<T> = std::result::Result<T, ClientError>;
 /// A client for connecting to a Unix socket server with improved error handling
 pub struct Client {
     socket_path: String,
-    stream: Option<UnixStream>,
     timeout: Duration,
     secret: Option<String>,
 }
@@ -62,7 +59,6 @@ impl Client {
     pub fn new(socket_path: &str) -> Self {
         Self {
             socket_path: socket_path.to_string(),
-            stream: None,
             timeout: Duration::from_secs(10),
             secret: None,
         }
@@ -80,11 +76,9 @@ impl Client {
         self
     }
     
-    /// Connect to the Unix socket
-    pub fn connect(&mut self) -> Result<()> {
-        // Close existing connection if any
-        self.close()?;
-        
+    /// Connect to the Unix socket and return the stream
+    fn connect_socket(&self) -> Result<UnixStream> {
+        println!("DEBUG: Opening new connection to {}", self.socket_path);
         // Connect to the socket
         let stream = UnixStream::connect(&self.socket_path)
             .map_err(|e| ClientError::ConnectionError(format!("Failed to connect to socket {}: {}", self.socket_path, e)))?;
@@ -93,12 +87,9 @@ impl Client {
         stream.set_read_timeout(Some(self.timeout))?;
         stream.set_write_timeout(Some(self.timeout))?;
         
-        self.stream = Some(stream);
-        
         // Read welcome message
         let mut buffer = [0; 4096];
-        let stream = self.stream.as_mut().unwrap();
-        match stream.read(&mut buffer) {
+        match stream.try_clone()?.read(&mut buffer) {
             Ok(n) => {
                 let welcome = String::from_utf8_lossy(&buffer[0..n]);
                 if !welcome.contains("Welcome") {
@@ -111,26 +102,50 @@ impl Client {
         }
         
         // Authenticate if a secret is provided
-        let secret_clone = self.secret.clone();
-        if let Some(secret) = secret_clone {
-            self.authenticate(&secret)?;
+        if let Some(secret) = &self.secret {
+            self.authenticate_stream(&stream, secret)?;
         }
         
-        Ok(())
+        Ok(stream)
     }
     
-    /// Close the connection
-    pub fn close(&mut self) -> Result<()> {
-        if let Some(stream) = self.stream.take() {
-            drop(stream);
+    /// Authenticate with the server using the provided stream
+    fn authenticate_stream(&self, stream: &UnixStream, secret: &str) -> Result<()> {
+        let mut stream_clone = stream.try_clone()?;
+        let auth_command = format!("auth {}\n\n", secret);
+        
+        // Send the auth command
+        stream_clone.write_all(auth_command.as_bytes())
+            .map_err(|e| ClientError::CommandError(format!("Failed to send auth command: {}", e)))?;
+        stream_clone.flush()
+            .map_err(|e| ClientError::CommandError(format!("Failed to flush auth command: {}", e)))?;
+        
+        // Add a small delay to ensure the server has time to process the command
+        std::thread::sleep(Duration::from_millis(100));
+        
+        // Read the response
+        let mut buffer = [0; 4096];
+        let n = stream_clone.read(&mut buffer)
+            .map_err(|e| ClientError::CommandError(format!("Failed to read auth response: {}", e)))?;
+        
+        if n == 0 {
+            return Err(ClientError::ConnectionError("Connection closed by server during authentication".to_string()));
         }
-        Ok(())
+        
+        let response = String::from_utf8_lossy(&buffer[0..n]).to_string();
+        
+        // Check for authentication success
+        if response.contains("Authentication successful") || response.contains("authenticated") {
+            Ok(())
+        } else {
+            Err(ClientError::ServerError(format!("Authentication failed: {}", response)))
+        }
     }
     
     /// Send a command to the server and get the response
-    pub fn send_command(&mut self, command: &str) -> Result<String> {
-        let stream = self.stream.as_mut()
-            .ok_or_else(|| ClientError::ConnectionError("Not connected".to_string()))?;
+    pub fn send_command(&self, command: &str) -> Result<String> {
+        // Connect to the socket for this command
+        let mut stream = self.connect_socket()?;
         
         // Ensure command ends with double newlines to execute it
         let command = if command.ends_with("\n\n") {
@@ -169,11 +184,15 @@ impl Client {
             return Err(ClientError::ServerError(response));
         }
         
+        // Close the connection by dropping the stream
+        println!("DEBUG: Closing connection to {}", self.socket_path);
+        drop(stream);
+        
         Ok(response)
     }
     
     /// Send a command and parse the JSON response
-    pub fn send_command_json<T: serde::de::DeserializeOwned>(&mut self, command: &str) -> Result<T> {
+    pub fn send_command_json<T: serde::de::DeserializeOwned>(&self, command: &str) -> Result<T> {
         let response = self.send_command(command)?;
         
         // If the response is empty, return an error
@@ -200,27 +219,24 @@ impl Client {
         }
     }
     
-    /// Authenticate with the server
-    fn authenticate(&mut self, secret: &str) -> Result<()> {
-        let stream = self.stream.as_mut()
-            .ok_or_else(|| ClientError::ConnectionError("Not connected".to_string()))?;
-        
-        // Send the secret
-        stream.write_all(format!("{secret}\n").as_bytes())
-            .map_err(|e| ClientError::CommandError(format!("Failed to send secret: {e}")))?;
-        
-        // Read the authentication response
-        let mut buffer = [0; 4096];
-        match stream.read(&mut buffer) {
-            Ok(n) => {
-                let response = String::from_utf8_lossy(&buffer[0..n]);
-                if response.contains("Authentication successful") {
-                    Ok(())
-                } else {
-                    Err(ClientError::CommandError(format!("Authentication failed: {response}")))
-                }
-            },
-            Err(e) => Err(ClientError::IoError(e)),
-        }
+    /// For backward compatibility
+    pub fn connect(&self) -> Result<()> {
+        // Just verify we can connect
+        let stream = self.connect_socket()?;
+        drop(stream);
+        Ok(())
+    }
+    
+    /// For backward compatibility
+    pub fn close(&self) -> Result<()> {
+        // No-op since we don't maintain a persistent connection
+        Ok(())
+    }
+    
+    /// Authenticate with the server - kept for backward compatibility
+    pub fn authenticate(&self, secret: &str) -> Result<()> {
+        // Create a temporary connection to authenticate
+        let stream = self.connect_socket()?;
+        self.authenticate_stream(&stream, secret)
     }
 }
