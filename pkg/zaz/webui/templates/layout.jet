@@ -14,20 +14,12 @@
     <link rel="stylesheet" href="/css/freezone.css">
     <link rel="stylesheet" href="/css/right-sidebar.css">
     <link rel="stylesheet" href="/css/unpoly.min.css">
-    {{ if .customCSS }}
-    <style>
-      {{.customCSS}}
-    </style>
-    {{ end }}
+    <!-- Custom CSS moved to stylesheet -->
 </head>
-<body class=".bodyClass">
-    {{ if .flashMessage }}
-    <div class="flash-message {{.flashMessage.Type}}">
-        <div class="container">
-            <p>{{.flashMessage.Text}}</p>
-            <button class="close-flash">&times;</button>
-        </div>
-    </div>
+<body class="default-body">
+    <!-- Flash Messages -->
+    {{ block flashMessages() }}
+<!-- No flash messages by default -->
     {{ end }}
     
     {{ include "partials/header" }}
@@ -49,7 +41,7 @@
     
     <footer>
         <div class="container">
-            <p>&copy; {{.currentYear}} Freezone Manager - A FreeFlow Universe Project</p>
+            <p>&copy; {{currentYear}} Freezone Manager - A FreeFlow Universe Project</p>
         </div>
     </footer>
     
@@ -57,10 +49,6 @@
     <script src="/js/echarts/echarts.min.js"></script>
     <script src="/js/freezone.js"></script>
     <script src="/js/sidebar.js"></script>
-    {{ if .customJS }}
-    <script>
-      {{.customJS}}
-    </script>
-    {{ end }}
+    <script src="/js/custom.js"></script>
 </body>
 </html>

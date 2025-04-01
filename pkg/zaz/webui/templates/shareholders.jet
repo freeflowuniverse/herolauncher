@@ -12,12 +12,12 @@
 
     <div class="action-bar">
         <form class="search-form" role="search" action="/shareholders" method="get">
-            <input type="search" name="search" placeholder="Search shareholders..." value="{{.search}}"/>
+            <input type="search" name="search" placeholder="Search shareholders..." value="{{search}}"/>
             <button type="submit">Search</button>
         </form>
     </div>
 
-    {{ if .shareholders }}
+    {{ if shareholders }}
     <table>
         <thead>
             <tr>
@@ -30,7 +30,7 @@
             </tr>
         </thead>
         <tbody>
-            {{ range .shareholders }}
+            {{ range shareholders }}
             <tr>
                 <td>{{.ID}}</td>
                 <td>{{.Name}}</td>
@@ -48,8 +48,8 @@
     {{ else }}
     <div class="empty-state">
         <p>No shareholders found</p>
-        {{ if .search }}
-        <p>No results for "{{.search}}"</p>
+        {{ if search }}
+        <p>No results for "{{search}}"</p>
         <a href="/shareholders">Clear search</a>
         {{ else }}
         <a href="/shareholders/create" role="button">Add your first shareholder</a>

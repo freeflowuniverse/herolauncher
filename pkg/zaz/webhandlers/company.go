@@ -24,6 +24,8 @@ func NewCompanyHandler(store *models.Store) *CompanyHandler {
 
 // GetDashboard renders the dashboard page
 func (h *CompanyHandler) GetDashboard(c *fiber.Ctx) error {
+	log.Println("CompanyHandler.GetDashboard method called")
+	
 	// Get data directly from the store
 	companies := h.store.CompanyHandler.GetAll()
 	shareholders := h.store.ShareholderHandler.GetAll()
@@ -36,12 +38,67 @@ func (h *CompanyHandler) GetDashboard(c *fiber.Ctx) error {
 		}
 	}
 	
-	return RenderWithDefaults(c, "index", fiber.Map{
-		"title": "Dashboard",
-		"companiesCount": len(companies),
+	// Get actual board meetings
+	boardMeetings := h.store.BoardMeetingHandler.GetAll()
+	
+	// Create a simple array for upcoming meetings
+	upcomingMeetings := []fiber.Map{}
+	
+	// Process actual board meetings
+	for _, meeting := range boardMeetings {
+		// Get the company for this meeting
+		company, err := h.store.CompanyHandler.GetByID(meeting.CompanyID)
+		if err != nil {
+			// If company not found, still include the meeting but with nil company
+			upcomingMeetings = append(upcomingMeetings, fiber.Map{
+				"ID":     meeting.ID,
+				"Date":   meeting.Date.Format("2006-01-02 15:04"),
+				"Title":  meeting.Title,
+				"Company": nil,
+			})
+		} else {
+			// Include meeting with company info
+			upcomingMeetings = append(upcomingMeetings, fiber.Map{
+				"ID":    meeting.ID,
+				"Date":  meeting.Date.Format("2006-01-02 15:04"),
+				"Title": meeting.Title,
+				"Company": fiber.Map{
+					"Name": company.Name,
+					"ID":   company.ID,
+				},
+			})
+		}
+	}
+	
+	// If no meetings found, add a dummy one for testing
+	if len(upcomingMeetings) == 0 {
+		upcomingMeetings = append(upcomingMeetings, fiber.Map{
+			"ID":    int64(1),
+			"Date":  time.Now().Format("2006-01-02 15:04"),
+			"Title": "Test Meeting",
+			"Company": fiber.Map{
+				"Name": "Test Company",
+				"ID":   int64(1),
+			},
+		})
+	}
+	
+	log.Printf("Debug - upcomingMeetings structure: %#v", upcomingMeetings)
+	
+	// Create the data map
+	data := fiber.Map{
+		"title":                "Dashboard",
+		"companiesCount":       len(companies),
 		"activeCompaniesCount": activeCompanies,
-		"shareholdersCount": len(shareholders),
-	})
+		"shareholdersCount":    len(shareholders),
+		"upcomingMeetings":     upcomingMeetings,
+		"recentActivities":     nil,
+		"currentYear":          time.Now().Year(),
+	}
+	
+	log.Printf("Debug - Full data map being passed to template: %#v", data)
+	
+	return RenderWithDefaults(c, "index", data)
 }
 
 // GetCompanies renders the companies list page
@@ -67,14 +124,57 @@ func (h *CompanyHandler) GetCompanies(c *fiber.Ctx) error {
 	return RenderWithDefaults(c, "companies", fiber.Map{
 		"title": "Companies",
 		"companies": companies,
-		"searchQuery": searchQuery,
+		"count": len(companies),
+		"search": searchQuery,
+		"currentYear": time.Now().Year(),
 	})
 }
 
 // GetCreateCompany renders the company creation page
 func (h *CompanyHandler) GetCreateCompany(c *fiber.Ctx) error {
+	// Define business types
+	businessTypes := []fiber.Map{
+		{"Value": "corporation", "Name": "Corporation"},
+		{"Value": "llc", "Name": "Limited Liability Company"},
+		{"Value": "partnership", "Name": "Partnership"},
+		{"Value": "sole_proprietorship", "Name": "Sole Proprietorship"},
+	}
+
+	// Define industries
+	industries := []fiber.Map{
+		{"Value": "technology", "Name": "Technology"},
+		{"Value": "finance", "Name": "Finance"},
+		{"Value": "healthcare", "Name": "Healthcare"},
+		{"Value": "retail", "Name": "Retail"},
+		{"Value": "manufacturing", "Name": "Manufacturing"},
+		{"Value": "other", "Name": "Other"},
+	}
+
+	// Define months for fiscal year end
+	months := []fiber.Map{
+		{"Value": "1", "Name": "January"},
+		{"Value": "2", "Name": "February"},
+		{"Value": "3", "Name": "March"},
+		{"Value": "4", "Name": "April"},
+		{"Value": "5", "Name": "May"},
+		{"Value": "6", "Name": "June"},
+		{"Value": "7", "Name": "July"},
+		{"Value": "8", "Name": "August"},
+		{"Value": "9", "Name": "September"},
+		{"Value": "10", "Name": "October"},
+		{"Value": "11", "Name": "November"},
+		{"Value": "12", "Name": "December"},
+	}
+
 	return RenderWithDefaults(c, "companies_create", fiber.Map{
 		"title": "Create Company",
+		"businessTypes": businessTypes,
+		"industries": industries,
+		"months": months,
+		"form": fiber.Map{}, // Empty form for initial load
+		"formErrors": []string{}, // Empty errors for initial load
+		"csrfToken": "sample-token", // This would normally be generated
+		"currentYear": time.Now().Year(),
 	})
 }
 

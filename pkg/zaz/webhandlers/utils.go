@@ -30,6 +30,23 @@ func RenderWithDefaults(c *fiber.Ctx, templateName string, data fiber.Map) error
 			Role:  "Admin",
 		}
 	}
+	
+	// Custom CSS is now in stylesheets
+	
+	if _, exists := data["bodyClass"]; !exists {
+		data["bodyClass"] = "default-body"
+	}
+	
+	if _, exists := data["flashMessage"]; !exists {
+		data["flashMessage"] = nil
+	}
 
 	return c.Render(templateName, data)
+}
+
+// GetCSRFToken returns a CSRF token for the current request
+func GetCSRFToken(c *fiber.Ctx) string {
+	// In a real application, this would generate a secure token
+	// For demo purposes, we'll return a fixed string
+	return "csrf-token-12345"
 }

@@ -7,29 +7,29 @@
         <p>Create a new board meeting for a company</p>
     </header>
 
-    {{ if .error }}
+    {{ if error }}
     <div class="form-errors">
         <h4>Please correct the following errors:</h4>
-        <p>{{ .error }}</p>
+        <p>{{ error }}</p>
     </div>
     {{ end }}
 
     <form action="/boardmeetings/create" method="post">
-        {{ if .csrfToken }}
-        <input type="hidden" name="csrf_token" value="{{ .csrfToken }}">
+        {{ if csrfToken }}
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         {{ end }}
         
         <div class="grid">
             <div>
                 <label for="title">Meeting Title</label>
-                <input type="text" id="title" name="title" placeholder="Enter meeting title" value="{{ .form.Title }}">
+                <input type="text" id="title" name="title" placeholder="Enter meeting title" value="{{ form.Title }}">
             </div>
             
             <div>
                 <label for="company_id">Company</label>
                 <select id="company_id" name="company_id">
                     <option value="">Select company</option>
-                    {{ range .companies }}
+                    {{ range companies }}
                     <option value="{{ .ID }}">{{ .Name }}</option>
                     {{ end }}
                 </select>
@@ -39,18 +39,18 @@
         <div class="grid">
             <div>
                 <label for="date">Meeting Date</label>
-                <input type="date" id="date" name="date" value="{{ .form.Date }}">
+                <input type="date" id="date" name="date" value="{{ form.Date }}">
             </div>
             
             <div>
                 <label for="location">Location</label>
-                <input type="text" id="location" name="location" placeholder="Meeting location" value="{{ .form.Location }}">
+                <input type="text" id="location" name="location" placeholder="Meeting location" value="{{ form.Location }}">
             </div>
         </div>
 
         <div>
             <label for="description">Description</label>
-            <textarea id="description" name="description" placeholder="Meeting agenda and details" rows="4">{{ .form.Description }}</textarea>
+            <textarea id="description" name="description" placeholder="Meeting agenda and details" rows="4">{{ form.Description }}</textarea>
         </div>
 
         <fieldset>

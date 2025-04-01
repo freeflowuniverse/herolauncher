@@ -1,28 +1,38 @@
 <!-- header -->
-header.container
-  nav
+<header class="container">
+  <nav>
     <!-- Logo on the left -->
-    ul
-      li
-        a(href="/")
-          img(src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24")
-          strong Freezone Manager
+    <ul>
+      <li>
+        <a href="/">
+          <img src="/img/freezone-icon.svg" alt="Freezone Logo" width="24" height="24">
+          <strong>Freezone Manager</strong>
+        </a>
+      </li>
+    </ul>
     
     <!-- Navigation items in the center -->
-    ul
-      li: a.secondary(href="/") Home
-      li: a.secondary(href="/companies") Companies
-      li: a.secondary(href="/shareholders") Shareholders
-      li: a.secondary(href="/boardmeetings") Meetings
-      li: a.secondary(href="/votes") Votes
-      li: a.secondary(href="/sales") Sales
+    <ul>
+      <li><a class="secondary" href="/">Home</a></li>
+      <li><a class="secondary" href="/companies">Companies</a></li>
+      <li><a class="secondary" href="/shareholders">Shareholders</a></li>
+      <li><a class="secondary" href="/boardmeetings">Meetings</a></li>
+      <li><a class="secondary" href="/votes">Votes</a></li>
+      <li><a class="secondary" href="/sales">Sales</a></li>
+    </ul>
     
     <!-- Profile dropdown on the right -->
-    ul
-      li
-        details.dropdown
-          summary Account
-          ul(dir="rtl")
-            li: a(href="/profile") Profile
-            li: a(href="/settings") Settings
-            li: a(href="/logout") Logout
+    <ul>
+      <li>
+        <details class="dropdown">
+          <summary>Account</summary>
+          <ul dir="rtl">
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="/settings">Settings</a></li>
+            <li><a href="/logout">Logout</a></li>
+          </ul>
+        </details>
+      </li>
+    </ul>
+  </nav>
+</header>
