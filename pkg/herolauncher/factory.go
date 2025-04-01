@@ -25,7 +25,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/swagger"
 	"github.com/gofiber/template/jet/v2"
 )
 
@@ -127,7 +126,7 @@ func New(config Config) *HeroLauncher {
 	app.Use(cors.New())
 
 	// Swagger documentation
-	app.Get("/swagger/*", swagger.HandlerDefault)
+	SetupSwagger(app)
 
 	// Static files - serve all directories with proper paths
 	app.Static("/", config.StaticFilesPath)

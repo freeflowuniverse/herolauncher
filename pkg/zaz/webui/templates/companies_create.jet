@@ -1,6 +1,6 @@
 {{ extends "./layout" }}
 
-{{ block content() }}
+{{ block documentBody() }}
 <article>
     <header>
         <h2>Create New Company</h2>

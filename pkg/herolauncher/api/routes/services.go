@@ -63,10 +63,77 @@ func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
 
 	// API routes
 	services.Get("/data", h.getServicesData)
+
+	// @Summary Get running services
+	// @Description Get a list of all currently running services
+	// @Tags services
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string][]ProcessDisplayInfo
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/running [get]
+	services.Get("/running", h.getRunningServices)
+
+	// @Summary Start a service
+	// @Description Start a new service with the given name and command
+	// @Tags services
+	// @Accept x-www-form-urlencoded
+	// @Produce json
+	// @Param name formData string true "Service name"
+	// @Param command formData string true "Command to run"
+	// @Success 200 {object} map[string]interface{}
+	// @Failure 400 {object} map[string]string
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/start [post]
 	services.Post("/start", h.startService)
+
+	// @Summary Stop a service
+	// @Description Stop a running service by name
+	// @Tags services
+	// @Accept x-www-form-urlencoded
+	// @Produce json
+	// @Param name formData string true "Service name"
+	// @Success 200 {object} map[string]interface{}
+	// @Failure 400 {object} map[string]string
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/stop [post]
 	services.Post("/stop", h.stopService)
+
+	// @Summary Restart a service
+	// @Description Restart a running service by name
+	// @Tags services
+	// @Accept x-www-form-urlencoded
+	// @Produce json
+	// @Param name formData string true "Service name"
+	// @Success 200 {object} map[string]interface{}
+	// @Failure 400 {object} map[string]string
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/restart [post]
 	services.Post("/restart", h.restartService)
+
+	// @Summary Delete a service
+	// @Description Delete a service by name
+	// @Tags services
+	// @Accept x-www-form-urlencoded
+	// @Produce json
+	// @Param name formData string true "Service name"
+	// @Success 200 {object} map[string]interface{}
+	// @Failure 400 {object} map[string]string
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/delete [post]
 	services.Post("/delete", h.deleteService)
+
+	// @Summary Get process logs
+	// @Description Get logs for a specific process
+	// @Tags services
+	// @Accept x-www-form-urlencoded
+	// @Produce json
+	// @Param name formData string true "Service name"
+	// @Param lines formData integer false "Number of log lines to retrieve"
+	// @Success 200 {object} map[string]string
+	// @Failure 400 {object} map[string]string
+	// @Failure 500 {object} map[string]string
+	// @Router /admin/services/logs [post]
 	services.Post("/logs", h.getProcessLogs)
 }
 
@@ -260,6 +327,30 @@ func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"message": fmt.Sprintf("Service '%s' deleted successfully", name),
+	})
+}
+
+// getRunningServices returns a list of running services in JSON format
+func (h *ServiceHandler) getRunningServices(c *fiber.Ctx) error {
+	// Get processes
+	processes, err := h.getProcessList()
+	if err != nil {
+		h.logger.Printf("Error getting process list: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to get process list: " + err.Error(),
+		})
+	}
+
+	// Filter to only include running processes
+	runningProcesses := make([]ProcessDisplayInfo, 0)
+	for _, proc := range processes {
+		if proc.Status == "running" {
+			runningProcesses = append(runningProcesses, proc)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"services": runningProcesses,
 	})
 }
 

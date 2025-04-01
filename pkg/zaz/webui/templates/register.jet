@@ -1,6 +1,6 @@
 {{ extends "./layout" }}
 
-{{ block content() }}
+{{ block documentBody() }}
 <article class="register-form">
   <header>
     <h2>Register</h2>

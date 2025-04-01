@@ -35,7 +35,7 @@
             </tbody>
           </table>
           
-          {{ include "partials/network_chart.jet" }}
+          {{ include "partials/network_chart" }}
         </article>
       </div>
 
@@ -62,8 +62,8 @@
             </tbody>
           </table>
           
-          {{ include "partials/__cpu_chart.jet" }}
-          {{ include "partials/__memory_chart.jet" }}
+          {{ include "partials/__cpu_chart" }}
+          {{ include "partials/__memory_chart" }}
         </article>
       </div>
     </div>
@@ -73,5 +73,5 @@
 {{ block scripts() }}
 <script src="/js/echarts/echarts.min.js"></script>
 
-{{ include "partials/__stats_fetcher.jet" }}
+{{ include "partials/__stats_fetcher" }}
 {{ end }}

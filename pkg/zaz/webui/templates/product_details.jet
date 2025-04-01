@@ -1,5 +1,5 @@
 {{ extends "./layout" }}
-{{ block content() }}
+{{ block documentBody() }}
 <article class="compact">
   <header class="slim-header">
     <h2>Product Details</h2>

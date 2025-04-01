@@ -1,6 +1,6 @@
-{{ extends "../layout.jet" }}
+{{ extends "../layout" }}
 
-{{ block content() }}
+{{ block documentBody() }}
 <div class="container-fluid p-4">
     <div class="row mb-4">
         <div class="col">

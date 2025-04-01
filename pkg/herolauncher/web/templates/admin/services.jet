@@ -1,4 +1,4 @@
-{{ extends "./layout.jet" }}
+{{ extends "./layout" }}
 
 {{ block "content" }}
 <div class="services-page">
@@ -19,7 +19,7 @@
             
             <!-- Service list -->
             <div id="services-table">
-                {{ include "./services_fragment.jet" }}
+                {{ include "./services_fragment" }}
             </div>
         </div>
         <div class="card">

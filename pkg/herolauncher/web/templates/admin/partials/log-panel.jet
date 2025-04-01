@@ -1,4 +1,4 @@
-<!-- log-panel.jet - Log panel component -->
+<!-- log-panel - Log panel component -->
 <div class="log-panel">
   <h3>System Logs</h3>
   <div class="log-content"></div>

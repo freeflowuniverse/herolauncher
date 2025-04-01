@@ -1,6 +1,6 @@
-{{ extends "./layout.jet" }}
+{{ extends "./layout" }}
 
-{{ block content() }}
+{{ block documentBody() }}
 <article>
     <header>
         <h2>Package Manager</h2>

@@ -57,15 +57,56 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 
 	// System routes
 	admin.Get("/system/info", h.getSystemInfo)
+
+	// @Summary Get hardware stats for UI
+	// @Description Get hardware statistics data for the UI
+	// @Tags system
+	// @Accept json
+	// @Produce html
+	// @Success 200 {string} string "HTML content"
+	// @Router /admin/system/hardware-stats [get]
 	admin.Get("/system/hardware-stats", h.getHardwareStats)
+
+	// @Summary Get system processes page
+	// @Description Get the system processes page with process data
+	// @Tags system
+	// @Accept json
+	// @Produce html
+	// @Success 200 {string} string "HTML content"
+	// @Router /admin/system/processes [get]
 	admin.Get("/system/processes", h.getProcesses)
+
+	// @Summary Get processes data
+	// @Description Get processes data for AJAX updates
+	// @Tags system
+	// @Accept json
+	// @Produce html
+	// @Success 200 {string} string "HTML content"
+	// @Router /admin/system/processes-data [get]
 	admin.Get("/system/processes-data", h.getProcessesData)
+
 	admin.Get("/system/logs", h.getSystemLogs)
 	admin.Get("/system/logs-test", h.getSystemLogsTest)
 
 	// API endpoints
+	// @Summary Get hardware stats
+	// @Description Get hardware statistics in JSON format
+	// @Tags api
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]interface{}
+	// @Router /admin/api/hardware-stats [get]
 	admin.Get("/api/hardware-stats", h.getHardwareStatsJSON)
+
+	// @Summary Get process stats
+	// @Description Get process statistics in JSON format
+	// @Tags api
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} map[string]interface{}
+	// @Router /admin/api/process-stats [get]
 	admin.Get("/api/process-stats", h.getProcessStatsJSON)
+
 	admin.Get("/system/settings", h.getSystemSettings)
 
 	// OpenRPC routes
