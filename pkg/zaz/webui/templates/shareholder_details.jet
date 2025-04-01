@@ -1,4 +1,4 @@
-{{ extends "./layout.jet" }}
+{{ extends "./layout" }}
 
 {{ block content() }}
 <article class="compact">

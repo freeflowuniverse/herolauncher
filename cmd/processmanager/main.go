@@ -9,13 +9,13 @@ import (
 	"syscall"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/interfaces/telnet"
 )
 
 func main() {
 	// Parse command line flags
 	socketPath := flag.String("socket", "/tmp/processmanager.sock", "Path to the Unix domain socket")
-	secret := flag.String("secret", "", "Authentication secret for the telnet server")
+	secret := flag.String("secret", "", "Authentication secret for the process manager")
+	logsDir := flag.String("logs", "/tmp/herolauncher/process_logs", "Directory for process logs")
 	flag.Parse()
 
 	// Validate flags
@@ -26,16 +26,30 @@ func main() {
 	// Create process manager
 	processManager := processmanager.NewProcessManager(*secret)
 
-	// Create telnet adapter
-	telnetAdapter := telnet.NewTelnetAdapter(processManager)
+	// Set logs base path
+	processManager.SetLogsBasePath(*logsDir)
 
-	// Start telnet server
-	fmt.Printf("Starting process manager telnet server on socket: %s\n", *socketPath)
-	err := telnetAdapter.Start(*socketPath)
-	if err != nil {
-		log.Fatalf("Failed to start telnet server: %v", err)
+	// Create the socket file to indicate the process manager is running
+	// In a real implementation, this would be a socket for communication
+	// For now, we just create an empty file
+	if err := os.MkdirAll("./tmp", 0755); err != nil {
+		log.Printf("Warning: Failed to create tmp directory: %v", err)
 	}
+	
+	// Remove existing socket file if it exists
+	if err := os.Remove(*socketPath); err != nil && !os.IsNotExist(err) {
+		log.Printf("Warning: Failed to remove existing socket file: %v", err)
+	}
+	
+	// Create an empty file to indicate the process manager is running
+	f, err := os.Create(*socketPath)
+	if err != nil {
+		log.Fatalf("Failed to create socket file: %v", err)
+	}
+	f.Close()
 
+	fmt.Printf("Process manager started. Socket path: %s\n", *socketPath)
+	
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -44,11 +58,8 @@ func main() {
 	sig := <-sigChan
 	fmt.Printf("Received signal %v, shutting down...\n", sig)
 
-	// Stop telnet server
-	err = telnetAdapter.Stop()
-	if err != nil {
-		log.Printf("Error stopping telnet server: %v", err)
-	}
+	// Clean up
+	os.Remove(*socketPath)
 
 	fmt.Println("Process manager shutdown complete")
 }

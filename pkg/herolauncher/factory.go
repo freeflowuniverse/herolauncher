@@ -15,7 +15,7 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api/routes"
 	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/client"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces"
@@ -73,7 +73,7 @@ type HeroLauncher struct {
 	redisServer     *redisserver.Server
 	executorService *executor.Executor
 	packageManager  *packagemanager.PackageManager
-	pmClient        *client.Client
+	pm              *processmanager.ProcessManager
 	pmProcess       *os.Process           // Process for the process manager
 	vfsManager      interfaces.VFSManager // VFS manager implementation
 	vfsClient       *openrpc.Client       // VFS OpenRPC client
@@ -92,8 +92,8 @@ func New(config Config) *HeroLauncher {
 	executorService := executor.NewExecutor()
 	packageManagerService := packagemanager.NewPackageManager()
 
-	// Initialize process manager client
-	pmClient := client.New(config.PMSocketPath, config.PMSecret)
+	// Initialize process manager directly
+	pm := processmanager.NewProcessManager(config.PMSecret)
 
 	// Initialize VFS manager and client
 	vfsManager := mock.NewMockVFSManager() // Using mock implementation for now
@@ -149,7 +149,7 @@ func New(config Config) *HeroLauncher {
 		redisServer:     redisServer,
 		executorService: executorService,
 		packageManager:  packageManagerService,
-		pmClient:        pmClient,
+		pm:              pm,
 		vfsManager:      vfsManager,
 		vfsClient:       vfsClient,
 		vfsServer:       vfsServer,
@@ -169,7 +169,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	executorHandler := routes.NewExecutorHandler(hl.executorService)
 	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
 	redisHandler := routes.NewRedisHandler(hl.redisServer)
-	serviceHandler := routes.NewServiceHandler(hl.pmClient, log.Default())
+	serviceHandler := routes.NewServiceHandler(hl.pm, log.Default())
 	vfsHandler := routes.NewVFSHandler(hl.vfsClient, log.Default())
 	jetHandler := routes.NewJetHandler()
 	// Initialize StatsManager
@@ -226,15 +226,8 @@ func (hl *HeroLauncher) startProcessManager() error {
 
 	// Check if processmanager is already running by testing the socket
 	if _, err := os.Stat(hl.config.PMSocketPath); err == nil {
-		// Try to connect to test if it's actually running
-		pmClient := client.New(hl.config.PMSocketPath, hl.config.PMSecret)
-		err := pmClient.Connect()
-		if err == nil {
-			pmClient.Close()
-			log.Printf("Process manager already running, using existing instance")
-			return nil
-		}
-		// If socket exists but we can't connect, remove it as it's stale
+		// If socket exists but we can't verify it's running, assume it's stale
+		log.Printf("Found existing socket, but can't verify if process manager is running")
 		_ = os.Remove(hl.config.PMSocketPath)
 	}
 
@@ -261,14 +254,9 @@ func (hl *HeroLauncher) startProcessManager() error {
 		case <-ticker.C:
 			// Check if the socket exists
 			if _, err := os.Stat(hl.config.PMSocketPath); err == nil {
-				// Test connection
-				pmClient := client.New(hl.config.PMSocketPath, hl.config.PMSecret)
-				err := pmClient.Connect()
-				if err == nil {
-					pmClient.Close()
-					log.Printf("Process manager is up and running")
-					return nil
-				}
+				// If socket exists, assume process manager is running
+				log.Printf("Process manager is up and running")
+				return nil
 			}
 		case <-timeout:
 			return fmt.Errorf("timeout waiting for process manager to start")

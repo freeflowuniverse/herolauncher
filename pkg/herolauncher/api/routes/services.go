@@ -3,13 +3,10 @@ package routes
 import (
 	"fmt"
 	"log"
-	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/client"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -42,18 +39,18 @@ func ConvertToDisplayInfo(info *processmanager.ProcessInfo) ProcessDisplayInfo {
 
 // ServiceHandler handles service-related routes
 type ServiceHandler struct {
-	pmClient *client.Client
-	logger   *log.Logger
+	pm     *processmanager.ProcessManager
+	logger *log.Logger
 }
 
 // default number of log lines to retrieve - use a high value to essentially show all logs
 const DefaultLogLines = 10000
 
-// NewServiceHandler creates a new service handler with the provided process manager client
-func NewServiceHandler(pmClient *client.Client, logger *log.Logger) *ServiceHandler {
+// NewServiceHandler creates a new service handler with the provided process manager
+func NewServiceHandler(pm *processmanager.ProcessManager, logger *log.Logger) *ServiceHandler {
 	return &ServiceHandler{
-		pmClient: pmClient,
-		logger:   logger,
+		pm:     pm,
+		logger: logger,
 	}
 }
 
@@ -75,24 +72,14 @@ func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
 
 // getServicesPage renders the services page
 func (h *ServiceHandler) getServicesPage(c *fiber.Ctx) error {
-	// Get processes to display on the initial page load - this will never return an error now
+	// Get processes to display on the initial page load
 	processes, _ := h.getProcessList()
 
-	// Check if the process manager socket exists and add a warning if it doesn't
+	// No need to check for socket existence since we're using the process manager directly
 	var warning string
-	if _, err := os.Stat(h.pmClient.GetSocketPath()); os.IsNotExist(err) {
-		warning = "Process manager is not running. To start it, run: './start_process_manager.sh'"
+	if h.pm == nil {
+		warning = "Process manager is not properly initialized."
 		h.logger.Printf("Warning: %s", warning)
-	} else {
-		// Socket exists but might not be accepting connections
-		err := h.pmClient.Connect()
-		if err != nil && strings.Contains(err.Error(), "connection refused") {
-			warning = "Process manager socket exists but is not accepting connections. The process may have crashed. Try running './start_process_manager.sh'"
-			h.logger.Printf("Warning: %s", warning)
-		}
-		if err == nil {
-			h.pmClient.Close()
-		}
 	}
 
 	return c.Render("admin/services", fiber.Map{
@@ -107,101 +94,18 @@ func (h *ServiceHandler) getProcessList() ([]ProcessDisplayInfo, error) {
 	// Debug: Log the function entry
 	h.logger.Printf("Entering getProcessList() function")
 
-	// Check if the process manager socket exists
-	if _, err := os.Stat(h.pmClient.GetSocketPath()); os.IsNotExist(err) {
-		// Return empty list instead of error when process manager is not running
-		h.logger.Printf("Process manager socket not found at %s, returning empty list", h.pmClient.GetSocketPath())
-		return []ProcessDisplayInfo{}, nil
+	// Get the list of processes directly from the process manager
+	processes := h.pm.ListProcesses()
+
+	// Convert to display info format
+	displayInfoList := make([]ProcessDisplayInfo, 0, len(processes))
+	for _, procInfo := range processes {
+		displayInfo := ConvertToDisplayInfo(procInfo)
+		displayInfoList = append(displayInfoList, displayInfo)
 	}
 
-	// Connect to the process manager
-	h.logger.Printf("Attempting to connect to process manager at %s", h.pmClient.GetSocketPath())
-	err := h.pmClient.Connect()
-	if err != nil {
-		// Also return empty list for connection errors
-		h.logger.Printf("Failed to connect to process manager: %v, returning empty list", err)
-		return []ProcessDisplayInfo{}, nil
-	}
-	defer h.pmClient.Close()
-
-	// Get the list of processes
-	h.logger.Printf("Connected successfully, fetching process list")
-	// Use text format since that's what the server is returning
-	response, err := h.pmClient.ListProcesses("")
-	if err != nil {
-		// Also return empty list for command errors
-		h.logger.Printf("Failed to list processes: %v, returning empty list", err)
-		return []ProcessDisplayInfo{}, nil
-	}
-
-	// Debug: Log the raw response
-	h.logger.Printf("Raw response from process manager: [%s]", response)
-	
-	// Process the text format response
-	response = strings.TrimPrefix(response, "**RESULT**\n")
-	response = strings.TrimSuffix(response, "\n**ENDRESULT**")
-	
-	// Process each line, which represents a process
-	displayInfoList := []ProcessDisplayInfo{}
-	lines := strings.Split(response, "\n")
-	
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		
-		// Parse the line to extract process info
-		// Format: "Name: name, Status: status, PID: pid, CPU: cpu%, Memory: memory MB"
-		parts := strings.Split(line, ",")
-		if len(parts) < 3 {
-			continue // Skip lines that don't have enough parts
-		}
-		
-		processInfo := ProcessDisplayInfo{}
-		
-		// Extract name
-		namePart := strings.TrimSpace(parts[0])
-		if strings.HasPrefix(namePart, "Name: ") {
-			processInfo.Name = strings.TrimPrefix(namePart, "Name: ")
-		}
-		
-		// Extract status
-		statusPart := strings.TrimSpace(parts[1])
-		if strings.HasPrefix(statusPart, "Status: ") {
-			processInfo.Status = strings.TrimPrefix(statusPart, "Status: ")
-		}
-		
-		// Extract PID
-		pidPart := strings.TrimSpace(parts[2])
-		if strings.HasPrefix(pidPart, "PID: ") {
-			processInfo.ID = strings.TrimPrefix(pidPart, "PID: ")
-		}
-		
-		// Extract CPU if available
-		if len(parts) > 3 {
-			cpuPart := strings.TrimSpace(parts[3])
-			if strings.HasPrefix(cpuPart, "CPU: ") {
-				processInfo.CPU = strings.TrimPrefix(cpuPart, "CPU: ")
-			}
-		}
-		
-		// Extract Memory if available
-		if len(parts) > 4 {
-			memoryPart := strings.TrimSpace(parts[4])
-			if strings.HasPrefix(memoryPart, "Memory: ") {
-				processInfo.Memory = strings.TrimPrefix(memoryPart, "Memory: ")
-			}
-		}
-		
-		// Calculate uptime (since we don't have real uptime info, we'll use a placeholder)
-		processInfo.Uptime = "< 1 min" // Placeholder
-		processInfo.StartTime = time.Now().Format("2006-01-02 15:04:05")
-		
-		displayInfoList = append(displayInfoList, processInfo)
-	}
-
-	// Debug: Log the number of processes parsed
-	h.logger.Printf("Parsed %d processes", len(displayInfoList))
+	// Debug: Log the number of processes
+	h.logger.Printf("Found %d processes", len(displayInfoList))
 
 	return displayInfoList, nil
 }
@@ -227,24 +131,14 @@ func formatUptime(duration time.Duration) string {
 
 // getServicesData returns only the services fragment for AJAX updates
 func (h *ServiceHandler) getServicesData(c *fiber.Ctx) error {
-	// Get processes - this will never return an error now
+	// Get processes
 	processes, _ := h.getProcessList()
 
-	// Check if the process manager socket exists and add a warning if it doesn't
+	// No need to check for socket existence since we're using the process manager directly
 	var warning string
-	if _, err := os.Stat(h.pmClient.GetSocketPath()); os.IsNotExist(err) {
-		warning = "Process manager is not running. To start it, run: './start_process_manager.sh'"
+	if h.pm == nil {
+		warning = "Process manager is not properly initialized."
 		h.logger.Printf("Warning: %s", warning)
-	} else {
-		// Socket exists but might not be accepting connections
-		err := h.pmClient.Connect()
-		if err != nil && strings.Contains(err.Error(), "connection refused") {
-			warning = "Process manager socket exists but is not accepting connections. The process may have crashed. Try running './start_process_manager.sh'"
-			h.logger.Printf("Warning: %s", warning)
-		}
-		if err == nil {
-			h.pmClient.Close()
-		}
 	}
 
 	// Return the fragment with process data and optional warning
@@ -266,18 +160,8 @@ func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Connect to the process manager
-	err := h.pmClient.Connect()
-	if err != nil {
-		h.logger.Printf("Error connecting to process manager: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to connect to process manager: " + err.Error(),
-		})
-	}
-	defer h.pmClient.Close()
-
 	// Start the process with logging enabled by default
-	response, err := h.pmClient.StartProcess(name, command, true, 0, "", "")
+	err := h.pm.StartProcess(name, command, true, 0, "", "")
 	if err != nil {
 		h.logger.Printf("Error starting process: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -286,9 +170,8 @@ func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"success":  true,
-		"message":  "Process started successfully",
-		"response": response,
+		"success": true,
+		"message": "Process started successfully",
 	})
 }
 
@@ -307,19 +190,9 @@ func (h *ServiceHandler) stopService(c *fiber.Ctx) error {
 		}
 	}
 
-	// Connect to the process manager
-	err := h.pmClient.Connect()
-	if err != nil {
-		h.logger.Printf("Error connecting to process manager: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to connect to process manager: " + err.Error(),
-		})
-	}
-	defer h.pmClient.Close()
-
-	// Stop the process - the client method expects a name, not an ID
+	// Stop the process directly using the process manager
 	h.logger.Printf("Stopping process with name: %s", name)
-	response, err := h.pmClient.StopProcess(name)
+	err := h.pm.StopProcess(name)
 	if err != nil {
 		h.logger.Printf("Error stopping process: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -328,9 +201,8 @@ func (h *ServiceHandler) stopService(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"success":  true,
-		"message":  "Process stopped successfully",
-		"response": response,
+		"success": true,
+		"message": "Process stopped successfully",
 	})
 }
 
@@ -349,19 +221,9 @@ func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 		}
 	}
 
-	// Connect to the process manager
-	err := h.pmClient.Connect()
-	if err != nil {
-		h.logger.Printf("Error connecting to process manager: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to connect to process manager: " + err.Error(),
-		})
-	}
-	defer h.pmClient.Close()
-
-	// Restart the process - the client method expects a name, not an ID
+	// Restart the process directly using the process manager
 	h.logger.Printf("Restarting process with name: %s", name) 
-	response, err := h.pmClient.RestartProcess(name)
+	err := h.pm.RestartProcess(name)
 	if err != nil {
 		h.logger.Printf("Error restarting process: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -370,9 +232,8 @@ func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"success":  true,
-		"message":  "Process restarted successfully",
-		"response": response,
+		"success": true,
+		"message": "Process restarted successfully",
 	})
 }
 
@@ -389,17 +250,8 @@ func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 	// Debug: Log the delete request
 	h.logger.Printf("Deleting process with name: %s", name)
 
-	// Connect to the process manager
-	err := h.pmClient.Connect()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": fmt.Sprintf("Failed to connect to process manager: %v", err),
-		})
-	}
-	defer h.pmClient.Close()
-
-	// Delete the service
-	_, err = h.pmClient.DeleteProcess(name)
+	// Delete the service directly using the process manager
+	err := h.pm.DeleteProcess(name)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fmt.Sprintf("Failed to delete service: %v", err),
@@ -435,19 +287,9 @@ func (h *ServiceHandler) getProcessLogs(c *fiber.Ctx) error {
 		}
 	}
 
-	// Connect to the process manager
-	err := h.pmClient.Connect()
-	if err != nil {
-		h.logger.Printf("Error connecting to process manager: %v", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to connect to process manager: " + err.Error(),
-		})
-	}
-	defer h.pmClient.Close()
-
-	// Get the process logs
+	// Get the process logs directly from the process manager
 	h.logger.Printf("Getting logs for process: %s (lines: %d)", name, lines)
-	logs, err := h.pmClient.GetProcessLogs(name, lines)
+	logs, err := h.pm.GetProcessLogs(name, lines)
 	if err != nil {
 		h.logger.Printf("Error getting process logs: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

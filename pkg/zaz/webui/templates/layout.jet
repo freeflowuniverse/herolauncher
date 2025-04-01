@@ -32,20 +32,20 @@
     </div>
     {{ end }}
     
-    {{ include "./partials/header.jet" }}
+    {{ include "partials/header" }}
     
     <div class="container">
       <div class="grid grid-sidebar">
         <!-- Left sidebar -->
-        {{ include "./partials/sidebar.jet" }}
+        {{ include "partials/sidebar" }}
         
         <!-- Main content area -->
         <main class="content-area">
-          {{ yield content }}
+          {{block documentBody()}}{{end}}
         </main>
         
         <!-- Right sidebar -->
-        {{ include "./partials/right-sidebar.jet" }}
+        {{ include "partials/right-sidebar" }}
       </div>
     </div>
     
