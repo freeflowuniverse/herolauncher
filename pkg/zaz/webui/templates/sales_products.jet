@@ -1,0 +1,60 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+  <header>
+    <h2>Products</h2>
+    <p>Manage all products available for sale in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/sales/products/create" role="button">Add Product</a>
+    <form class="search-form" action="/sales/products" method="get">
+      <input type="search" name="search" placeholder="Search products..." value="{{ .search }}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .products }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Company</th>
+        <th>Category</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .products }}
+      <tr>
+        <td>{{ .ID }}</td>
+        <td>{{ .Name }}</td>
+        <td>{{ .CompanyName }}</td>
+        <td>{{ .Category }}</td>
+        <td>${{ .Price }}</td>
+        <td>{{ .Stock }}</td>
+        <td class="actions">
+          <a href="/sales/products/{{ .ID }}" title="View Details">Details</a>
+          <a href="/sales/products/{{ .ID }}/edit" title="Edit Product">Edit</a>
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No products found</p>
+    {{ if .search }}
+    <p>No results for "{{ .search }}"</p>
+    <a href="/sales/products">Clear search</a>
+    {{ else }}
+    <a href="/sales/products/create" role="button">Add your first product</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

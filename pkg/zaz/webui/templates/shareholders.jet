@@ -1,0 +1,60 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+    <header class="action-header">
+        <div>
+            <h2>Shareholders</h2>
+            <p>Manage all shareholders registered in the Freezone</p>
+        </div>
+        <a(href="/shareholders/create" role="button")>Add Shareholder</a>
+    </header>
+
+    <div class="action-bar">
+        <form class="search-form" role="search" action="/shareholders" method="get">
+            <input type="search" name="search" placeholder="Search shareholders..." value="{{.search}}"/>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    {{ if .shareholders }}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Companies</th>
+                <th>Total Shares</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .shareholders }}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Name}}</td>
+                <td>N/A</td>
+                <td>{{.CompanyID}}</td>
+                <td>{{.Shares}}</td>
+                <td class="actions">
+                    <a href="/shareholders/{{.ID}}" title="View Details">Details</a>
+                    <a href="/shareholders/{{.ID}}/edit" title="Edit Shareholder">Edit</a>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+    {{ else }}
+    <div class="empty-state">
+        <p>No shareholders found</p>
+        {{ if .search }}
+        <p>No results for "{{.search}}"</p>
+        <a href="/shareholders">Clear search</a>
+        {{ else }}
+        <a href="/shareholders/create" role="button">Add your first shareholder</a>
+        {{ end }}
+    </div>
+    {{ end }}
+</article>
+{{ end }}

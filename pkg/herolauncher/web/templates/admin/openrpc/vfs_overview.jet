@@ -1,0 +1,118 @@
+<div class="row mb-4">
+  <div class="col">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">OpenRPC Schema</h5>
+      </div>
+      <div class="card-body">
+        <p>The OpenRPC schema describes all available methods for interacting with the Virtual File System.</p>
+        <a href="/api/vfs/openrpc" target="_blank" class="btn btn-primary">View Schema</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Available Methods</h5>
+      </div>
+      <div class="card-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>UploadFile</td>
+              <td>Uploads a file to the virtual file system</td>
+            </tr>
+            <tr>
+              <td>UploadDir</td>
+              <td>Uploads a directory to the virtual file system</td>
+            </tr>
+            <tr>
+              <td>DownloadFile</td>
+              <td>Downloads a file from the virtual file system</td>
+            </tr>
+            <tr>
+              <td>ExportMeta</td>
+              <td>Exports metadata from the virtual file system</td>
+            </tr>
+            <tr>
+              <td>ImportMeta</td>
+              <td>Imports metadata to the virtual file system</td>
+            </tr>
+            <tr>
+              <td>ExportDedupe</td>
+              <td>Exports dedupe information from the virtual file system</td>
+            </tr>
+            <tr>
+              <td>ImportDedupe</td>
+              <td>Imports dedupe information to the virtual file system</td>
+            </tr>
+            <tr>
+              <td>Send</td>
+              <td>Sends files based on dedupe hashes to a destination</td>
+            </tr>
+            <tr>
+              <td>SendExist</td>
+              <td>Checks which dedupe hashes exist and returns a list</td>
+            </tr>
+            <tr>
+              <td>ExposeWebDAV</td>
+              <td>Exposes the virtual file system via WebDAV</td>
+            </tr>
+            <tr>
+              <td>Expose9P</td>
+              <td>Exposes the virtual file system via 9P protocol</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">API Testing</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-3">You can test the VFS API methods directly from this interface.</p>
+        <div class="form-group mb-3">
+          <label for="method-select">Select Method:</label>
+          <select id="method-select" class="form-control">
+            <option value="">-- Select a method --</option>
+            <option value="UploadFile">UploadFile</option>
+            <option value="UploadDir">UploadDir</option>
+            <option value="DownloadFile">DownloadFile</option>
+            <option value="ExportMeta">ExportMeta</option>
+            <option value="ImportMeta">ImportMeta</option>
+            <option value="ExportDedupe">ExportDedupe</option>
+            <option value="ImportDedupe">ImportDedupe</option>
+            <option value="Send">Send</option>
+            <option value="SendExist">SendExist</option>
+            <option value="ExposeWebDAV">ExposeWebDAV</option>
+            <option value="Expose9P">Expose9P</option>
+          </select>
+        </div>
+        <div id="method-params" class="d-none">
+          <h6 class="mb-3">Parameters:</h6>
+          <div id="param-fields"></div>
+        </div>
+        <button id="execute-btn" class="btn btn-primary mt-3">Execute Method</button>
+        <div id="result-container" class="mt-4 d-none">
+          <h6>Result:</h6>
+          <pre id="result-output" class="bg-light p-3 border rounded"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

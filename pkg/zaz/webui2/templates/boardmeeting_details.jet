@@ -1,0 +1,223 @@
+{{ extends "layout.jet" }}
+
+{{ block content() }}
+<article class="compact">
+    <header class="slim-header">
+        <h2>Board Meeting Details</h2>
+        <div class="header-actions button-group">
+            {{ if meeting.Status == "Scheduled" }}
+            <a href="/boardmeetings/{{ meeting.ID }}/start" role="button" class="primary small">Start Meeting</a>
+            {{ end }}
+            {{ if meeting.Status == "In Progress" }}
+            <a href="/boardmeetings/{{ meeting.ID }}/minutes" role="button" class="primary small">Record Minutes</a>
+            <a href="/boardmeetings/{{ meeting.ID }}/end" role="button" class="secondary small">End Meeting</a>
+            {{ end }}
+            {{ if meeting.Status == "Completed" }}
+            <a href="/boardmeetings/{{ meeting.ID }}/minutes" role="button" class="secondary small">View Minutes</a>
+            {{ end }}
+            <a href="/boardmeetings" role="button" class="outline small">Back to List</a>
+        </div>
+    </header>
+
+    <div class="meeting-info grid">
+        <div class="meeting-details">
+            <h3>{{ meeting.Title }}</h3>
+            <p class="company"><strong>Company: </strong><a href="/companies/{{ meeting.CompanyID }}">{{ meeting.CompanyName }}</a></p>
+            <p class="status"><strong>Status: </strong><span class="status {{ meeting.Status }}">{{ meeting.Status }}</span></p>
+            <p class="date"><strong>Date: </strong><span>{{ meeting.Date | date("2006-01-02") }}</span></p> 
+            <p class="location"><strong>Location: </strong><span>{{ meeting.Location }}</span></p>
+        </div>
+        <div class="meeting-description">
+            <h3>Description</h3>
+            <p>{{ meeting.Description }}</p>
+        </div>
+    </div>
+
+    <section class="attendees">
+        <h3>Attendees</h3>
+        {{ if meeting.Attendees }}
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range meeting.Attendees }}
+                <tr>
+                    <td>{{ .Name }}</td>
+                    <td>{{ .Role }}</td>
+                    <td>{{ .Status }}</td>
+                    <td class="actions">
+                        {{ if .Status == "Invited" }}
+                        <a class="action-button" href="/boardmeetings/{{ meeting.ID }}/attendees/{{ .ID }}/confirm" title="Confirm Attendance">Confirm</a>
+                        {{ end }}
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ else }}
+        <p class="no-data">No attendees added to this meeting.</p>
+        {{ end }}
+
+        {{ if meeting.Status == "Scheduled" }}
+        <div class="add-attendee">
+            <h4>Add Attendee</h4>
+            <form action="/boardmeetings/{{ meeting.ID }}/attendees/add" method="post">
+                {{ if csrfToken }}
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                {{ end }}
+                <div class="grid">
+                    <div>
+                        <label for="attendee_id">Select Shareholder</label>
+                        <select id="attendee_id" name="attendee_id">
+                            <option value="">Select an attendee</option>
+                            {{ range availableAttendees }}
+                            <option value="{{ .ID }}">{{ .Name }} ({{ .Role }})</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="role">Role in Meeting</label>
+                        <select id="role" name="role">
+                            <option value="">Select role</option>
+                            <option value="Chairman">Chairman</option>
+                            <option value="Secretary">Secretary</option>
+                            <option value="Director">Director</option>
+                            <option value="Member">Member</option>
+                            <option value="Observer">Observer</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" role="button" class="small">Add Attendee</button>
+            </form>
+        </div>
+        {{ end }}
+    </section>
+
+    <section class="agenda">
+        <h3>Agenda Items</h3>
+        {{ if meeting.AgendaItems }}
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Presenter</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range meeting.AgendaItems }}
+                <tr>
+                    <td>{{ .Title }}</td>
+                    <td>{{ .Presenter }}</td>
+                    <td>{{ .Duration }} min</td>
+                    <td>{{ .Status }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+        {{ else }}
+        <p class="no-data">No agenda items added to this meeting.</p>
+        {{ end }}
+
+        {{ if meeting.Status == "Scheduled" }}
+        <div class="add-agenda-item">
+            <h4>Add Agenda Item</h4>
+            <form action="/boardmeetings/{{ meeting.ID }}/agenda/add" method="post">
+                 {{ if csrfToken }}
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                {{ end }}
+                <div class="grid">
+                    <div>
+                        <label for="agenda_title">Title</label>
+                        <input type="text" id="agenda_title" name="agenda_title" placeholder="Agenda item title">
+                    </div>
+                    <div>
+                        <label for="agenda_presenter">Presenter</label>
+                        <input type="text" id="agenda_presenter" name="agenda_presenter" placeholder="Who will present this item">
+                    </div>
+                </div>
+                <div class="grid">
+                    <div>
+                        <label for="agenda_duration">Duration (minutes)</label>
+                        <input type="number" id="agenda_duration" name="agenda_duration" min="1" value="15">
+                    </div>
+                    <div>
+                        <label for="agenda_description">Description</label>
+                        <input type="text" id="agenda_description" name="agenda_description" placeholder="Brief description">
+                    </div>
+                </div>
+                <button type="submit" role="button" class="small">Add Item</button>
+            </form>
+        </div>
+        {{ end }}
+    </section>
+
+    {{ if meeting.RelatedDocuments }}
+    <section class="documents">
+        <h3>Related Documents</h3>
+        <ul class="document-list">
+            {{ range meeting.RelatedDocuments }}
+            <li>
+                <a href="{{ .URL }}" target="_blank">{{ .Name }}</a>
+                <span class="document-type">({{ .Type }})</span>
+            </li>
+            {{ end }}
+        </ul>
+    </section>
+    {{ end }}
+
+    {{ if meeting.Status == "Completed" }}
+    <section class="resolutions">
+        <h3>Resolutions</h3>
+        {{ if meeting.Resolutions }}
+        <div class="resolutions-list">
+            {{ range meeting.Resolutions }}
+            <article class="resolution">
+                <header>
+                    <h4>{{ .Title }}</h4>
+                </header>
+                <p>{{ .Description }}</p>
+                <p class="resolution-result"><strong>Result: </strong><span>{{ .Result }}</span></p>
+                <p class="resolution-votes"><strong>Votes: </strong><span>For: {{ .VotesFor }}, Against: {{ .VotesAgainst }}, Abstained: {{ .VotesAbstained }}</span></p>
+            </article>
+            {{ end }}
+        </div>
+        {{ else }}
+        <p class="no-data">No resolutions recorded for this meeting.</p>
+        {{ end }}
+    </section>
+    {{ end }}
+
+</article>
+{{ end }}
+
+{{ block scripts() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dateElement = document.querySelector('.meeting-details .date span');
+      if (dateElement) {
+        const dateText = dateElement.textContent.trim();
+        if (dateText) {
+          try {
+            const date = new Date(dateText + 'T00:00:00'); 
+            if (!isNaN(date.getTime())) { 
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }; 
+                dateElement.textContent = date.toLocaleDateString('en-US', options);
+            } else {
+                 console.error('Could not parse date:', dateText);
+            }
+          } catch (e) {
+            console.error('Error formatting date:', e);
+          }
+        }
+      }
+    });
+</script>
+{{ end }}

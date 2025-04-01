@@ -1,0 +1,235 @@
+{{ extends "../layout" }}
+
+{{ block documentBody() }}
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">Virtual File System API</h1>
+            <p class="lead">This page provides access to the VFS OpenRPC API documentation, methods, and logs.</p>
+        </div>
+    </div>
+
+    <!-- Tabs navigation -->
+    <div class="row mb-4">
+        <div class="col">
+            <ul class="nav nav-tabs" id="vfsTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#overview" up-target=".tab-content">Overview</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/openrpc/vfs/logs" up-target="#logs">Logs</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab content -->
+    <div class="tab-content">
+        <!-- Overview tab -->
+        <div id="overview">
+            {{ include "./vfs_overview" }}
+        </div>
+
+        <!-- Logs tab (will be loaded via Unpoly) -->
+        <div id="logs">
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status">
+                    <div class="mt-3">Loading logs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script>
+    /* Handle tab switching */
+    up.compiler('#vfsTabs a', function(element) {
+        element.addEventListener('click', function(e) {
+            /* Remove active class from all tabs */
+            document.querySelectorAll('#vfsTabs a').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            
+            /* Add active class to clicked tab */
+            element.classList.add('active');
+            
+            /* If overview tab is clicked, show overview and hide logs */
+            if (element.getAttribute('href') === '#overview') {
+                e.preventDefault(); /* Prevent default anchor behavior */
+                document.getElementById('overview').style.display = 'block';
+                document.getElementById('logs').style.display = 'none';
+            } else {
+                /* For logs tab, hide overview (logs will be loaded via Unpoly) */
+                document.getElementById('overview').style.display = 'none';
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const methodSelect = document.getElementById('method-select');
+        const methodParams = document.getElementById('method-params');
+        const paramFields = document.getElementById('param-fields');
+        const executeBtn = document.getElementById('execute-btn');
+        const resultContainer = document.getElementById('result-container');
+        const resultOutput = document.getElementById('result-output');
+        
+        /* Method parameter definitions */
+        const methodDefinitions = {
+            'UploadFile': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'filepath', type: 'string', description: 'Local file path to upload' }
+            ],
+            'UploadDir': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'dirpath', type: 'string', description: 'Local directory path to upload' }
+            ],
+            'DownloadFile': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'destpath', type: 'string', description: 'Local destination path' }
+            ],
+            'ExportMeta': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'destpath', type: 'string', description: 'Local destination path for metadata' }
+            ],
+            'ImportMeta': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'sourcepath', type: 'string', description: 'Local source path for metadata' }
+            ],
+            'ExportDedupe': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'destpath', type: 'string', description: 'Local destination path for dedupe info' }
+            ],
+            'ImportDedupe': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'sourcepath', type: 'string', description: 'Local source path for dedupe info' }
+            ],
+            'Send': [
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'pubkeydest', type: 'string', description: 'Public key of destination' },
+                { name: 'hashlist', type: 'array', description: 'List of hashes to send' },
+                { name: 'secret', type: 'string', description: 'Secret for authentication' }
+            ],
+            'SendExist': [
+                { name: 'dedupepath', type: 'string', description: 'Path for deduplication' },
+                { name: 'pubkeydest', type: 'string', description: 'Public key of destination' },
+                { name: 'hashlist', type: 'array', description: 'List of hashes to check' },
+                { name: 'secret', type: 'string', description: 'Secret for authentication' }
+            ],
+            'ExposeWebDAV': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'port', type: 'number', description: 'Port to expose on' },
+                { name: 'username', type: 'string', description: 'WebDAV username' },
+                { name: 'password', type: 'string', description: 'WebDAV password' }
+            ],
+            'Expose9P': [
+                { name: 'vfspath', type: 'string', description: 'Path in the virtual file system' },
+                { name: 'port', type: 'number', description: 'Port to expose on' },
+                { name: 'readonly', type: 'boolean', description: 'Whether to expose as read-only' }
+            ]
+        };
+
+        /* When a method is selected, show the parameter form */
+        methodSelect.addEventListener('change', function() {
+            const selectedMethod = this.value;
+            
+            if (!selectedMethod) {
+                methodParams.classList.add('d-none');
+                return;
+            }
+            
+            /* Clear previous parameters */
+            paramFields.innerHTML = '';
+            
+            /* Add parameter fields for the selected method */
+            const params = methodDefinitions[selectedMethod] || [];
+            params.forEach(param => {
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group mb-2';
+                
+                const label = document.createElement('label');
+                label.textContent = `${param.name} (${param.type}):`;
+                label.setAttribute('for', `param-${param.name}`);
+                
+                const input = document.createElement('input');
+                input.className = 'form-control';
+                input.id = `param-${param.name}`;
+                input.name = param.name;
+                input.setAttribute('data-type', param.type);
+                
+                if (param.type === 'boolean') {
+                    input.type = 'checkbox';
+                    input.className = 'form-check-input ms-2';
+                } else {
+                    input.type = 'text';
+                }
+                
+                const small = document.createElement('small');
+                small.className = 'form-text text-muted';
+                small.textContent = param.description;
+                
+                formGroup.appendChild(label);
+                formGroup.appendChild(input);
+                formGroup.appendChild(small);
+                paramFields.appendChild(formGroup);
+            });
+            
+            methodParams.classList.remove('d-none');
+        });
+        
+        /* Execute button handler */
+        executeBtn.addEventListener('click', function() {
+            const selectedMethod = methodSelect.value;
+            if (!selectedMethod) return;
+            
+            const params = {};
+            const paramDefs = methodDefinitions[selectedMethod] || [];
+            
+            /* Collect parameter values */
+            paramDefs.forEach(param => {
+                const input = document.getElementById(`param-${param.name}`);
+                if (!input) return;
+                
+                let value = input.value;
+                if (param.type === 'boolean') {
+                    value = input.checked;
+                } else if (param.type === 'number') {
+                    value = parseFloat(value);
+                } else if (param.type === 'array' && value) {
+                    try {
+                        value = JSON.parse(value);
+                    } catch (e) {
+                        value = value.split(',').map(item => item.trim());
+                    }
+                }
+                
+                params[param.name] = value;
+            });
+            
+            /* Call the API */
+            fetch(`/api/vfs/${selectedMethod.toLowerCase()}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(params)
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultOutput.textContent = JSON.stringify(data, null, 2);
+                resultContainer.classList.remove('d-none');
+            })
+            .catch(error => {
+                resultOutput.textContent = `Error: ${error.message}`;
+                resultContainer.classList.remove('d-none');
+            });
+        });
+    });
+</script>
+{{ end }}

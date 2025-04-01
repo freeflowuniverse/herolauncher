@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HeroLauncher Admin</title>
+    <link rel="icon" href="/img/hero-icon.svg" type="image/svg+xml">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/css/pico.min.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/unpoly.min.css">
+    <style>
+      :root {
+        --font-size: 70%; /* Reduce font size by 30% */
+      }
+    </style>
+  </head>
+  <body>
+    {{ include "partials/header" }}
+    <div class="sidebar">
+      <nav>
+        {{ include "partials/sidebar" }}
+      </nav>
+    </div>  
+    <main>
+      {{block documentBody()}}{{end}}
+    </main>
+    
+    <script src="/js/unpoly.min.js"></script>
+    <script src="/js/echarts/echarts.min.js"></script>
+    <script src="/js/admin.js"></script>
+    <script src="/js/service-logs.js"></script>
+
+  </body>
+</html>

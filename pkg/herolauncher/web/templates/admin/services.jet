@@ -1,0 +1,191 @@
+{{ extends "./layout" }}
+
+{{ block "content" }}
+<div class="services-page">
+    <h2 class="section-title">Services</h2>
+    <p class="section-description">Manage all your running services</p>
+    {{ if .error }}
+    <div class="alert alert-danger">{{ .error }}</div>
+    {{ end }}
+    {{ if .warning }}
+    <div class="alert alert-warning">{{ .warning }}</div>
+    {{ end }}
+    <div class="two-column-layout">
+        <div class="card">
+            <div class="card-title">Active Services</div>
+            <div class="card-actions">
+                <button class="button refresh" onclick="refreshServices()">Refresh</button>
+            </div>
+            
+            <!-- Service list -->
+            <div id="services-table">
+                {{ include "./services_fragment" }}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Start New Service</div>
+            <div class="card-content">
+                <form id="start-service-form" onsubmit="startService(event)">
+                    <div class="form-group">
+                        <label for="service-name">Service Name</label>
+                        <input id="service-name" type="text" name="name" required="required">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="service-command">Command</label>
+                        <input id="service-command" type="text" name="command" required="required">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="button" type="submit">Start Service</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="start-result" class="alert" style="display: none"></div>
+        </div>
+    </div>
+</div>
+
+{{ script }}
+{{{ `
+    // Function to refresh services
+    function refreshServices() {
+        const servicesTable = document.getElementById('services-table');
+        fetch('/admin/services/data')
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to refresh services');
+                    });
+                }
+                return response.text();
+            })
+            .then(html => {
+                servicesTable.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error refreshing services:', error);
+                // Show error message in the services table instead of replacing it
+                const errorHtml = \`<table><tbody><tr><td colspan="4"><div class="alert alert-danger">Error refreshing services: \${error.message}</div></td></tr></tbody></table>\`;
+                servicesTable.innerHTML = errorHtml;
+                // Try again after a short delay
+                setTimeout(() => {
+                    refreshServices();
+                }, 3000);
+            });
+    }
+    
+    // Refresh services as soon as the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        refreshServices();
+    });
+    
+    // Function to start a new service
+    function startService(event) {
+        event.preventDefault();
+        const form = document.getElementById('start-service-form');
+        const resultDiv = document.getElementById('start-result');
+        
+        const formData = new FormData(form);
+        
+        fetch('/admin/services/start', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.textContent = data.error;
+                } else {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.textContent = data.message;
+                    form.reset();
+                    refreshServices();
+                }
+                resultDiv.style.display = 'block';
+                setTimeout(() => {
+                    resultDiv.style.display = 'none';
+                }, 5000);
+            })
+            .catch(error => {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.textContent = 'An error occurred: ' + error.message;
+                resultDiv.style.display = 'block';
+            });
+    }
+    
+    // Function to stop a process
+    function stopProcess(name) {
+        if (!confirm('Are you sure you want to stop this service?')) return;
+        
+        const formData = new FormData();
+        formData.append('name', name);
+        
+        fetch('/admin/services/stop', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    refreshServices();
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error.message);
+            });
+    }
+    
+    // Function to restart a process
+    function restartProcess(name) {
+        if (!confirm('Are you sure you want to restart this service?')) return;
+        
+        const formData = new FormData();
+        formData.append('name', name);
+        
+        fetch('/admin/services/restart', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    refreshServices();
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error.message);
+            });
+    }
+    
+    // Function to delete a process
+    function deleteProcess(name) {
+        if (!confirm('Are you sure you want to delete this service? This cannot be undone.')) return;
+        
+        const formData = new FormData();
+        formData.append('name', name);
+        
+        fetch('/admin/services/delete', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    refreshServices();
+                }
+            })
+            .catch(error => {
+                alert('An error occurred: ' + error.message);
+            });
+    }
+` }}
+{{ end }}

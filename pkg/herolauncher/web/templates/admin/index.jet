@@ -1,0 +1,77 @@
+{{ extends "layout" }}
+{{ block documentBody() }}
+<article>
+    <header>
+        <h2>Dashboard</h2>
+        <p>Welcome to the HeroLauncher Admin Dashboard</p>
+    </header>
+    
+    <div class="grid">
+        <div>
+            <article>
+                <header>
+                    <h3>System Status</h3>
+                </header>
+                
+                <div class="grid">
+                    <div>
+                        <h4>Services</h4>
+                        <p>
+                            <strong>12</strong> running
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h4>CPU</h4>
+                        <p>
+                            <strong>24%</strong> usage
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h4>Memory</h4>
+                        <p>
+                            <strong>1.2GB</strong> / 8GB
+                        </p>
+                    </div>
+                </div>
+            </article>
+        </div>
+        
+        <div>
+            <article>
+                <header>
+                    <h3>Recent Activity</h3>
+                </header>
+                
+                <ul>
+                    <li>Service 'redis' started (2 minutes ago)</li>
+                    <li>Package 'web-ui' updated (10 minutes ago)</li>
+                    <li>System backup completed (1 hour ago)</li>
+                    <li>User 'admin' logged in (2 hours ago)</li>
+                </ul>
+            </article>
+        </div>
+    </div>
+    
+    <article>
+        <header>
+            <h3>Quick Actions</h3>
+        </header>
+        
+        <div class="grid">
+            <div>
+                <a href="/admin/services/start" role="button">Start Service</a>
+            </div>
+            
+            <div>
+                <a href="/admin/services/stop" role="button" class="secondary">Stop Service</a>
+            </div>
+            
+            <div>
+                <a href="/admin/packages/install" role="button" class="contrast">Install Package</a>
+            </div>
+        </div>
+    </article>
+</article>
+{{ end }}

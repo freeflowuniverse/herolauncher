@@ -1,0 +1,217 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+  <header>
+    <h2>Sales Reports</h2>
+    <p>Analyze sales performance and generate reports</p>
+  </header>
+
+  <div class="filters">
+    <form class="filter-form" action="/sales/reports" method="get">
+      <div class="grid">
+        <div>
+          <label for="company_id">Company</label>
+          <select id="company_id" name="company_id">
+            <option value="">All Companies</option>
+            <option value="1">Example Company</option>
+            <option value="2">Another Company</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="period">Time Period</label>
+          <select id="period" name="period">
+            <option value="this_month">This Month</option>
+            <option value="last_month">Last Month</option>
+            <option value="this_quarter">This Quarter</option>
+            <option value="last_quarter">Last Quarter</option>
+            <option value="this_year">This Year</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="custom-date-range" style="display: none;">
+        <div class="grid">
+          <div>
+            <label for="start_date">Start Date</label>
+            <input type="date" id="start_date" name="start_date" value="2025-03-01">
+          </div>
+
+          <div>
+            <label for="end_date">End Date</label>
+            <input type="date" id="end_date" name="end_date" value="2025-03-28">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="type">Sale Type</label>
+          <select id="type" name="type">
+            <option value="">All Types</option>
+            <option value="product">Products</option>
+            <option value="service">Services</option>
+            <option value="subscription">Subscriptions</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="status">Status</label>
+          <select id="status" name="status">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" role="button">Generate Report</button>
+        <button type="button" class="secondary" id="export-report">Export CSV</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="report-summary">
+    <h3>Summary: Sales Report</h3>
+
+    <div class="grid">
+      <div>
+        <article>
+          <header>
+            <h4>Total Sales</h4>
+          </header>
+          <p class="big-number">
+            {{ if .monthlySales }}
+              ${{ printf "%.2f" (sum .monthlySales) }}
+            {{ else }}
+              $0.00
+            {{ end }}
+          </p>
+        </article>
+      </div>
+
+      <div>
+        <article>
+          <header>
+            <h4>Number of Transactions</h4>
+          </header>
+          <p class="big-number">{{ len .companySales }}</p>
+          <p class="small-text">
+            {{ if and .monthlySales (gt (len .companySales) 0) }}
+              Average: ${{ printf "%.2f" (div (sum .monthlySales) (len .companySales)) }} per sale
+            {{ else }}
+              No sales data available
+            {{ end }}
+          </p>
+        </article>
+      </div>
+
+      <div>
+        <article>
+          <header>
+            <h4>Top Performing</h4>
+          </header>
+          <p class="medium-text">
+            {{ if .companySales }}
+              {{ topCompany .companySales }}
+            {{ else }}
+              No data available
+            {{ end }}
+          </p>
+          <p class="small-text">
+            {{ if .companySales }}
+              ${{ printf "%.2f" (topCompanyAmount .companySales) }}
+            {{ else }}
+              $0.00
+            {{ end }}
+          </p>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-charts">
+    <div class="grid">
+      <div>
+        <h3>Sales by Type</h3>
+        <div class="chart-container">
+          <div id="sales-by-type-chart" style="width: 100%; height: 300px;"></div>
+          <p class="chart-placeholder">Sales by Type chart will appear here</p>
+        </div>
+      </div>
+
+      <div>
+        <h3>Sales Trend</h3>
+        <div class="chart-container">
+          <div id="sales-trend-chart" style="width: 100%; height: 300px;"></div>
+          <p class="chart-placeholder">Sales Trend chart will appear here</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-data">
+    <h3>Detailed Sales Data</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Company</th>
+          <th>Type</th>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ if .monthlySales }}
+          {{ range $month, $amount := .monthlySales }}
+            <tr>
+              <td>{{ $month }} 2025</td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+              <td>${{ printf "%.2f" $amount }}</td>
+              <td>-</td>
+            </tr>
+          {{ end }}
+        {{ else }}
+          <tr>
+            <td colspan="6">No sales data available</td>
+          </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</article>
+
+{{ block scripts() }}
+<script>
+// Toggle custom date range based on period selection
+document.getElementById('period').addEventListener('change', function() {
+  const customDateRange = document.querySelector('.custom-date-range');
+  
+  if (this.value === 'custom') {
+    customDateRange.style.display = 'block';
+  } else {
+    customDateRange.style.display = 'none';
+  }
+});
+
+// Placeholder for chart initialization
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Charts would be initialized here');
+  
+  // Export to CSV functionality
+  document.getElementById('export-report').addEventListener('click', function() {
+    alert('CSV export functionality would be triggered here');
+  });
+});
+</script>
+{{ end }}

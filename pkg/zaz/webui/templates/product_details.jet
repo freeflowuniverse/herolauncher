@@ -1,0 +1,64 @@
+{{ extends "./layout" }}
+{{ block documentBody() }}
+<article class="compact">
+  <header class="slim-header">
+    <h2>Product Details</h2>
+    <div class="header-actions button-group">
+      <a href="/products/{{.product.ID}}/edit" role="button" class="secondary small">Edit Product</a>
+      <a href="/products" role="button" class="outline small">Back to List</a>
+    </div>
+  </header>
+
+  <div class="product-info grid">
+    <div class="product-profile">
+      <h3>{{.product.Name}}</h3>
+
+      <p class="identification">
+        <strong>ID:</strong>
+        <span>{{.product.ID}}</span>
+      </p>
+      <p class="category">
+        <strong>Category:</strong>
+        <span>{{.product.Category}}</span>
+      </p>
+      <p class="type">
+        <strong>Type:</strong>
+        <span>{{.product.Type}}</span>
+      </p>
+      <p class="status">
+        <strong>Status:</strong>
+        <span>{{.product.Status}}</span>
+      </p>
+    </div>
+
+    <div class="product-pricing">
+      <h3>Pricing Information</h3>
+      <p class="price">
+        <strong>Price:</strong>
+        <span>{{printf "%.2f" .product.Price}} {{.product.Currency}}</span>
+      </p>
+      <p class="created">
+        <strong>Created At:</strong>
+        <span>{{.product.CreatedAt.Format "2006-01-02"}}</span>
+      </p>
+      <p class="updated">
+        <strong>Updated At:</strong>
+        <span>{{.product.UpdatedAt.Format "2006-01-02"}}</span>
+      </p>
+    </div>
+
+    <div class="product-description">
+      <h3>Description</h3>
+      <p>{{.product.Description}}</p>
+    </div>
+  </div>
+
+  <section class="additional-info">
+    <h3>Additional Information</h3>
+
+    <p>This product is currently {{.product.Status}}.</p>
+    <p>Category: {{.product.Category}}</p>
+    <p>Type: {{.product.Type}}</p>
+  </section>
+</article>
+{{ end }}

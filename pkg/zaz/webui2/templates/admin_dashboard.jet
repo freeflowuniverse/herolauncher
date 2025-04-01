@@ -1,0 +1,187 @@
+{{ extends "layout.jet" }}
+
+{{ block content() }}
+<article>
+    <header>
+        <h2>Admin Dashboard</h2>
+        <p>System administration and management</p>
+    </header>
+
+    <div class="grid">
+        <div>
+            <article>
+                <header>
+                    <h3>System Status</h3>
+                </header>
+                <div class="grid">
+                    <div>
+                        <h4>Server Uptime</h4>
+                        <p>
+                            <strong>{{ stats.Uptime }}</strong>
+                        </p>
+                    </div>
+                    <div>
+                        <h4>Active Users</h4>
+                        <p>
+                            <strong>{{ stats.ActiveUsers }}</strong>
+                            <span> users online</span>
+                        </p>
+                    </div>
+                    <div>
+                        <h4>Database Size</h4>
+                        <p>
+                            <strong>{{ stats.DatabaseSize }}</strong>
+                        </p>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div>
+            <article>
+                <header>
+                    <h3>Recent Activity</h3>
+                </header>
+                {{ if recentActivities }}
+                <ul class="activity-list">
+                    {{ range recentActivities }}
+                    <li>
+                        <span class="activity-time">{{ .TimeAgo }}</span>
+                        <span class="activity-user">{{ .User }}</span>
+                        <span class="activity-action">{{ .Action }}</span>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p class="no-data">No recent activities to display.</p>
+                {{ end }}
+            </article>
+        </div>
+    </div>
+
+    <article>
+        <header>
+            <h3>Quick Actions</h3>
+        </header>
+        <div class="grid">
+            <div>
+                <a href="/admin/users" role="button">Manage Users</a>
+            </div>
+            <div>
+                <a href="/admin/settings" role="button" class="secondary">System Settings</a>
+            </div>
+            <div>
+                <a href="/admin/backup" role="button" class="contrast">Backup Data</a>
+            </div>
+        </div>
+    </article>
+
+    <div class="grid">
+        <div>
+            <article>
+                <header>
+                    <h3>System Resources</h3>
+                </header>
+                <div class="resource-meters">
+                    <div class="resource-meter">
+                        <label>CPU Usage</label>
+                        <progress value="{{ stats.CPUUsage }}" max="100">{{ stats.CPUUsage }}%</progress>
+                        <span>{{ stats.CPUUsage }}%</span>
+                    </div>
+                    <div class="resource-meter">
+                        <label>Memory Usage</label>
+                        <progress value="{{ stats.MemoryUsage }}" max="100">{{ stats.MemoryUsage }}%</progress>
+                        <span>{{ stats.MemoryUsage }}%</span>
+                    </div>
+                    <div class="resource-meter">
+                        <label>Disk Usage</label>
+                        <progress value="{{ stats.DiskUsage }}" max="100">{{ stats.DiskUsage }}%</progress>
+                        <span>{{ stats.DiskUsage }}%</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div>
+            <article>
+                <header>
+                    <h3>User Statistics</h3>
+                </header>
+                <div class="chart-container">
+                    <div id="user-stats-chart" style="width: 100%; height: 300px;"></div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <article>
+        <header>
+            <h3>System Logs</h3>
+        </header>
+        <div class="log-filters">
+            <div class="grid">
+                <div>
+                    <label for="log_level">Log Level</label>
+                    <select id="log_level" name="log_level">
+                        <option value="all" {{ if logFilters.Level == "all" }}selected{{ end }}>All Levels</option>
+                        <option value="debug" {{ if logFilters.Level == "debug" }}selected{{ end }}>Debug</option>
+                        <option value="info" {{ if logFilters.Level == "info" }}selected{{ end }}>Info</option>
+                        <option value="warn" {{ if logFilters.Level == "warn" }}selected{{ end }}>Warning</option>
+                        <option value="error" {{ if logFilters.Level == "error" }}selected{{ end }}>Error</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="log_start_date">Start Date</label>
+                    <input type="date" id="log_start_date" name="log_start_date" value="{{ logFilters.StartDate }}">
+                </div>
+                <div>
+                    <label for="log_end_date">End Date</label>
+                    <input type="date" id="log_end_date" name="log_end_date" value="{{ logFilters.EndDate }}">
+                </div>
+                <div>
+                    <button type="submit" form="log-filter-form">Filter Logs</button>
+                </div>
+            </div>
+        </div>
+        <form id="log-filter-form" method="get" action="/admin/logs"></form>
+
+        <div class="log-entries">
+            {{ if logs }}
+            <pre><code>{{ range logs }}
+{{ .Timestamp }} [{{ .Level }}]: {{ .Message }}
+{{ end }}</code></pre>
+            {{ else }}
+            <p>No log entries match the current filter.</p>
+            {{ end }}
+        </div>
+        <!-- TODO: Add pagination for logs -->
+    </article>
+</article>
+{{ end }}
+
+{{ block scripts() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Example chart data - replace with actual data fetched from server
+    const ctx = document.getElementById('user-stats-chart').getContext('2d');
+    const userStatsChart = new Chart(ctx, {
+        type: 'line', // or 'bar', 'pie', etc.
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], // Example labels
+            datasets: [{
+                label: 'New User Registrations',
+                data: [12, 19, 3, 5, 2, 3], // Example data
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Add JS for log filtering if needed (e.g., AJAX updates)
+</script>
+{{ end }}

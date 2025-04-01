@@ -1,0 +1,63 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+  <header>
+    <h2>Votes</h2>
+    <p>Manage all votes and resolutions in the Freezone</p>
+  </header>
+
+  <div class="action-bar">
+    <a href="/votes/create" role="button">Create Vote</a>
+    <form class="search-form" action="/votes" method="get">
+      <input type="search" name="search" placeholder="Search votes..." value="{{ .search }}">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  {{ if .votes }}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Company</th>
+        <th>Resolution</th>
+        <th>Status</th>
+        <th>Deadline</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .votes }}
+      <tr>
+        <td>{{ .ID }}</td>
+        <td>{{ .CompanyID }}</td>
+        <td>{{ .Title }}</td>
+        <td>{{ .Status }}</td>
+        <td>{{ .EndDate.Format "2006-01-02" }}</td>
+        <td class="actions">
+          <a href="/votes/{{ .ID }}" title="View Details">Details</a>
+          {{ if eq .Status "Open" }}
+          <a href="/votes/{{ .ID }}/cast" title="Cast Vote">Vote</a>
+          {{ end }}
+          {{ if eq .Status "Completed" }}
+          <a href="/votes/{{ .ID }}/results" title="View Results">Results</a>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+  {{ else }}
+  <div class="empty-state">
+    <p>No votes found</p>
+    {{ if .search }}
+    <p>No results for "{{ .search }}"</p>
+    <a href="/votes">Clear search</a>
+    {{ else }}
+    <a href="/votes/create" role="button">Create your first vote</a>
+    {{ end }}
+  </div>
+  {{ end }}
+</article>
+{{ end }}

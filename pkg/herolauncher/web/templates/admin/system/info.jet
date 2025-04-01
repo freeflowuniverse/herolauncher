@@ -1,0 +1,77 @@
+{{ extends "../layout" }}
+
+{{ block documentBody() }}
+  <article class="system-info">
+    <header>
+      <h2 class="title">System Information</h2>
+      <p class="description text-muted">Overview of system resources and configuration</p>
+    </header>
+
+    <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+      <div>
+        <article class="hardware-info">
+          <header>
+            <h3 id="hardware-title">Hardware</h3>
+          </header>
+          
+          <table class="table table-striped" up:poll="/admin/system/hardware-stats" up:target=".hardware-stats" up:poll-interval="1000">
+            <tbody>
+              <tr>
+                <th scope="row">CPU</th>
+                <td>{{ cpuInfo }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Memory</th>
+                <td>{{ memoryInfo }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Disk</th>
+                <td>{{ diskInfo }}</td>
+              </tr>
+              <tr>
+                <th scope="row">Network</th>
+                <td style="white-space: pre-line;">{{ networkInfo }}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          {{ include "partials/network_chart" }}
+        </article>
+      </div>
+
+      <div>
+        <article class="software-info">
+          <header>
+            <h3 id="software-title">Software</h3>
+          </header>
+          
+          <table class="table table-bordered" data:type="software-info">
+            <tbody>
+              <tr>
+                <th scope="row">OS</th>
+                <td>{{ osInfo }}</td>
+              </tr>
+              <tr>
+                <th scope="row">HeroLauncher</th>
+                <td>HeroLauncher</td>
+              </tr>
+              <tr>
+                <th scope="row">Uptime</th>
+                <td>{{ uptimeInfo }}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          {{ include "partials/__cpu_chart" }}
+          {{ include "partials/__memory_chart" }}
+        </article>
+      </div>
+    </div>
+  </article>
+{{ end }}
+
+{{ block scripts() }}
+<script src="/js/echarts/echarts.min.js"></script>
+
+{{ include "partials/__stats_fetcher" }}
+{{ end }}

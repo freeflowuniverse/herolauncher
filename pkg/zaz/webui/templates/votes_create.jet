@@ -1,0 +1,188 @@
+{{ extends "./layout" }}
+
+{{ block "content" }}
+<article>
+    <header>
+        <h2>Create New Vote</h2>
+        <p>Create a new vote or resolution for a company</p>
+    </header>
+
+    {{ if .formErrors }}
+    <div class="form-errors">
+        <h4>Please correct the following errors:</h4>
+        <ul>
+            {{ range .formErrors }}
+            <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ end }}
+
+    <form action="/votes/create" method="post">
+        {{ if .csrfToken }}
+        <input type="hidden" name="csrf_token" value="{{ .csrfToken }}">
+        {{ end }}
+
+        <div class="grid">
+            <div>
+                <label for:"company_id">Company</label>
+                <select id="company_id" name="company_id">
+                    <option value="">Select company</option>
+                    {{ range .companies }}
+                    <option value="{{ .ID }}">{{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <div>
+                <label for:"title">Vote Title</label>
+                <input type="text" id="title" name="title" placeholder="Enter vote title" value="{{ .form.Title }}">
+            </div>
+        </div>
+
+        <div>
+            <label for:"description">Description</label>
+            <textarea id="description" name="description" placeholder="Detailed description of the vote or resolution" rows="4">{{ .form.Description }}</textarea>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for:"vote_type">Vote Type</label>
+                <select id="vote_type" name="vote_type">
+                    <option value="">Select vote type</option>
+                    <option value="resolution">Board Resolution</option>
+                    <option value="shareholder">Shareholder Vote</option>
+                    <option value="election">Board Election</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div>
+                <label for:"majority_type">Majority Type</label>
+                <select id="majority_type" name="majority_type">
+                    <option value="">Select majority type</option>
+                    <option value="simple">Simple Majority (>50%)</option>
+                    <option value="two_thirds">Two-Thirds Majority (≥66.67%)</option>
+                    <option value="three_quarters">Three-Quarters Majority (≥75%)</option>
+                    <option value="unanimous">Unanimous (100%)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for:"start_date">Start Date</label>
+                <input type="date" id="start_date" name="start_date" value="{{ .form.StartDate }}">
+            </div>
+
+            <div>
+                <label for:"deadline">Deadline</label>
+                <input type="date" id="deadline" name="deadline" value="{{ .form.Deadline }}">
+            </div>
+        </div>
+
+        <fieldset>
+            <legend>Vote Options</legend>
+
+            <div class="vote-options">
+                <div class="vote-option">
+                    <div class="grid">
+                        <div>
+                            <label for:"option_1">Option 1</label>
+                            <input type="text" id="option_1" name="options[]" placeholder="Enter option" value="{{ if and .form.Options (gt (len .form.Options) 0) }}{{ index .form.Options 0 }}{{ end }}">
+                        </div>
+
+                        <div>
+                            <label for:"option_1_description">Description (Optional)</label>
+                            <input type="text" id="option_1_description" name="option_descriptions[]" placeholder="Brief description" value="{{ if and .form.OptionDescriptions (gt (len .form.OptionDescriptions) 0) }}{{ index .form.OptionDescriptions 0 }}{{ end }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vote-option">
+                    <div class="grid">
+                        <div>
+                            <label for:"option_2">Option 2</label>
+                            <input type="text" id="option_2" name="options[]" placeholder="Enter option" value="{{ if and .form.Options (gt (len .form.Options) 1) }}{{ index .form.Options 1 }}{{ end }}">
+                        </div>
+
+                        <div>
+                            <label for:"option_2_description">Description (Optional)</label>
+                            <input type="text" id="option_2_description" name="option_descriptions[]" placeholder="Brief description" value="{{ if and .form.OptionDescriptions (gt (len .form.OptionDescriptions) 1) }}{{ index .form.OptionDescriptions 1 }}{{ end }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="add-option">+ Add Another Option</button>
+        </fieldset>
+
+        <fieldset>
+            <legend>Eligible Voters</legend>
+
+            <div>
+                <label for:"voter_type">Who Can Vote</label>
+                <select id="voter_type" name="voter_type">
+                    <option value="">Select voter type</option>
+                    <option value="all_shareholders">All Shareholders</option>
+                    <option value="board_members">Board Members Only</option>
+                    <option value="specific">Specific Shareholders</option>
+                </select>
+            </div>
+
+            <div class="specific-voters" style="display: none;">
+                <label>Select Specific Shareholders</label>
+                {{ range .shareholders }}
+                <div class="checkbox-item">
+                    <input type="checkbox" id="voter_{{ .ID }}" name="specific_voters[]" value="{{ .ID }}">
+                    <label for="voter_{{ .ID }}">{{ .Name }} ({{ .Email }})</label>
+                </div>
+                {{ end }}
+            </div>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" role="button">Create Vote</button>
+            <a href="/votes" role="button" class="secondary">Cancel</a>
+        </div>
+    </form>
+
+    {{ block "scripts" }}
+    <script>
+        // Add more vote options
+        document.querySelector('.add-option').addEventListener('click', function() {
+            const voteOptions = document.querySelector('.vote-options');
+            const optionCount = voteOptions.querySelectorAll('.vote-option').length + 1;
+            
+            const newOption = document.createElement('div');
+            newOption.className = 'vote-option';
+            newOption.innerHTML = `
+                <div class="grid">
+                    <div>
+                        <label for="option_${optionCount}">Option ${optionCount}</label>
+                        <input type="text" id="option_${optionCount}" name="options[]" placeholder="Enter option" required>
+                    </div>
+                    <div>
+                        <label for="option_${optionCount}_description">Description (Optional)</label>
+                        <input type="text" id="option_${optionCount}_description" name="option_descriptions[]" placeholder="Brief description">
+                    </div>
+                </div>
+            `;
+            
+            voteOptions.appendChild(newOption);
+        });
+        
+        // Toggle specific voters section
+        document.getElementById('voter_type').addEventListener('change', function() {
+            const specificVoters = document.querySelector('.specific-voters');
+            
+            if (this.value === 'specific') {
+                specificVoters.style.display = 'block';
+            } else {
+                specificVoters.style.display = 'none';
+            }
+        });
+    </script>
+    {{ end }}
+</article>
+{{ end }}

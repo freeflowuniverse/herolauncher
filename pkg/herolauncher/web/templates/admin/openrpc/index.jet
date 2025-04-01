@@ -1,0 +1,86 @@
+{{ extends "../layout" }}
+
+{{ block documentBody() }}
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="mb-3">OpenRPC Manager</h1>
+            <p class="lead">This page provides access to all available OpenRPC servers and their APIs.</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Available OpenRPC Servers</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Server Name</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Virtual File System (VFS)</td>
+                                <td>Provides file system operations including upload, download, and metadata management</td>
+                                <td>
+                                    <span class="badge bg-success">Running</span>
+                                </td>
+                                <td>
+                                    <a href="/admin/openrpc/vfs" class="btn btn-sm btn-primary">View API</a>
+                                    <a href="/api/vfs/openrpc" target="_blank" class="btn btn-sm btn-secondary ms-2">Schema</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">OpenRPC Information</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>What is OpenRPC?</strong> OpenRPC is a standard for describing JSON-RPC 2.0 APIs, similar to how OpenAPI (Swagger) describes REST APIs.
+                    </p>
+
+                    <p>
+                        <strong>Benefits:</strong>
+                        <ul>
+                            <li>Standardized API documentation</li>
+                            <li>Automatic client and server code generation</li>
+                            <li>Consistent interface across different programming languages</li>
+                            <li>Self-documenting APIs with built-in schema validation</li>
+                        </ul>
+                    </p>
+
+                    <p>
+                        <strong>Learn more:</strong>
+                        <a href="https://open-rpc.org/" target="_blank">open-rpc.org</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ block scripts() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any JavaScript functionality here
+    console.log('OpenRPC Manager page loaded');
+});
+</script>
+{{ end }}

@@ -1,0 +1,35 @@
+<!-- right-sidebar.jet - Right sidebar component -->
+<aside class="sidebar right-sidebar">
+    <header>
+        <h4>Quick Actions</h4>
+        <hr>
+    </header>
+    <nav class="is-sticky">
+        <details open>
+            <summary>Actions</summary>
+            <ul>
+                <li><a class="secondary" href="#">Create Report</a></li>
+                <li><a class="secondary" href="#">Export Data</a></li>
+                <li><a class="secondary" href="#">Print View</a></li>
+            </ul>
+        </details>
+
+        <details open>
+            <summary>Recent Items</summary>
+            <ul id="recent-items">
+                <li><a class="secondary" href="#">Company Alpha</a></li>
+                <li><a class="secondary" href="#">Shareholder Meeting</a></li>
+                <li><a class="secondary" href="#">Q1 Sales Report</a></li>
+            </ul>
+        </details>
+
+        <details open>
+            <summary>Notifications</summary>
+            <ul id="notifications">
+                <li><a class="secondary" href="#">New vote request</a></li>
+                <li><a class="secondary" href="#">Meeting reminder</a></li>
+                <li><a class="secondary" href="#">Document approval</a></li>
+            </ul>
+        </details>
+    </nav>
+</aside>

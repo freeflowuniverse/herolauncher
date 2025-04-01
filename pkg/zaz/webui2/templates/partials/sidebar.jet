@@ -1,0 +1,67 @@
+<!-- sidebar.jet - Vertical navigation menu -->
+<aside class="sidebar left-sidebar" id="freezone-menu">
+    <header>
+        <h4>Navigation</h4>
+        <hr>
+    </header>
+    <nav class="is-sticky">
+        <details data-section="dashboard">
+            <summary>Dashboard</summary>
+            <ul>
+                <li><a class="secondary" href="/" data-path="/">Overview</a></li>
+            </ul>
+        </details>
+
+        <details data-section="companies">
+            <summary>Companies</summary>
+            <ul>
+                <li><a class="secondary" href="/companies" data-path="/companies">All Companies</a></li>
+                <li><a class="secondary" href="/companies/create" data-path="/companies/create">Register Company</a></li>
+            </ul>
+        </details>
+
+        <details data-section="shareholders">
+            <summary>Shareholders</summary>
+            <ul>
+                <li><a class="secondary" href="/shareholders" data-path="/shareholders">All Shareholders</a></li>
+                <li><a class="secondary" href="/shareholders/create" data-path="/shareholders/create">Add Shareholder</a></li>
+            </ul>
+        </details>
+
+        <details data-section="meetings">
+            <summary>Meetings</summary>
+            <ul>
+                <li><a class="secondary" href="/boardmeetings" data-path="/boardmeetings">All Meetings</a></li>
+                <li><a class="secondary" href="/boardmeetings/create" data-path="/boardmeetings/create">Schedule Meeting</a></li>
+            </ul>
+        </details>
+
+        <details data-section="voting">
+            <summary>Voting</summary>
+            <ul>
+                <li><a class="secondary" href="/votes" data-path="/votes">All Votes</a></li>
+                <li><a class="secondary" href="/votes/create" data-path="/votes/create">Create Vote</a></li>
+                <li><a class="secondary" href="/votes/results" data-path="/votes/results">Vote Results</a></li>
+            </ul>
+        </details>
+
+        <details data-section="sales">
+            <summary>Sales</summary>
+            <ul>
+                <li><a class="secondary" href="/sales" data-path="/sales">All Sales</a></li>
+                <li><a class="secondary" href="/sales/products" data-path="/sales/products">Products</a></li>
+                <li><a class="secondary" href="/sales/services" data-path="/sales/services">Services</a></li>
+                <li><a class="secondary" href="/sales/reports" data-path="/sales/reports">Sales Reports</a></li>
+            </ul>
+        </details>
+
+        <details data-section="account">
+            <summary>Account</summary>
+            <ul>
+                <li><a class="secondary" href="/login" data-path="/login">Login</a></li>
+                <li><a class="secondary" href="/register" data-path="/register">Register</a></li>
+                <li><a class="secondary" href="/logout" data-path="/logout">Logout</a></li>
+            </ul>
+        </details>
+    </nav>
+</aside>

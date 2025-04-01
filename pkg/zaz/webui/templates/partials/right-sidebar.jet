@@ -1,0 +1,34 @@
+<aside class="sidebar right-sidebar">
+  <header>
+    <h4>Quick Actions</h4>
+    <hr/>
+  </header>
+  <nav class="is-sticky">
+    <details open>
+      <summary>Actions</summary>
+      <ul>
+        <li><a href="#" class="secondary">Create Report</a></li>
+        <li><a href="#" class="secondary">Export Data</a></li>
+        <li><a href="#" class="secondary">Print View</a></li>
+      </ul>
+    </details>
+    
+    <details open>
+      <summary>Recent Items</summary>
+      <ul id="recent-items">
+        <li><a href="#" class="secondary">Company Alpha</a></li>
+        <li><a href="#" class="secondary">Shareholder Meeting</a></li>
+        <li><a href="#" class="secondary">Q1 Sales Report</a></li>
+      </ul>
+    </details>
+    
+    <details open>
+      <summary>Notifications</summary>
+      <ul id="notifications">
+        <li><a href="#" class="secondary">New vote request</a></li>
+        <li><a href="#" class="secondary">Meeting reminder</a></li>
+        <li><a href="#" class="secondary">Document approval</a></li>
+      </ul>
+    </details>
+  </nav>
+</aside>

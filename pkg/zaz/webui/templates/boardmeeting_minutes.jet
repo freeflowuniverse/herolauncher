@@ -1,0 +1,239 @@
+{{ extends "./layout" }}
+
+{{ block "content" }}
+<article class="compact">
+  <header class="slim-header">
+    <h2>Meeting Minutes</h2>
+    <div class="header-actions button-group">
+      <a href="#" role="button" class="outline small">Back to Meeting</a>
+    </div>
+  </header>
+
+  <div class="meeting-header">
+    <h3>Board Meeting Minutes</h3>
+    
+    <div class="meeting-meta">
+      <p>
+        <strong>Company:</strong>
+        <a href="#">Company Name</a>
+      </p>
+      <p>
+        <strong>Date:</strong>
+        <span>Meeting Date</span>
+      </p>
+      <p>
+        <strong>Location:</strong>
+        <span>Meeting Location</span>
+      </p>
+      <p>
+        <strong>Status:</strong>
+        <span class="status">Status</span>
+      </p>
+    </div>
+  </div>
+
+  <section class="minutes-content">
+    <fieldset>
+      <legend>Meeting Information</legend>
+      
+      <div class="grid">
+        <div>
+          <label for="start_time">Start Time</label>
+          <input type="time" id="start_time" name="start_time">
+        </div>
+        <div>
+          <label for="end_time">End Time</label>
+          <input type="time" id="end_time" name="end_time">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Attendees</legend>
+      
+      <div class="attendees-section">
+        <div class="checkbox-item">
+          <input type="checkbox" id="attendee_1" name="attendees[]" value="1">
+          <label for="attendee_1">John Doe (Chairman)</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="attendee_2" name="attendees[]" value="2">
+          <label for="attendee_2">Jane Smith (Secretary)</label>
+        </div>
+        <div>
+          <label for="additional_attendees">Additional Attendees</label>
+          <input type="text" id="additional_attendees" name="additional_attendees" placeholder="Other attendees not listed above">
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Agenda and Discussion</legend>
+      
+      <div class="agenda-item">
+        <h4>1. Financial Report</h4>
+        <div>
+          <label for="discussion_0">Discussion</label>
+          <textarea id="discussion_0" name="discussions[]" rows="4" placeholder="Record discussion for this agenda item"></textarea>
+        </div>
+        <div>
+          <label for="decision_0">Decision/Action Item</label>
+          <textarea id="decision_0" name="decisions[]" rows="2" placeholder="Record any decisions or action items"></textarea>
+        </div>
+      </div>
+
+      <div class="agenda-item">
+        <h4>2. Strategic Planning</h4>
+        <div>
+          <label for="discussion_1">Discussion</label>
+          <textarea id="discussion_1" name="discussions[]" rows="4" placeholder="Record discussion for this agenda item"></textarea>
+        </div>
+        <div>
+          <label for="decision_1">Decision/Action Item</label>
+          <textarea id="decision_1" name="decisions[]" rows="2" placeholder="Record any decisions or action items"></textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Resolutions</legend>
+      
+      <div class="resolutions-section">
+        <div class="resolution-items">
+          <div class="resolution-item">
+            <div>
+              <label for="resolution_title_0">Resolution Title</label>
+              <input type="text" id="resolution_title_0" name="resolution_titles[]" placeholder="Resolution title">
+            </div>
+            <div>
+              <label for="resolution_text_0">Resolution Text</label>
+              <textarea id="resolution_text_0" name="resolution_texts[]" rows="3" placeholder="Full text of the resolution"></textarea>
+            </div>
+            <div class="grid">
+              <div>
+                <label for="resolution_votes_for_0">Votes For</label>
+                <input type="number" id="resolution_votes_for_0" name="resolution_votes_for[]" min="0" value="0">
+              </div>
+              <div>
+                <label for="resolution_votes_against_0">Votes Against</label>
+                <input type="number" id="resolution_votes_against_0" name="resolution_votes_against[]" min="0" value="0">
+              </div>
+              <div>
+                <label for="resolution_votes_abstained_0">Abstained</label>
+                <input type="number" id="resolution_votes_abstained_0" name="resolution_votes_abstained[]" min="0" value="0">
+              </div>
+            </div>
+            <div>
+              <label for="resolution_result_0">Result</label>
+              <select id="resolution_result_0" name="resolution_results[]">
+                <option value="">Select result</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Deferred">Deferred</option>
+                <option value="Withdrawn">Withdrawn</option>
+              </select>
+            </div>
+            <button class="remove-resolution" type="button">Remove</button>
+          </div>
+        </div>
+        <button class="add-resolution" type="button">+ Add Resolution</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Additional Notes</legend>
+      <div>
+        <label for="additional_notes">Additional Notes</label>
+        <textarea id="additional_notes" name="additional_notes" rows="5" placeholder="Any additional notes or comments about the meeting"></textarea>
+      </div>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" name="action" value="save" role="button">Save Minutes</button>
+      <button type="submit" name="action" value="finalize" role="button" class="secondary">Finalize Minutes</button>
+    </div>
+  </section>
+
+  <section class="minutes-content hidden">
+    <h3>Meeting Minutes</h3>
+    
+    <div class="minutes-meta">
+      <p>
+        <strong>Start Time:</strong>
+        <span>10:00 AM</span>
+      </p>
+      <p>
+        <strong>End Time:</strong>
+        <span>11:30 AM</span>
+      </p>
+      <p>
+        <strong>Recorded By:</strong>
+        <span>Jane Smith</span>
+      </p>
+    </div>
+
+    <section class="attendees-list">
+      <h4>Attendees</h4>
+      <ul>
+        <li>John Doe (Chairman)</li>
+        <li>Jane Smith (Secretary)</li>
+        <li>Additional attendees</li>
+      </ul>
+    </section>
+
+    <section class="agenda-discussions">
+      <h4>Agenda and Discussions</h4>
+      
+      <div class="agenda-discussion">
+        <h5>1. Financial Report</h5>
+        <div class="discussion">
+          <h6>Discussion:</h6>
+          <p>The financial report for Q1 was presented and discussed.</p>
+        </div>
+        <div class="decision">
+          <h6>Decision/Action Item:</h6>
+          <p>The board approved the financial report unanimously.</p>
+        </div>
+      </div>
+
+      <div class="agenda-discussion">
+        <h5>2. Strategic Planning</h5>
+        <div class="discussion">
+          <h6>Discussion:</h6>
+          <p>The strategic plan for the next fiscal year was presented.</p>
+        </div>
+        <div class="decision">
+          <h6>Decision/Action Item:</h6>
+          <p>The board requested additional information before making a decision.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="resolutions">
+      <h4>Resolutions</h4>
+      
+      <div class="resolution">
+        <h5>Approval of Financial Report</h5>
+        <div class="resolution-text">
+          <p>The board approves the Q1 financial report as presented.</p>
+        </div>
+        <div class="resolution-result">
+          <p>
+            <strong>Result:</strong>
+            <span>Approved (For: 5, Against: 0, Abstained: 0)</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="additional-notes">
+      <h4>Additional Notes</h4>
+      <p>The meeting was adjourned at 11:30 AM.</p>
+    </section>
+  </section>
+</article>
+
+{{ block "scripts" }}
+<script src="/static/js/boardmeeting-minutes.js"></script>
+{{ end }}
+{{ end }}

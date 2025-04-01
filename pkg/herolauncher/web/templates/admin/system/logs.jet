@@ -1,0 +1,131 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+  <article>
+    <header class="flex-container">
+      <div>
+        <h2>System Logs</h2>
+        <p>View and filter system logs</p>
+      </div>
+      <div>
+        <a href="#" role="button" class="outline">Export Logs</a>
+      </div>
+    </header>
+
+    <article class="filter-controls">
+      <form class="log-controls">
+        <div class="grid filter-grid">
+          <div class="filter-item">
+            <label for="log-level">Log Level</label>
+            <select id="log-level">
+              <option value="all">All Levels</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+              <option value="debug">Debug</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="log-source">Log Source</label>
+            <select id="log-source">
+              <option value="all">All Sources</option>
+              <option value="system">System</option>
+              <option value="redis">Redis</option>
+              <option value="executor">Executor</option>
+              <option value="packagemanager">Package Manager</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="log-date">Date Range</label>
+            <input type="date" id="log-date">
+          </div>
+
+          <div class="filter-button">
+            <button type="submit" class="filter-apply">Apply Filters</button>
+          </div>
+        </div>
+      </form>
+    </article>
+
+    <article class="log-container">
+      <header>
+        <h3>Log Output</h3>
+      </header>
+
+      <div class="log-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Level</th>
+              <th>Source</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2025-03-14T06:15:22</td>
+              <td class="log-info">INFO</td>
+              <td>SYSTEM</td>
+              <td>Server started on port 9001</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:15:23</td>
+              <td class="log-info">INFO</td>
+              <td>REDIS</td>
+              <td>Redis server initialized</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:15:24</td>
+              <td class="log-info">INFO</td>
+              <td>EXECUTOR</td>
+              <td>Executor service ready</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:15:25</td>
+              <td class="log-info">INFO</td>
+              <td>PACKAGEMANAGER</td>
+              <td>Package manager initialized</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:16:30</td>
+              <td class="log-info">INFO</td>
+              <td>SYSTEM</td>
+              <td>New client connection from 127.0.0.1</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:17:45</td>
+              <td class="log-warning">WARNING</td>
+              <td>REDIS</td>
+              <td>High memory usage detected (75%)</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:18:12</td>
+              <td class="log-error">ERROR</td>
+              <td>EXECUTOR</td>
+              <td>Failed to execute command: permission denied</td>
+            </tr>
+            <tr>
+              <td>2025-03-14T06:20:05</td>
+              <td class="log-info">INFO</td>
+              <td>PACKAGEMANAGER</td>
+              <td>Package 'web-ui' installed successfully</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <div class="pagination-info">
+          <span>Showing 1-8 of 124 logs</span>
+        </div>
+        <div class="pagination-controls">
+          <a href="#" role="button" class="outline secondary pagination-btn">← Previous</a>
+          <a href="#" role="button" class="outline secondary pagination-btn">Next →</a>
+        </div>
+      </div>
+    </article>
+  </article>
+{{ end }}

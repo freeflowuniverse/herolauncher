@@ -1,0 +1,96 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article class="compact">
+    <header class="slim-header">
+        <h2>Shareholder Details</h2>
+        <div class="header-actions button-group">
+            <a href="/shareholders/{{.shareholder.ID}}/edit" role="button" class="secondary small">Edit Shareholder</a>
+            <a href="/shareholders" role="button" class="outline small">Back to List</a>
+        </div>
+    </header>
+
+    <div class="shareholder-info grid">
+        <div class="shareholder-profile">
+            <h3>{{.shareholder.Name}}</h3>
+            
+            <p class="identification">
+                <strong>ID:</strong> 
+                <span>{{.shareholder.ID}}</span>
+            </p>
+            <p class="company">
+                <strong>Company ID:</strong> 
+                <span>{{.shareholder.CompanyID}}</span>
+            </p>
+            <p class="since">
+                <strong>Member Since:</strong> 
+                <span>{{.shareholder.Since.Format "2006-01-02"}}</span>
+            </p>
+            <p class="type">
+                <strong>Type:</strong> 
+                <span>{{.shareholder.Type}}</span>
+            </p>
+        </div>
+
+        <div class="shareholder-shares">
+            <h3>Share Information</h3>
+            <p class="shares">
+                <strong>Shares:</strong> 
+                <span>{{.shareholder.Shares}}</span>
+            </p>
+            <p class="percentage">
+                <strong>Percentage:</strong> 
+                <span>{{printf "%.1f" .shareholder.Percentage}}%</span>
+            </p>
+            <p class="created">
+                <strong>Created At:</strong> 
+                <span>{{.shareholder.CreatedAt.Format "2006-01-02"}}</span>
+            </p>
+        </div>
+
+        <div class="shareholder-additional">
+            <h3>Additional Information</h3>
+            <p>Created: {{.shareholder.CreatedAt.Format "2006-01-02"}}</p>
+            <p>Updated: {{.shareholder.UpdatedAt.Format "2006-01-02"}}</p>
+        </div>
+    </div>
+
+    <section class="company-info">
+        <h3>Company Information</h3>
+        {{ if .company }}
+        <table>
+            <thead>
+                <tr>
+                    <th>Company ID</th>
+                    <th>Name</th>
+                    <th>Industry</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{.company.ID}}</td>
+                    <td>{{.company.Name}}</td>
+                    <td>{{.company.Industry}}</td>
+                    <td>{{.company.Status}}</td>
+                    <td class="actions">
+                        <a href="/companies/{{.company.ID}}" title="View Company Details" class="action-button">View Company</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        {{ else }}
+        <p class="no-data">No companies associated with this shareholder.</p>
+        {{ end }}
+    </section>
+
+    <section class="additional-info">
+        <h3>Additional Information</h3>
+        
+        <p>This shareholder owns {{.shareholder.Shares}} shares ({{printf "%.1f" .shareholder.Percentage}}%) of the company.</p>
+        <p>Shareholder type: {{.shareholder.Type}}</p>
+        <p>Member since: {{.shareholder.Since.Format "2006-01-02"}}</p>
+    </section>
+</article>
+{{ end }}

@@ -1,0 +1,203 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+  <article class="compact">
+    <header class="slim-header">
+      <h2>Sale Details</h2>
+      <div class="header-actions button-group">
+        <a href="#" role="button" class="secondary small">Edit Sale</a>
+        <a href="/sales" role="button" class="outline small">Back to List</a>
+      </div>
+    </header>
+
+    <div class="sale-info grid">
+      <div class="sale-details">
+        <h3>Sale #12345</h3>
+
+        <p class="company">
+          <strong>Company:</strong>
+          <a href="#">Example Company</a>
+        </p>
+        <p class="type">
+          <strong>Type:</strong>
+          <span>Product</span>
+        </p>
+        <p class="status">
+          <strong>Status:</strong>
+          <span class="status completed">Completed</span>
+        </p>
+        <p class="date">
+          <strong>Date:</strong>
+          <span>2025-03-28</span>
+        </p>
+      </div>
+
+      <div class="customer-details">
+        <h3>Customer Information</h3>
+        <p>
+          <strong>Name:</strong>
+          <span>John Doe</span>
+        </p>
+        <p>
+          <strong>Email:</strong>
+          <a href="mailto:john.doe@example.com">john.doe@example.com</a>
+        </p>
+        <p>
+          <strong>Phone:</strong>
+          <span>+1 555-123-4567</span>
+        </p>
+      </div>
+
+      <div class="payment-details">
+        <h3>Payment Information</h3>
+        <p>
+          <strong>Amount:</strong>
+          <span>| ${{.sale.Amount}}</span>
+        </p>
+        <p>
+          <strong>Payment Method:</strong>
+          <span>| {{.sale.PaymentMethod}}</span>
+        </p>
+        {{ if .sale.TransactionID }}
+        <p>
+          <strong>Transaction ID:</strong>
+          <span>| {{.sale.TransactionID}}</span>
+        </p>
+        {{ end }}
+        {{ if .sale.PaymentDate }}
+        <p>
+          <strong>Payment Date:</strong>
+          <span>| {{.sale.PaymentDate.Format "2006-01-02"}}</span>
+        </p>
+        {{ end }}
+      </div>
+    </div>
+
+    {{ if eq .sale.Type "product" }}
+    <section class="product-details">
+      <h3>Product Details</h3>
+
+      {{ if .sale.Products }}
+      <table>
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .sale.Products }}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Quantity}}</td>
+            <td>{{.UnitPrice}}</td>
+            <td>{{.Total}}</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+      {{ else }}
+      <p class="no-data">No product details available.</p>
+      {{ end }}
+    </section>
+    {{ end }}
+
+    {{ if eq .sale.Type "service" }}
+    <section class="service-details">
+      <h3>Service Details</h3>
+
+      {{ if .sale.Services }}
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Hours</th>
+            <th>Rate</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{ range .sale.Services }}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Hours}}</td>
+            <td>${{.Rate}}</td>
+            <td>${{.Total}}</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+      {{ else }}
+      <p class="no-data">No service details available.</p>
+      {{ end }}
+    </section>
+    {{ end }}
+
+    {{ if eq .sale.Type "subscription" }}
+    <section class="subscription-details">
+      <h3>Subscription Details</h3>
+
+      {{ if .sale.Subscription }}
+      <div class="subscription-info">
+        <p>
+          <strong>Plan:</strong>
+          <span>{{.sale.Subscription.Plan}}</span>
+        </p>
+        <p>
+          <strong>Duration:</strong>
+          <span>{{.sale.Subscription.Duration}} months</span>
+        </p>
+        <p>
+          <strong>Start Date:</strong>
+          <span>{{.sale.Subscription.StartDate}}</span>
+        </p>
+        <p>
+          <strong>End Date:</strong>
+          <span>{{.sale.Subscription.EndDate}}</span>
+        </p>
+        <p>
+          <strong>Status:</strong>
+          <span>{{.sale.Subscription.Status}}</span>
+        </p>
+      </div>
+      {{ else }}
+      <p class="no-data">No subscription details available.</p>
+      {{ end }}
+    </section>
+    {{ end }}
+
+    <section class="notes">
+      <h3>Notes</h3>
+
+      {{ if .sale.Notes }}
+      <p>{{.sale.Notes}}</p>
+      {{ else }}
+      <p class="no-data">No additional notes.</p>
+      {{ end }}
+    </section>
+
+    {{ if .sale.Timeline }}
+    <section class="timeline">
+      <h3>Timeline</h3>
+
+      <ul class="sale-timeline">
+        {{ range .sale.Timeline }}
+        <li>
+          <div class="timeline-date">{{.Date}}</div>
+          <div class="timeline-event">
+            <strong>{{.Event}}</strong>
+            {{ if .Description }}
+            <p>{{.Description}}</p>
+            {{ end }}
+          </div>
+        </li>
+        {{ end }}
+      </ul>
+      {{ else }}
+      <p class="no-data">No timeline events recorded.</p>
+      {{ end }}
+    </section>
+  </article>
+{{ end }}

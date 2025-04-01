@@ -1,0 +1,67 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+    <header>
+        <h2>Schedule Board Meeting</h2>
+        <p>Create a new board meeting for a company</p>
+    </header>
+
+    {{ if .error }}
+    <div class="form-errors">
+        <h4>Please correct the following errors:</h4>
+        <p>{{ .error }}</p>
+    </div>
+    {{ end }}
+
+    <form action="/boardmeetings/create" method="post">
+        {{ if .csrfToken }}
+        <input type="hidden" name="csrf_token" value="{{ .csrfToken }}">
+        {{ end }}
+        
+        <div class="grid">
+            <div>
+                <label for="title">Meeting Title</label>
+                <input type="text" id="title" name="title" placeholder="Enter meeting title" value="{{ .form.Title }}">
+            </div>
+            
+            <div>
+                <label for="company_id">Company</label>
+                <select id="company_id" name="company_id">
+                    <option value="">Select company</option>
+                    {{ range .companies }}
+                    <option value="{{ .ID }}">{{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for="date">Meeting Date</label>
+                <input type="date" id="date" name="date" value="{{ .form.Date }}">
+            </div>
+            
+            <div>
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" placeholder="Meeting location" value="{{ .form.Location }}">
+            </div>
+        </div>
+
+        <div>
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Meeting agenda and details" rows="4">{{ .form.Description }}</textarea>
+        </div>
+
+        <fieldset>
+            <legend>Attendees</legend>
+            <p>Attendees can be added after creating the meeting</p>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" role="button">Schedule Meeting</button>
+            <a href="/boardmeetings" role="button" class="secondary">Cancel</a>
+        </div>
+    </form>
+</article>
+{{ end }}

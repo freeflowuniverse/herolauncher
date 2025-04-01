@@ -1,0 +1,6 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+  <h1>Test Logs Page</h1>
+  <p>This is a simple test template</p>
+{{ end }}

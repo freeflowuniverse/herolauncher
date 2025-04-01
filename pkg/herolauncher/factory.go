@@ -13,9 +13,9 @@ import (
 
 	"github.com/freeflowuniverse/herolauncher/pkg/executor"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
-	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api/routes"
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/pages"
 	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/client"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces"
@@ -25,21 +25,20 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/swagger"
-	"github.com/gofiber/template/pug/v2"
+	"github.com/gofiber/template/jet/v2"
 )
 
 // Config holds the configuration for the HeroLauncher server
 type Config struct {
-	Port                 string
-	RedisTCPPort         string
-	RedisSocketPath      string
-	TemplatesPath        string
-	StaticFilesPath      string
-	PMSocketPath         string // ProcessManager socket path
-	PMSecret             string // ProcessManager authentication secret
-	VFSSocketPath        string // VFS OpenRPC socket path
-	VFSSecret            string // VFS OpenRPC authentication secret
+	Port            string
+	RedisTCPPort    string
+	RedisSocketPath string
+	TemplatesPath   string
+	StaticFilesPath string
+	PMSocketPath    string // ProcessManager socket path
+	PMSecret        string // ProcessManager authentication secret
+	VFSSocketPath   string // VFS OpenRPC socket path
+	VFSSecret       string // VFS OpenRPC authentication secret
 }
 
 // DefaultConfig returns a default configuration for the HeroLauncher server
@@ -47,7 +46,7 @@ func DefaultConfig() Config {
 	// Get the absolute path to the project root
 	_, filename, _, _ := runtime.Caller(0)
 	projectRoot := filepath.Join(filepath.Dir(filename), "../..")
-	
+
 	// Check for PORT environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -59,9 +58,9 @@ func DefaultConfig() Config {
 		RedisTCPPort:    "6379",
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		PMSocketPath:    "/tmp/processmanager.sock", // Default ProcessManager socket path
-		PMSecret:        "secret123", // Default ProcessManager secret
-		VFSSocketPath:   "/tmp/vfs.sock", // Default VFS socket path
-		VFSSecret:       "vfs_secret", // Default VFS secret
+		PMSecret:        "secret123",                // Default ProcessManager secret
+		VFSSocketPath:   "/tmp/vfs.sock",            // Default VFS socket path
+		VFSSecret:       "vfs_secret",               // Default VFS secret
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
 		StaticFilesPath: filepath.Join(projectRoot, "pkg/herolauncher/web/static"),
 	}
@@ -73,11 +72,11 @@ type HeroLauncher struct {
 	redisServer     *redisserver.Server
 	executorService *executor.Executor
 	packageManager  *packagemanager.PackageManager
-	pmClient        *client.Client
-	pmProcess       *os.Process    // Process for the process manager
+	pm              *processmanager.ProcessManager
+	pmProcess       *os.Process           // Process for the process manager
 	vfsManager      interfaces.VFSManager // VFS manager implementation
-	vfsClient       *openrpc.Client // VFS OpenRPC client
-	vfsServer       *openrpc.Server // VFS OpenRPC server
+	vfsClient       *openrpc.Client       // VFS OpenRPC client
+	vfsServer       *openrpc.Server       // VFS OpenRPC server
 	config          Config
 	startTime       time.Time
 }
@@ -91,10 +90,10 @@ func New(config Config) *HeroLauncher {
 	})
 	executorService := executor.NewExecutor()
 	packageManagerService := packagemanager.NewPackageManager()
-	
-	// Initialize process manager client
-	pmClient := client.New(config.PMSocketPath, config.PMSecret)
-	
+
+	// Initialize process manager directly
+	pm := processmanager.NewProcessManager(config.PMSecret)
+
 	// Initialize VFS manager and client
 	vfsManager := mock.NewMockVFSManager() // Using mock implementation for now
 	vfsClient := openrpc.NewClient(config.VFSSocketPath, config.VFSSecret)
@@ -106,7 +105,7 @@ func New(config Config) *HeroLauncher {
 		log.Fatalf("Failed to get absolute path for templates: %v", err)
 	}
 
-	engine := pug.New(absTemplatePath, ".pug")
+	engine := jet.New(absTemplatePath, ".jet")
 	engine.Debug(true) // Enable debug mode to see template errors
 	// Reload templates on each render in development
 	engine.Reload(true)
@@ -127,7 +126,7 @@ func New(config Config) *HeroLauncher {
 	app.Use(cors.New())
 
 	// Swagger documentation
-	app.Get("/swagger/*", swagger.HandlerDefault)
+	SetupSwagger(app)
 
 	// Static files - serve all directories with proper paths
 	app.Static("/", config.StaticFilesPath)
@@ -149,7 +148,7 @@ func New(config Config) *HeroLauncher {
 		redisServer:     redisServer,
 		executorService: executorService,
 		packageManager:  packageManagerService,
-		pmClient:        pmClient,
+		pm:              pm,
 		vfsManager:      vfsManager,
 		vfsClient:       vfsClient,
 		vfsServer:       vfsServer,
@@ -165,12 +164,6 @@ func New(config Config) *HeroLauncher {
 
 // setupRoutes initializes and registers all route handlers
 func (hl *HeroLauncher) setupRoutes() {
-	// Initialize route handlers
-	executorHandler := routes.NewExecutorHandler(hl.executorService)
-	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
-	redisHandler := routes.NewRedisHandler(hl.redisServer)
-	serviceHandler := routes.NewServiceHandler(hl.pmClient, log.Default())
-	vfsHandler := routes.NewVFSHandler(hl.vfsClient, log.Default())
 	// Initialize StatsManager
 	statsManager, err := stats.NewStatsManagerWithDefaults()
 	if err != nil {
@@ -178,16 +171,38 @@ func (hl *HeroLauncher) setupRoutes() {
 		statsManager = nil
 	}
 
-	// Pass HeroLauncher as an UptimeProvider and StatsManager
-	adminHandler := routes.NewAdminHandler(hl, statsManager)
+	// Initialize API handlers
+	apiAdminHandler := api.NewAdminHandler(hl, statsManager)
+	apiServiceHandler := api.NewServiceHandler(hl.pm, log.Default())
 
-	// Register routes
+	// Initialize Page handlers
+	pageAdminHandler := pages.NewAdminHandler(hl, statsManager)
+	pageServiceHandler := pages.NewServiceHandler(hl.pm, log.Default())
+
+	// Register API routes
+	apiAdminHandler.RegisterRoutes(hl.app)
+	apiServiceHandler.RegisterRoutes(hl.app)
+
+	// Register Page routes
+	pageAdminHandler.RegisterRoutes(hl.app)
+	pageServiceHandler.RegisterRoutes(hl.app)
+
+	// TODO: Move these to appropriate API or pages packages
+	executorHandler := api.NewExecutorHandler(hl.executorService)
+	//vfsHandler := routesold.NewVFSHandler(hl.vfsClient, log.Default())
+
+	// Create new API handlers
+	redisAddr := "localhost:" + hl.config.RedisTCPPort
+	redisHandler := api.NewRedisHandler(redisAddr, false)
+	jetHandler := api.NewJetHandler()
+
+	// Register legacy routes (to be migrated)
 	executorHandler.RegisterRoutes(hl.app)
-	packageManagerHandler.RegisterRoutes(hl.app)
+	//vfsHandler.RegisterRoutes(hl.app)
+
+	// Register new API routes
 	redisHandler.RegisterRoutes(hl.app)
-	adminHandler.RegisterRoutes(hl.app)
-	serviceHandler.RegisterRoutes(hl.app)
-	vfsHandler.RegisterRoutes(hl.app)
+	jetHandler.RegisterRoutes(hl.app)
 }
 
 // GetUptime returns the uptime of the HeroLauncher server as a formatted string
@@ -224,15 +239,8 @@ func (hl *HeroLauncher) startProcessManager() error {
 
 	// Check if processmanager is already running by testing the socket
 	if _, err := os.Stat(hl.config.PMSocketPath); err == nil {
-		// Try to connect to test if it's actually running
-		pmClient := client.New(hl.config.PMSocketPath, hl.config.PMSecret)
-		err := pmClient.Connect()
-		if err == nil {
-			pmClient.Close()
-			log.Printf("Process manager already running, using existing instance")
-			return nil
-		}
-		// If socket exists but we can't connect, remove it as it's stale
+		// If socket exists but we can't verify it's running, assume it's stale
+		log.Printf("Found existing socket, but can't verify if process manager is running")
 		_ = os.Remove(hl.config.PMSocketPath)
 	}
 
@@ -240,7 +248,7 @@ func (hl *HeroLauncher) startProcessManager() error {
 	cmd := exec.Command("go", "run", processManagerPath, "-socket", hl.config.PMSocketPath, "-secret", hl.config.PMSecret)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	err := cmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start process manager: %v", err)
@@ -259,14 +267,9 @@ func (hl *HeroLauncher) startProcessManager() error {
 		case <-ticker.C:
 			// Check if the socket exists
 			if _, err := os.Stat(hl.config.PMSocketPath); err == nil {
-				// Test connection
-				pmClient := client.New(hl.config.PMSocketPath, hl.config.PMSecret)
-				err := pmClient.Connect()
-				if err == nil {
-					pmClient.Close()
-					log.Printf("Process manager is up and running")
-					return nil
-				}
+				// If socket exists, assume process manager is running
+				log.Printf("Process manager is up and running")
+				return nil
 			}
 		case <-timeout:
 			return fmt.Errorf("timeout waiting for process manager to start")
@@ -298,13 +301,13 @@ func (hl *HeroLauncher) Start() error {
 	go func() {
 		<-c
 		log.Println("Shutting down server...")
-		
+
 		// Kill the process manager if we started it
 		if hl.pmProcess != nil {
 			log.Println("Stopping process manager...")
 			_ = hl.pmProcess.Kill()
 		}
-		
+
 		_ = hl.app.Shutdown()
 	}()
 

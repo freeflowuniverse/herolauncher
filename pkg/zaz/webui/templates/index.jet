@@ -1,0 +1,115 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<article>
+    <header>
+        <h2>Freezone Manager Dashboard</h2>
+        <p>Welcome to the Freezone Management System</p>
+    </header>
+
+    <div class="grid">
+        <div>
+            <article>
+                <header>
+                    <h3>Company Statistics</h3>
+                </header>
+                
+                <div class="grid">
+                    <div>
+                        <h4>Total Companies</h4>
+                        <p>
+                            <strong>{{.companiesCount}}</strong>
+                            <span>registered</span>
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4>Active Companies</h4>
+                        <p>
+                            <strong>{{.activeCompaniesCount}}</strong>
+                            <span>companies</span>
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4>Total Shareholders</h4>
+                        <p>
+                            <strong>{{.shareholdersCount}}</strong>
+                            <span>shareholders</span>
+                        </p>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <div>
+            <article>
+                <header>
+                    <h3>Recent Activity</h3>
+                </header>
+                
+                {{ if .recentActivities }}
+                <ul>
+                    {{ range .recentActivities }}
+                    <li>{{.Description}} ({{.TimeAgo}})</li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p class="no-data">No recent activities to display.</p>
+                {{ end }}
+            </article>
+        </div>
+    </div>
+
+    <article>
+        <header>
+            <h3>Quick Actions</h3>
+        </header>
+
+        <div class="grid">
+            <div>
+                <a href="/companies/create" role="button">Register Company</a>
+            </div>
+
+            <div>
+                <a href="/boardmeetings/create" role="button" class="secondary">Schedule Meeting</a>
+            </div>
+
+            <div>
+                <a href="/votes/create" role="button" class="contrast">Create Vote</a>
+            </div>
+        </div>
+    </article>
+
+    {{ if .upcomingMeetings }}
+    <article>
+        <header>
+            <h3>Upcoming Meetings</h3>
+        </header>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Company</th>
+                    <th>Title</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .upcomingMeetings }}
+                <tr>
+                    <td>{{.Date}}</td>
+                    <td>{{.Company.Name}}</td>
+                    <td>{{.Title}}</td>
+                    <td>
+                        <a href="/boardmeetings/{{.ID}}" title="View Details" class="action-button">Details</a>
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </article>
+    {{ end }}
+</article>
+{{ end }}
