@@ -1,12 +1,16 @@
-package handlerfactory
+package core
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
+	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
@@ -33,15 +37,29 @@ type TelnetServer struct {
 	clients      map[net.Conn]bool // map of client connections to authentication status
 	clientsMutex sync.RWMutex
 	running      bool
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	sigCh        chan os.Signal
+	onShutdown   func()
+	// Map to store client preferences (like json formatting)
+	clientPrefs  map[net.Conn]map[string]bool
+	prefsMutex   sync.RWMutex
 }
 
 // NewTelnetServer creates a new telnet server
 func NewTelnetServer(factory *HandlerFactory, secrets ...string) *TelnetServer {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &TelnetServer{
-		factory: factory,
-		secrets: secrets,
-		clients: make(map[net.Conn]bool),
-		running: false,
+		factory:    factory,
+		secrets:    secrets,
+		clients:    make(map[net.Conn]bool),
+		clientPrefs: make(map[net.Conn]map[string]bool),
+		running:    false,
+		ctx:        ctx,
+		cancel:     cancel,
+		sigCh:      make(chan os.Signal, 1),
+		onShutdown: func() {},
 	}
 }
 
@@ -65,7 +83,13 @@ func (ts *TelnetServer) Start(socketPath string) error {
 	ts.running = true
 
 	// Accept connections in a goroutine
+	ts.wg.Add(1)
 	go ts.acceptConnections(listener)
+
+	// Setup signal handling if this is the first listener
+	if ts.unixListener != nil && ts.tcpListener == nil {
+		ts.setupSignalHandling()
+	}
 
 	return nil
 }
@@ -82,7 +106,13 @@ func (ts *TelnetServer) StartTCP(address string) error {
 	ts.running = true
 
 	// Accept connections in a goroutine
+	ts.wg.Add(1)
 	go ts.acceptConnections(listener)
+
+	// Setup signal handling if this is the first listener
+	if ts.tcpListener != nil && ts.unixListener == nil {
+		ts.setupSignalHandling()
+	}
 
 	return nil
 }
@@ -94,6 +124,9 @@ func (ts *TelnetServer) Stop() error {
 	}
 
 	ts.running = false
+
+	// Signal all goroutines to stop
+	ts.cancel()
 
 	// Close the listeners
 	if ts.unixListener != nil {
@@ -116,31 +149,67 @@ func (ts *TelnetServer) Stop() error {
 	}
 	ts.clientsMutex.Unlock()
 
+	// Wait for all goroutines to finish
+	ts.wg.Wait()
+
+	// Call the onShutdown callback if set
+	if ts.onShutdown != nil {
+		ts.onShutdown()
+	}
+
 	return nil
 }
 
 // acceptConnections accepts incoming connections
 func (ts *TelnetServer) acceptConnections(listener net.Listener) {
-	for ts.running {
-		conn, err := listener.Accept()
-		if err != nil {
+	defer ts.wg.Done()
+
+	for {
+		// Use a separate goroutine to accept connections so we can check for context cancellation
+		connCh := make(chan net.Conn)
+		errCh := make(chan error)
+
+		go func() {
+			conn, err := listener.Accept()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			connCh <- conn
+		}()
+
+		select {
+		case <-ts.ctx.Done():
+			// Context was canceled, exit the loop
+			return
+		case conn := <-connCh:
+			// Handle the connection in a goroutine
+			ts.wg.Add(1)
+			go ts.handleConnection(conn)
+		case err := <-errCh:
 			if ts.running {
 				fmt.Printf("Failed to accept connection: %v\n", err)
+			} else {
+				// If we're not running, this is expected during shutdown
+				return
 			}
-			continue
 		}
-
-		// Handle the connection in a goroutine
-		go ts.handleConnection(conn)
 	}
 }
 
 // handleConnection handles a client connection
 func (ts *TelnetServer) handleConnection(conn net.Conn) {
+	defer ts.wg.Done()
+
 	// Add client to the map (not authenticated yet)
 	ts.clientsMutex.Lock()
 	ts.clients[conn] = false
 	ts.clientsMutex.Unlock()
+	
+	// Initialize client preferences
+	ts.prefsMutex.Lock()
+	ts.clientPrefs[conn] = make(map[string]bool)
+	ts.prefsMutex.Unlock()
 
 	// Ensure client is removed when connection closes
 	defer func() {
@@ -148,15 +217,22 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 		ts.clientsMutex.Lock()
 		delete(ts.clients, conn)
 		ts.clientsMutex.Unlock()
+		// Also remove client preferences
+		ts.prefsMutex.Lock()
+		delete(ts.clientPrefs, conn)
+		ts.prefsMutex.Unlock()
 	}()
 
 	// Welcome message
-	conn.Write([]byte(" ** Welcome: you are not authenticated, please authenticate with !!core.auth secret:1234\n"))
+	if len(ts.secrets) > 0 {
+		conn.Write([]byte(" ** Welcome: you are not authenticated, please authenticate with !!core.auth secret:'your_secret'\n"))
+	} else {
+		conn.Write([]byte(" ** Welcome to HeroLauncher Telnet Server\n ** Note: Press Enter twice after sending heroscript to execute\n"))
+	}
 
 	// Create a scanner for reading input
 	scanner := bufio.NewScanner(conn)
 	var heroscriptBuffer strings.Builder
-	var lastCommand string
 	commandHistory := []string{}
 	historyPos := 0
 	interactiveMode := true
@@ -208,6 +284,28 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 			}
 			continue
 		}
+		
+		// Handle JSON format toggle
+		if line == "!!json" {
+			ts.prefsMutex.Lock()
+			prefs, exists := ts.clientPrefs[conn]
+			if !exists {
+				prefs = make(map[string]bool)
+				ts.clientPrefs[conn] = prefs
+			}
+			
+			// Toggle JSON format preference
+			currentSetting := prefs["json"]
+			prefs["json"] = !currentSetting
+			ts.prefsMutex.Unlock()
+			
+			if prefs["json"] {
+				conn.Write([]byte("JSON format will be automatically added to all heroscripts.\n"))
+			} else {
+				conn.Write([]byte("JSON format will no longer be automatically added to heroscripts.\n"))
+			}
+			continue
+		}
 
 		// Check authentication
 		isAuthenticated := ts.isClientAuthenticated(conn)
@@ -249,13 +347,13 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 			continue
 		}
 
-		// Empty line executes pending command or repeats last command
+		// Empty line executes pending command but does not repeat last command
 		if line == "" {
 			if heroscriptBuffer.Len() > 0 {
 				// Execute pending command
 				commandText := heroscriptBuffer.String()
-				result := ts.executeHeroscript(commandText, interactiveMode)
-				conn.Write([]byte(result + "\n"))
+				result := ts.executeHeroscript(commandText, conn, interactiveMode)
+				conn.Write([]byte(result))
 
 				// Add to history
 				commandHistory = append(commandHistory, commandText)
@@ -263,11 +361,6 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 
 				// Reset buffer
 				heroscriptBuffer.Reset()
-				lastCommand = commandText
-			} else if lastCommand != "" {
-				// Repeat last command
-				result := ts.executeHeroscript(lastCommand, interactiveMode)
-				conn.Write([]byte(result + "\n"))
 			}
 			continue
 		}
@@ -277,6 +370,7 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 			heroscriptBuffer.WriteString("\n")
 		}
 		heroscriptBuffer.WriteString(line)
+
 	}
 
 	// Handle scanner errors
@@ -287,6 +381,11 @@ func (ts *TelnetServer) handleConnection(conn net.Conn) {
 
 // isClientAuthenticated checks if a client is authenticated
 func (ts *TelnetServer) isClientAuthenticated(conn net.Conn) bool {
+	// If no secrets are configured, authentication is not required
+	if len(ts.secrets) == 0 {
+		return true
+	}
+
 	ts.clientsMutex.RLock()
 	defer ts.clientsMutex.RUnlock()
 
@@ -304,8 +403,28 @@ func (ts *TelnetServer) isValidSecret(secret string) bool {
 	return false
 }
 
+// connKey is a type for context keys
+type connKey struct{}
+
+// connKeyValue is the key for storing the connection in context
+var connKeyValue = connKey{}
+
 // executeHeroscript executes a heroscript and returns the result
-func (ts *TelnetServer) executeHeroscript(script string, interactive bool) string {
+func (ts *TelnetServer) executeHeroscript(script string, conn net.Conn, interactive bool) string {
+	// Check if this connection has JSON formatting enabled
+	if conn != nil {
+		ts.prefsMutex.RLock()
+		prefs, exists := ts.clientPrefs[conn]
+		ts.prefsMutex.RUnlock()
+		
+		if exists && prefs["json"] {
+			// Add format:json if not already present
+			if !strings.Contains(script, "format:json") {
+				script = ts.addJsonFormat(script)
+			}
+		}
+	}
+	
 	if interactive {
 		// Format the script with colors
 		formattedScript := formatHeroscript(script)
@@ -331,6 +450,23 @@ func (ts *TelnetServer) executeHeroscript(script string, interactive bool) strin
 	}
 	return result
 }
+
+// addJsonFormat adds format:json to a heroscript if not already present
+func (ts *TelnetServer) addJsonFormat(script string) string {
+	lines := strings.Split(script, "\n")
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "!!") {
+			// Found action line, add format:json if not present
+			if !strings.Contains(line, "format:") {
+				lines[i] = line + " format:json"
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+
 
 // formatHeroscript formats heroscript with colors for console output only
 // This is not used for telnet responses, only for server-side logging
@@ -389,6 +525,53 @@ func formatHeroscript(script string) string {
 }
 
 // generateHelpText generates help text for available commands
+// EnableSignalHandling sets up signal handling for graceful shutdown
+// This is now deprecated as signal handling is automatically set up when the server starts
+// It's kept for backward compatibility
+func (ts *TelnetServer) EnableSignalHandling(onShutdown func()) {
+	// Set the onShutdown callback
+	ts.onShutdown = onShutdown
+
+	// Setup the signal handling
+	ts.setupSignalHandling()
+}
+
+// setupSignalHandling sets up signal handling for graceful shutdown
+func (ts *TelnetServer) setupSignalHandling() {
+	// Reset any previous signal notification
+	signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+
+	// Register for SIGINT and SIGTERM signals
+	signal.Notify(ts.sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start a goroutine to handle signals
+	ts.wg.Add(1)
+	go func() {
+		defer ts.wg.Done()
+
+		// Wait for signal
+		sig := <-ts.sigCh
+
+		// Log that we received a signal
+		fmt.Printf("Received %s signal, shutting down telnet server...\n", sig)
+
+		// Stop the telnet server
+		if err := ts.Stop(); err != nil {
+			fmt.Printf("Error stopping telnet server: %v\n", err)
+		} else {
+			fmt.Println("Telnet server stopped successfully")
+		}
+
+		// Call the onShutdown callback if set
+		if ts.onShutdown != nil {
+			ts.onShutdown()
+		}
+
+		// Exit the program if this was triggered by a signal
+		os.Exit(0)
+	}()
+}
+
 func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	var help strings.Builder
 
@@ -403,6 +586,7 @@ func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	help.WriteString("  System Commands:\n")
 	help.WriteString("    !!help, h, ?      - Show this help\n")
 	help.WriteString("    !!interactive, i  - Toggle interactive mode\n")
+	help.WriteString("    !!json            - Toggle automatic JSON formatting for heroscripts\n")
 	help.WriteString("    !!quit, q         - Disconnect\n")
 	help.WriteString("    !!exit            - Disconnect\n")
 	help.WriteString("\n")
@@ -412,22 +596,36 @@ func (ts *TelnetServer) generateHelpText(interactive bool) string {
 	help.WriteString("    !!core.auth secret:'your_secret'  - Authenticate with a secret\n")
 	help.WriteString("\n")
 
-	// Handler actions
-	help.WriteString("  Supported Actions:\n")
-	actions := ts.factory.GetSupportedActions()
-	for actor, actorActions := range actions {
-		help.WriteString(fmt.Sprintf("    %s:\n", actor))
-		for _, action := range actorActions {
-			help.WriteString(fmt.Sprintf("      !!%s.%s\n", actor, action))
-		}
-	}
-	help.WriteString("\n")
-
 	// Usage tips
 	help.WriteString("  Usage Tips:\n")
 	help.WriteString("    - Enter an empty line to execute a command\n")
 	help.WriteString("    - Commands can span multiple lines\n")
 	help.WriteString("    - Use arrow up to access command history\n")
+	help.WriteString("------------------------------------------------\n\n")
+
+	// Handler help sections
+	help.WriteString("Handler Documentation:\n\n")
+
+	// Get all registered handlers
+	for actorName, handler := range ts.factory.handlers {
+		// Try to call the Help method on each handler using reflection
+		handlerValue := reflect.ValueOf(handler)
+		helpMethod := handlerValue.MethodByName("Help")
+		
+		if helpMethod.IsValid() {
+			// Call the Help method
+			args := []reflect.Value{reflect.ValueOf("")}
+			result := helpMethod.Call(args)
+			
+			// Get the result
+			if len(result) > 0 && result[0].Kind() == reflect.String {
+				helpText := result[0].String()
+				help.WriteString(fmt.Sprintf("  %s Handler (%s):\n", strings.Title(actorName), actorName))
+				help.WriteString(fmt.Sprintf("  %s\n", helpText))
+				help.WriteString("\n")
+			}
+		}
+	}
 
 	return help.String()
 }
