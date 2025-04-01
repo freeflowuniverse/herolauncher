@@ -42,7 +42,7 @@ func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsMan
 // RegisterRoutes registers all admin page routes
 func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 	// Admin routes
-	admin := app.Group("/pages/admin")
+	admin := app.Group("/admin")
 
 	// Dashboard
 	admin.Get("/", h.getDashboard)
@@ -69,7 +69,7 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 
 	// Redirect root to admin
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Redirect("/pages/admin")
+		return c.Redirect("/admin")
 	})
 }
 
@@ -248,6 +248,12 @@ func (h *AdminHandler) getSystemSettings(c *fiber.Ctx) error {
 
 // getHardwareStats returns only the hardware stats for Unpoly polling
 func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
+	// Initialize default values
+	cpuInfo := "Unknown"
+	memoryInfo := "Unknown"
+	diskInfo := "Unknown"
+	networkInfo := "Unknown"
+
 	// Get hardware stats from the StatsManager
 	var hardwareStats map[string]interface{}
 	if h.statsManager != nil {
@@ -257,16 +263,106 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 		hardwareStats = stats.GetHardwareStats()
 	}
 
+	// Extract the formatted strings - safely handle different return types
+	if cpuVal, ok := hardwareStats["cpu"]; ok {
+		switch v := cpuVal.(type) {
+		case string:
+			cpuInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			if model, ok := v["model"].(string); ok {
+				cpuInfo = model
+			}
+		}
+	}
+
+	if memVal, ok := hardwareStats["memory"]; ok {
+		switch v := memVal.(type) {
+		case string:
+			memoryInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			memoryInfo = fmt.Sprintf("%.1f GB / %.1f GB", used, total)
+		}
+	}
+
+	if diskVal, ok := hardwareStats["disk"]; ok {
+		switch v := diskVal.(type) {
+		case string:
+			diskInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			total, used := 0.0, 0.0
+			if totalGB, ok := v["total_gb"].(float64); ok {
+				total = totalGB
+			}
+			if usedGB, ok := v["used_gb"].(float64); ok {
+				used = usedGB
+			}
+			diskInfo = fmt.Sprintf("%.1f GB / %.1f GB", used, total)
+		}
+	}
+
+	if netVal, ok := hardwareStats["network"]; ok {
+		switch v := netVal.(type) {
+		case string:
+			networkInfo = v
+		case map[string]interface{}:
+			// Format the map into a string
+			var interfaces []string
+			if ifaces, ok := v["interfaces"].([]interface{}); ok {
+				for _, iface := range ifaces {
+					if ifaceMap, ok := iface.(map[string]interface{}); ok {
+						name := ifaceMap["name"].(string)
+						ip := ifaceMap["ip"].(string)
+						interfaces = append(interfaces, fmt.Sprintf("%s: %s", name, ip))
+					}
+				}
+				networkInfo = strings.Join(interfaces, ", ")
+			}
+		}
+	}
+
 	// Format for display
-	cpuUsage := fmt.Sprintf("%.1f%%", hardwareStats["cpu"].(map[string]interface{})["usage_percent"].(float64))
-	memUsage := fmt.Sprintf("%.1f%%", hardwareStats["memory"].(map[string]interface{})["used_percent"].(float64))
-	diskUsage := fmt.Sprintf("%.1f%%", hardwareStats["disk"].(map[string]interface{})["used_percent"].(float64))
+	cpuUsage := "0.0%"
+	memUsage := "0.0%"
+	diskUsage := "0.0%"
+	
+	// Safely extract usage percentages
+	if cpuVal, ok := hardwareStats["cpu"].(map[string]interface{}); ok {
+		if usagePercent, ok := cpuVal["usage_percent"].(float64); ok {
+			cpuUsage = fmt.Sprintf("%.1f%%", usagePercent)
+		}
+	}
+	
+	if memVal, ok := hardwareStats["memory"].(map[string]interface{}); ok {
+		if usedPercent, ok := memVal["used_percent"].(float64); ok {
+			memUsage = fmt.Sprintf("%.1f%%", usedPercent)
+		}
+	}
+	
+	if diskVal, ok := hardwareStats["disk"].(map[string]interface{}); ok {
+		if usedPercent, ok := diskVal["used_percent"].(float64); ok {
+			diskUsage = fmt.Sprintf("%.1f%%", usedPercent)
+		}
+	}
 
 	// Render only the hardware stats fragment
 	return c.Render("admin/system/hardware_stats_fragment", fiber.Map{
-		"cpuUsage":  cpuUsage,
-		"memUsage":  memUsage,
-		"diskUsage": diskUsage,
+		"cpuInfo":     cpuInfo,
+		"memoryInfo":  memoryInfo,
+		"diskInfo":    diskInfo,
+		"networkInfo": networkInfo,
+		"cpuUsage":    cpuUsage,
+		"memUsage":    memUsage,
+		"diskUsage":   diskUsage,
 	})
 }
 
@@ -274,6 +370,8 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
 	// Get process stats from the StatsManager
 	var processStats map[string]interface{}
+	var errorMsg string
+
 	if h.statsManager != nil {
 		processStats = h.statsManager.GetProcessStatsJSON(100) // Limit to 100 processes
 	} else {
@@ -291,12 +389,19 @@ func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
 		}
 	}
 
+	// If processList is nil, initialize it as an empty slice to avoid template errors
+	if processList == nil {
+		processList = []map[string]interface{}{}
+		errorMsg = "No process data available"
+	}
+
 	// Sort processes by CPU usage (descending)
 	// This would typically be done in Go code, but for simplicity we'll let the template handle it
 
 	return c.Render("admin/system/processes", fiber.Map{
 		"title":     "System Processes",
 		"processes": processList,
+		"error":     errorMsg,
 	})
 }
 
@@ -445,6 +550,8 @@ func generateMethodOptions(methods []string, methodDisplayNames map[string]strin
 func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 	// Get process stats from the StatsManager
 	var processStats map[string]interface{}
+	var errorMsg string
+
 	if h.statsManager != nil {
 		processStats = h.statsManager.GetProcessStatsJSON(100) // Limit to 100 processes
 	} else {
@@ -462,8 +569,15 @@ func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
 		}
 	}
 
+	// If processList is nil, initialize it as an empty slice to avoid template errors
+	if processList == nil {
+		processList = []map[string]interface{}{}
+		errorMsg = "No process data available"
+	}
+
 	// Render only the processes table fragment
 	return c.Render("admin/system/processes_table", fiber.Map{
 		"processes": processList,
+		"error":     errorMsg,
 	})
 }

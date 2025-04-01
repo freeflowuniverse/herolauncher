@@ -1,0 +1,19 @@
+<!-- Hardware stats fragment for polling updates -->
+<tbody>
+  <tr>
+    <th scope="row">CPU</th>
+    <td>{{ cpuInfo }} ({{ cpuUsage }})</td>
+  </tr>
+  <tr>
+    <th scope="row">Memory</th>
+    <td>{{ memoryInfo }} ({{ memUsage }})</td>
+  </tr>
+  <tr>
+    <th scope="row">Disk</th>
+    <td>{{ diskInfo }} ({{ diskUsage }})</td>
+  </tr>
+  <tr>
+    <th scope="row">Network</th>
+    <td style="white-space: pre-line;">{{ networkInfo }}</td>
+  </tr>
+</tbody>

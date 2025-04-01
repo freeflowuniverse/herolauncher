@@ -21,8 +21,10 @@
         </header>
 
         <div class="processes-table-content" up-poll="/admin/system/processes-data" up-interval="10000" style="display: block; width: 100%;" id="processes-content">
-          {{ if .error }}
-          <div class="alert alert-danger">{{ .error }}</div>
+          {{ if isset(.) "error" }}
+            {{ if .error }}
+            <div class="alert alert-danger">{{ .error }}</div>
+            {{ end }}
           {{ end }}
 
           <table class="processes-stats table table-striped">
@@ -43,8 +45,8 @@
                   <td>{{ .pid }}</td>
                   <td>{{ .name }}</td>
                   <td>{{ .status }}</td>
-                  <td>{{ printf "%.1f%%" .cpu_percent }}</td>
-                  <td>{{ printf "%.1f MB" .memory_mb }}</td>
+                  <td>{{ printf("%.1f%%", .cpu_percent) }}</td>
+                  <td>{{ printf("%.1f MB", .memory_mb) }}</td>
                   <td>{{ .create_time_str }}</td>
                 </tr>
                 {{ end }}

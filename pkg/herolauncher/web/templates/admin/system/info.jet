@@ -18,19 +18,19 @@
             <tbody>
               <tr>
                 <th scope="row">CPU</th>
-                <td>{{ system.hardware.cpu }}</td>
+                <td>{{ cpuInfo }}</td>
               </tr>
               <tr>
                 <th scope="row">Memory</th>
-                <td>{{ system.hardware.memory }}</td>
+                <td>{{ memoryInfo }}</td>
               </tr>
               <tr>
                 <th scope="row">Disk</th>
-                <td>{{ system.hardware.disk }}</td>
+                <td>{{ diskInfo }}</td>
               </tr>
               <tr>
                 <th scope="row">Network</th>
-                <td style="white-space: pre-line;">{{ system.hardware.network }}</td>
+                <td style="white-space: pre-line;">{{ networkInfo }}</td>
               </tr>
             </tbody>
           </table>
@@ -49,15 +49,15 @@
             <tbody>
               <tr>
                 <th scope="row">OS</th>
-                <td>{{ system.software.os }}</td>
+                <td>{{ osInfo }}</td>
               </tr>
               <tr>
                 <th scope="row">HeroLauncher</th>
-                <td>{{ system.software.herolauncher }}</td>
+                <td>HeroLauncher</td>
               </tr>
               <tr>
                 <th scope="row">Uptime</th>
-                <td>{{ system.software.uptime }}</td>
+                <td>{{ uptimeInfo }}</td>
               </tr>
             </tbody>
           </table>

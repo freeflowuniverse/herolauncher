@@ -23,7 +23,7 @@ func NewServiceHandler(pm *processmanager.ProcessManager, logger *log.Logger) *S
 
 // RegisterRoutes registers service page routes
 func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
-	services := app.Group("/pages/services")
+	services := app.Group("/services")
 
 	// Page routes
 	services.Get("/", h.getServicesPage)
