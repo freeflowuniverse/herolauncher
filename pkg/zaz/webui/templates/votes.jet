@@ -10,12 +10,12 @@
   <div class="action-bar">
     <a href="/votes/create" role="button">Create Vote</a>
     <form class="search-form" action="/votes" method="get">
-      <input type="search" name="search" placeholder="Search votes..." value="{{ .search }}">
+      <input type="search" name="search" placeholder="Search votes..." value="{{ search }}">
       <button type="submit">Search</button>
     </form>
   </div>
 
-  {{ if .votes }}
+  {{ if votes }}
   <table>
     <thead>
       <tr>
@@ -28,19 +28,19 @@
       </tr>
     </thead>
     <tbody>
-      {{ range .votes }}
+      {{ range votes }}
       <tr>
         <td>{{ .ID }}</td>
-        <td>{{ .CompanyID }}</td>
+        <td>{{ .Company.Name }}</td>
         <td>{{ .Title }}</td>
         <td>{{ .Status }}</td>
-        <td>{{ .EndDate.Format "2006-01-02" }}</td>
+        <td>{{ if .EndDate }}{{ .EndDate.Format("2006-01-02") }}{{ else }}N/A{{ end }}</td>
         <td class="actions">
           <a href="/votes/{{ .ID }}" title="View Details">Details</a>
-          {{ if eq .Status "Open" }}
+          {{ if .Status == "Open" }}
           <a href="/votes/{{ .ID }}/cast" title="Cast Vote">Vote</a>
           {{ end }}
-          {{ if eq .Status "Completed" }}
+          {{ if .Status == "Completed" }}
           <a href="/votes/{{ .ID }}/results" title="View Results">Results</a>
           {{ end }}
         </td>
@@ -51,8 +51,8 @@
   {{ else }}
   <div class="empty-state">
     <p>No votes found</p>
-    {{ if .search }}
-    <p>No results for "{{ .search }}"</p>
+    {{ if search }}
+    <p>No results for "{{ search }}"</p>
     <a href="/votes">Clear search</a>
     {{ else }}
     <a href="/votes/create" role="button">Create your first vote</a>

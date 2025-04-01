@@ -29,6 +29,7 @@ func (h *ShareholderHandler) GetShareholders(c *fiber.Ctx) error {
 		"title": "Shareholders",
 		"shareholders": shareholders,
 		"search": c.Query("search"),
+		"currentYear": time.Now().Year(),
 	})
 }
 
@@ -40,6 +41,10 @@ func (h *ShareholderHandler) GetCreateShareholder(c *fiber.Ctx) error {
 	return RenderWithDefaults(c, "shareholders_create", fiber.Map{
 		"title": "Create Shareholder",
 		"companies": companies,
+		"formErrors": []string{}, // Empty errors for initial load
+		"csrfToken": "sample-token", // This would normally be generated
+		"form": fiber.Map{}, // Empty form for initial load
+		"currentYear": time.Now().Year(),
 	})
 }
 

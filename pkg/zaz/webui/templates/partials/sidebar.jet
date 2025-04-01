@@ -1,135 +1,135 @@
-{{ aside | class("sidebar", "left-sidebar") | id("freezone-menu") }}
-  {{ header }}
-    {{ h4 }}Navigation{{ end }}
-    {{ hr }}
-  {{ end }}
+<aside class="sidebar left-sidebar" id="freezone-menu">
+  <header>
+    <h4>Navigation</h4>
+    <hr>
+  </header>
 
-  {{ nav | class("is-sticky") }}
-    {{ details | data("section", "dashboard") }}
-      {{ summary }}Dashboard{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/") | data("path", "/") }}
+  <nav class="is-sticky">
+    <details data-section="dashboard">
+      <summary>Dashboard</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/" data-path="/">
             Overview
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "companies") }}
-      {{ summary }}Companies{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/companies") | data("path", "/companies") }}
+    <details data-section="companies">
+      <summary>Companies</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/companies" data-path="/companies">
             All Companies
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/companies/create") | data("path", "/companies/create") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/companies/create" data-path="/companies/create">
             Register Company
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "shareholders") }}
-      {{ summary }}Shareholders{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/shareholders") | data("path", "/shareholders") }}
+    <details data-section="shareholders">
+      <summary>Shareholders</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/shareholders" data-path="/shareholders">
             All Shareholders
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/shareholders/create") | data("path", "/shareholders/create") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/shareholders/create" data-path="/shareholders/create">
             Add Shareholder
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "meetings") }}
-      {{ summary }}Meetings{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/boardmeetings") | data("path", "/boardmeetings") }}
+    <details data-section="meetings">
+      <summary>Meetings</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/boardmeetings" data-path="/boardmeetings">
             All Meetings
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/boardmeetings/create") | data("path", "/boardmeetings/create") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/boardmeetings/create" data-path="/boardmeetings/create">
             Schedule Meeting
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "voting") }}
-      {{ summary }}Voting{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/votes") | data("path", "/votes") }}
+    <details data-section="voting">
+      <summary>Voting</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/votes" data-path="/votes">
             All Votes
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/votes/create") | data("path", "/votes/create") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/votes/create" data-path="/votes/create">
             Create Vote
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/votes/results") | data("path", "/votes/results") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/votes/results" data-path="/votes/results">
             Vote Results
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "sales") }}
-      {{ summary }}Sales{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/sales") | data("path", "/sales") }}
+    <details data-section="sales">
+      <summary>Sales</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/sales" data-path="/sales">
             All Sales
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/sales/products") | data("path", "/sales/products") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/sales/products" data-path="/sales/products">
             Products
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/sales/services") | data("path", "/sales/services") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/sales/services" data-path="/sales/services">
             Services
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/sales/reports") | data("path", "/sales/reports") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/sales/reports" data-path="/sales/reports">
             Sales Reports
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
 
-    {{ details | data("section", "account") }}
-      {{ summary }}Account{{ end }}
-      {{ ul }}
-        {{ li }}
-          {{ a | class("secondary") | href("/login") | data("path", "/login") }}
+    <details data-section="account">
+      <summary>Account</summary>
+      <ul>
+        <li>
+          <a class="secondary" href="/login" data-path="/login">
             Login
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/register") | data("path", "/register") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/register" data-path="/register">
             Register
-          {{ end }}
-        {{ end }}
-        {{ li }}
-          {{ a | class("secondary") | href("/logout") | data("path", "/logout") }}
+          </a>
+        </li>
+        <li>
+          <a class="secondary" href="/logout" data-path="/logout">
             Logout
-          {{ end }}
-        {{ end }}
-      {{ end }}
-    {{ end }}
-  {{ end }}
-{{ end }}
+          </a>
+        </li>
+      </ul>
+    </details>
+  </nav>
+</aside>

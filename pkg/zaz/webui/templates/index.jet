@@ -1,5 +1,13 @@
 {{ extends "./layout" }}
 
+{{ block customCSS() }}
+<!-- Custom CSS moved to stylesheet -->
+{{ end }}
+
+{{ block flashMessages() }}
+<!-- No flash messages by default -->
+{{ end }}
+
 {{ block documentBody() }}
 <article>
     <header>
@@ -18,7 +26,7 @@
                     <div>
                         <h4>Total Companies</h4>
                         <p>
-                            <strong>{{.companiesCount}}</strong>
+                            <strong>{{ companiesCount }}</strong>
                             <span>registered</span>
                         </p>
                     </div>
@@ -26,7 +34,7 @@
                     <div>
                         <h4>Active Companies</h4>
                         <p>
-                            <strong>{{.activeCompaniesCount}}</strong>
+                            <strong>{{ activeCompaniesCount }}</strong>
                             <span>companies</span>
                         </p>
                     </div>
@@ -34,7 +42,7 @@
                     <div>
                         <h4>Total Shareholders</h4>
                         <p>
-                            <strong>{{.shareholdersCount}}</strong>
+                            <strong>{{ shareholdersCount }}</strong>
                             <span>shareholders</span>
                         </p>
                     </div>
@@ -48,14 +56,17 @@
                     <h3>Recent Activity</h3>
                 </header>
                 
-                {{ if .recentActivities }}
-                <ul>
-                    {{ range .recentActivities }}
-                    <li>{{.Description}} ({{.TimeAgo}})</li>
-                    {{ end }}
-                </ul>
+                {{ if recentActivities }}
+                    <ul class="activity-list">
+                        {{ range recentActivities }}
+                        <li>
+                            <span class="activity-date">{{.Date}}</span>
+                            <span class="activity-desc">{{.Description}}</span>
+                        </li>
+                        {{ end }}
+                    </ul>
                 {{ else }}
-                <p class="no-data">No recent activities to display.</p>
+                    <p class="no-data">No recent activities to display.</p>
                 {{ end }}
             </article>
         </div>
@@ -81,7 +92,6 @@
         </div>
     </article>
 
-    {{ if .upcomingMeetings }}
     <article>
         <header>
             <h3>Upcoming Meetings</h3>
@@ -97,19 +107,24 @@
                 </tr>
             </thead>
             <tbody>
-                {{ range .upcomingMeetings }}
-                <tr>
-                    <td>{{.Date}}</td>
-                    <td>{{.Company.Name}}</td>
-                    <td>{{.Title}}</td>
-                    <td>
-                        <a href="/boardmeetings/{{.ID}}" title="View Details" class="action-button">Details</a>
-                    </td>
-                </tr>
+                {{ if upcomingMeetings }}
+                    {{ range upcomingMeetings }}
+                    <tr>
+                        <td>{{.Date}}</td>
+                        <td>Unknown</td>
+                        <td>{{.Title}}</td>
+                        <td>
+                            <a href="/boardmeetings/{{.ID}}" title="View Details" class="action-button">Details</a>
+                        </td>
+                    </tr>
+                    {{ end }}
+                {{ else }}
+                    <tr>
+                        <td colspan="4">No upcoming meetings scheduled</td>
+                    </tr>
                 {{ end }}
             </tbody>
         </table>
     </article>
-    {{ end }}
 </article>
 {{ end }}

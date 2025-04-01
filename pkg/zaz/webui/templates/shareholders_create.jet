@@ -7,11 +7,11 @@
     <p>Register a new shareholder in the Freezone</p>
   </header>
 
-  {{ if .formErrors }}
+  {{ if formErrors }}
   <div class="form-errors">
     <h4>Please correct the following errors:</h4>
     <ul>
-      {{ range .formErrors }}
+      {{ range formErrors }}
       <li>{{ . }}</li>
       {{ end }}
     </ul>
@@ -19,37 +19,37 @@
   {{ end }}
 
   <form action="/shareholders/create" method="post">
-    {{ if .csrfToken }}
-    <input type="hidden" name="csrf_token" value="{{ .csrfToken }}">
+    {{ if csrfToken }}
+    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
     {{ end }}
     
     <div class="grid">
       <div>
         <label for="name">Full Name</label>
-        <input type="text" id="name" name="name" placeholder="Enter shareholder name" value="{{ .form.Name }}">
+        <input type="text" id="name" name="name" placeholder="Enter shareholder name" value="{{ form.Name }}">
       </div>
       
       <div>
         <label for="email">Email</label>
-        <input type="email" id="email" name="email" placeholder="shareholder@example.com" value="{{ .form.Email }}">
+        <input type="email" id="email" name="email" placeholder="shareholder@example.com" value="{{ form.Email }}">
       </div>
     </div>
 
     <div class="grid">
       <div>
         <label for="phone">Phone</label>
-        <input type="tel" id="phone" name="phone" placeholder="+1 234 567 8900" value="{{ .form.Phone }}">
+        <input type="tel" id="phone" name="phone" placeholder="+1 234 567 8900" value="{{ form.Phone }}">
       </div>
       
       <div>
         <label for="address">Address</label>
-        <input type="text" id="address" name="address" placeholder="Shareholder address" value="{{ .form.Address }}">
+        <input type="text" id="address" name="address" placeholder="Shareholder address" value="{{ form.Address }}">
       </div>
     </div>
 
     <div>
       <label for="identification">Identification Number</label>
-      <input type="text" id="identification" name="identification" placeholder="ID or Passport number" value="{{ .form.Identification }}">
+      <input type="text" id="identification" name="identification" placeholder="ID or Passport number" value="{{ form.Identification }}">
     </div>
 
     <fieldset>
@@ -57,18 +57,18 @@
       <div class="grid">
         <div>
           <label for="nationality">Nationality</label>
-          <input type="text" id="nationality" name="nationality" placeholder="Shareholder nationality" value="{{ .form.Nationality }}">
+          <input type="text" id="nationality" name="nationality" placeholder="Shareholder nationality" value="{{ form.Nationality }}">
         </div>
         
         <div>
           <label for="tax_id">Tax ID</label>
-          <input type="text" id="tax_id" name="tax_id" placeholder="Tax identification number" value="{{ .form.TaxID }}">
+          <input type="text" id="tax_id" name="tax_id" placeholder="Tax identification number" value="{{ form.TaxID }}">
         </div>
       </div>
 
       <div>
         <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" placeholder="Additional notes about the shareholder" rows="3">{{ .form.Notes }}</textarea>
+        <textarea id="notes" name="notes" placeholder="Additional notes about the shareholder" rows="3">{{ form.Notes }}</textarea>
       </div>
     </fieldset>
 

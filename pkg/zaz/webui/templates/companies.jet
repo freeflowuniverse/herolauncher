@@ -12,15 +12,15 @@
 
   <div class="action-bar">
     <form class="search-form" role="search" action="/companies" method="get">
-      <input type="search" name="search" placeholder="Search companies..." value="{{ .search }}">
+      <input type="search" name="search" placeholder="Search companies..." value="{{ search }}">
       <button type="submit">Search</button>
     </form>
   </div>
 
   <!-- Debug info -->
-  <p>Found {{ .count }} companies in the database</p>
+  <p>Found {{ count }} companies in the database</p>
   
-  {{ if .companies }}
+  {{ if companies }}
   <table>
     <thead>
       <tr>
@@ -32,7 +32,7 @@
       </tr>
     </thead>
     <tbody>
-      {{ range .companies }}
+      {{ range companies }}
       <tr>
         <td>{{ .ID }}</td>
         <td>{{ .Name }}</td>
@@ -49,8 +49,8 @@
   {{ else }}
   <div class="empty-state">
     <p>No companies found</p>
-    {{ if .search }}
-    <p>No results for "{{ .search }}"</p>
+    {{ if search }}
+    <p>No results for "{{ search }}"</p>
     <a href="/companies">Clear search</a>
     {{ else }}
     <a href="/companies/create" role="button">Register your first company</a>

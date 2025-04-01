@@ -1,6 +1,7 @@
 package webhandlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -22,13 +23,33 @@ func NewBoardMeetingHandler(store *models.Store) *BoardMeetingHandler {
 
 // GetBoardMeetings renders the board meetings list page
 func (h *BoardMeetingHandler) GetBoardMeetings(c *fiber.Ctx) error {
-	// Get board meetings directly from the store
+	// Get board meetings directly from the store and preload company information
 	meetings := h.store.BoardMeetingHandler.GetAll()
+	
+	// Preload company information for each meeting
+	for i := range meetings {
+		if company, err := h.store.CompanyHandler.GetByID(meetings[i].CompanyID); err == nil {
+			meetings[i].Company = company
+		}
+	}
 
-	return RenderWithDefaults(c, "boardmeetings", fiber.Map{
+	// Handle potential rendering errors
+	err := RenderWithDefaults(c, "boardmeetings", fiber.Map{
 		"title": "Board Meetings",
-		"meetings": meetings,
+		"boardMeetings": meetings,
+		"search": c.Query("search"),
+		"currentYear": time.Now().Year(),
+		"formErrors": nil,
+		"csrfToken": GetCSRFToken(c),
 	})
+	
+	if err != nil {
+		// Log the error
+		fmt.Printf("Error rendering boardmeetings template: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	
+	return nil
 }
 
 // GetCreateBoardMeeting renders the board meeting creation page
@@ -39,6 +60,10 @@ func (h *BoardMeetingHandler) GetCreateBoardMeeting(c *fiber.Ctx) error {
 	return RenderWithDefaults(c, "boardmeetings_create", fiber.Map{
 		"title": "Schedule Board Meeting",
 		"companies": companies,
+		"currentYear": time.Now().Year(),
+		"formErrors": nil,
+		"csrfToken": GetCSRFToken(c),
+		"form": fiber.Map{},
 	})
 }
 

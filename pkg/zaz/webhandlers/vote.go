@@ -1,6 +1,7 @@
 package webhandlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -22,25 +23,51 @@ func NewVoteHandler(store *models.Store) *VoteHandler {
 
 // GetVotes renders the votes list page
 func (h *VoteHandler) GetVotes(c *fiber.Ctx) error {
-	// Get votes directly from the store
+	// Get votes directly from the store and preload company information
 	votes := h.store.VoteHandler.GetAll()
+	
+	// Preload company information for each vote
+	for i := range votes {
+		if company, err := h.store.CompanyHandler.GetByID(votes[i].CompanyID); err == nil {
+			votes[i].Company = company
+		}
+	}
 
-	return RenderWithDefaults(c, "votes", fiber.Map{
+	// Handle potential rendering errors
+	err := RenderWithDefaults(c, "votes", fiber.Map{
 		"title": "Votes",
 		"votes": votes,
+		"search": c.Query("search"),
+		"currentYear": time.Now().Year(),
+		"formErrors": nil,
+		"csrfToken": GetCSRFToken(c),
 	})
+	
+	if err != nil {
+		// Log the error
+		fmt.Printf("Error rendering votes template: %v\n", err)
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+	
+	return nil
 }
 
 // GetCreateVote renders the vote creation page
 func (h *VoteHandler) GetCreateVote(c *fiber.Ctx) error {
-	// Get list of companies and board meetings directly from the store
+	// Get list of companies, board meetings, and shareholders directly from the store
 	companies := h.store.CompanyHandler.GetAll()
 	boardMeetings := h.store.BoardMeetingHandler.GetAll()
+	shareholders := h.store.ShareholderHandler.GetAll()
 
 	return RenderWithDefaults(c, "votes_create", fiber.Map{
 		"title": "Create Vote",
 		"companies": companies,
 		"boardMeetings": boardMeetings,
+		"shareholders": shareholders,
+		"currentYear": time.Now().Year(),
+		"formErrors": nil,
+		"csrfToken": GetCSRFToken(c),
+		"form": fiber.Map{},
 	})
 }
 
