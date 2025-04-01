@@ -14,7 +14,6 @@ import (
 type Server struct {
 	processManager interfaces.ProcessManagerInterface
 	socketPath     string
-	secret         string
 	openRPCMgr     *openrpcmanager.OpenRPCManager
 	unixServer     *openrpcmanager.UnixServer
 	isRunning      bool
@@ -28,20 +27,17 @@ func NewServer(processManager interfaces.ProcessManagerInterface, socketPath str
 		return nil, fmt.Errorf("failed to create socket directory: %w", err)
 	}
 
-	// Get the secret from the process manager
-	secret := processManager.GetSecret()
-
 	// Load the OpenRPC schema
 	schema, err := LoadSchema()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OpenRPC schema: %w", err)
 	}
 
-	// Create a new handler
-	handler := NewHandler(processManager, secret)
+	// Create a new handler - no authentication now
+	handler := NewHandler(processManager)
 
-	// Create a new OpenRPC manager
-	openRPCMgr, err := openrpcmanager.NewOpenRPCManager(schema, handler.GetHandlers(), secret)
+	// Create a new OpenRPC manager - using empty string for auth (no authentication)
+	openRPCMgr, err := openrpcmanager.NewOpenRPCManager(schema, handler.GetHandlers(), "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenRPC manager: %w", err)
 	}
@@ -55,7 +51,6 @@ func NewServer(processManager interfaces.ProcessManagerInterface, socketPath str
 	return &Server{
 		processManager: processManager,
 		socketPath:     socketPath,
-		secret:         secret,
 		openRPCMgr:     openRPCMgr,
 		unixServer:     unixServer,
 		isRunning:      false,

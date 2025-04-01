@@ -58,7 +58,6 @@ type ProcessInfo struct {
 type ProcessManager struct {
 	processes    map[string]*ProcessInfo
 	mutex        sync.RWMutex
-	secret       string
 	logsBasePath string // Base path for all process logs
 }
 
@@ -69,7 +68,6 @@ func NewProcessManager(secret string) *ProcessManager {
 
 	return &ProcessManager{
 		processes:    make(map[string]*ProcessInfo),
-		secret:       secret,
 		logsBasePath: logsPath,
 	}
 }
@@ -433,11 +431,6 @@ func (pm *ProcessManager) ListProcesses() []*ProcessInfo {
 	}
 
 	return processes
-}
-
-// GetSecret returns the authentication secret
-func (pm *ProcessManager) GetSecret() string {
-	return pm.secret
 }
 
 // GetProcessLogs returns the logs for a specific process

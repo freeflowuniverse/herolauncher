@@ -25,7 +25,7 @@ type ProcessDisplayInfo struct {
 func ConvertToDisplayInfo(info *processmanager.ProcessInfo) ProcessDisplayInfo {
 	// Calculate uptime from start time
 	uptime := formatUptime(time.Since(info.StartTime))
-	
+
 	return ProcessDisplayInfo{
 		ID:        fmt.Sprintf("%d", info.PID),
 		Name:      info.Name,
@@ -56,177 +56,28 @@ func NewServiceHandler(pm *processmanager.ProcessManager, logger *log.Logger) *S
 
 // RegisterRoutes registers service API routes
 func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
-	// Register API routes under /api/services
+
 	apiServices := app.Group("/api/services")
-
-	// @Summary Get running services
-	// @Description Get a list of all currently running services
-	// @Tags services
-	// @Accept json
-	// @Produce json
-	// @Success 200 {object} map[string][]ProcessDisplayInfo
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/running [get]
 	apiServices.Get("/running", h.getRunningServices)
-
-	// @Summary Start a service
-	// @Description Start a new service with the given name and command
-	// @Tags services
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Param command formData string true "Command to run"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/start [post]
 	apiServices.Post("/start", h.startService)
-
-	// @Summary Stop a service
-	// @Description Stop a running service by name
-	// @Tags services
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/stop [post]
 	apiServices.Post("/stop", h.stopService)
-
-	// @Summary Restart a service
-	// @Description Restart a running service by name
-	// @Tags services
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/restart [post]
 	apiServices.Post("/restart", h.restartService)
-
-	// @Summary Delete a service
-	// @Description Delete a service by name
-	// @Tags services
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/delete [post]
 	apiServices.Post("/delete", h.deleteService)
-
-	// @Summary Get process logs
-	// @Description Get logs for a specific process
-	// @Tags services
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Param lines formData integer false "Number of log lines to retrieve"
-	// @Success 200 {object} map[string]string
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /api/services/logs [post]
 	apiServices.Post("/logs", h.getProcessLogs)
 
-	// Register Web UI routes under /admin/services
 	adminServices := app.Group("/admin/services")
-
-	// @Summary Get services page
-	// @Description Get the services management page
-	// @Tags admin
-	// @Produce html
-	// @Success 200 {string} string "HTML content"
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/ [get]
 	adminServices.Get("/", h.getServicesPage)
-
-	// @Summary Get services data
-	// @Description Get services data for AJAX updates
-	// @Tags admin
-	// @Produce html
-	// @Success 200 {string} string "HTML content"
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/data [get]
 	adminServices.Get("/data", h.getServicesData)
-
-	// Mirror the API routes under admin for the web UI
-	// @Summary Get running services (Web UI)
-	// @Description Get a list of all currently running services
-	// @Tags admin
-	// @Accept json
-	// @Produce json
-	// @Success 200 {object} map[string][]ProcessDisplayInfo
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/running [get]
 	adminServices.Get("/running", h.getRunningServices)
-
-	// @Summary Start a service (Web UI)
-	// @Description Start a new service with the given name and command
-	// @Tags admin
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Param command formData string true "Command to run"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/start [post]
 	adminServices.Post("/start", h.startService)
-
-	// @Summary Stop a service (Web UI)
-	// @Description Stop a running service by name
-	// @Tags admin
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/stop [post]
 	adminServices.Post("/stop", h.stopService)
-
-	// @Summary Restart a service (Web UI)
-	// @Description Restart a running service by name
-	// @Tags admin
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/restart [post]
 	adminServices.Post("/restart", h.restartService)
-
-	// @Summary Delete a service (Web UI)
-	// @Description Delete a service by name
-	// @Tags admin
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Success 200 {object} map[string]interface{}
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/delete [post]
 	adminServices.Post("/delete", h.deleteService)
-
-	// @Summary Get process logs (Web UI)
-	// @Description Get logs for a specific process
-	// @Tags admin
-	// @Accept x-www-form-urlencoded
-	// @Produce json
-	// @Param name formData string true "Service name"
-	// @Param lines formData integer false "Number of log lines to retrieve"
-	// @Success 200 {object} map[string]string
-	// @Failure 400 {object} map[string]string
-	// @Failure 500 {object} map[string]string
-	// @Router /admin/services/logs [post]
 	adminServices.Post("/logs", h.getProcessLogs)
 }
 
 // getProcessList gets a list of processes from the process manager
+// TODO: add swagger annotations
 func (h *ServiceHandler) getProcessList() ([]ProcessDisplayInfo, error) {
 	// Debug: Log the function entry
 	h.logger.Printf("Entering getProcessList() function")
@@ -266,7 +117,18 @@ func formatUptime(duration time.Duration) string {
 	}
 }
 
-// startService starts a new service
+// @Summary Start a service
+// @Description Start a new service with the given name and command
+// @Tags services
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param name formData string true "Service name"
+// @Param command formData string true "Command to run"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/services/start [post]
+// @Router /admin/services/start [post]
 func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 	// Get form values
 	name := c.FormValue("name")
@@ -307,6 +169,17 @@ func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Stop a service
+// @Description Stop a running service by name
+// @Tags services
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param name formData string true "Service name"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/services/stop [post]
+// @Router /admin/services/stop [post]
 // stopService stops a service
 func (h *ServiceHandler) stopService(c *fiber.Ctx) error {
 	// Get form values
@@ -342,6 +215,17 @@ func (h *ServiceHandler) stopService(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Restart a service
+// @Description Restart a running service by name
+// @Tags services
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param name formData string true "Service name"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/services/restart [post]
+// @Router /admin/services/restart [post]
 // restartService restarts a service
 func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 	// Get form values
@@ -377,6 +261,17 @@ func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Delete a service
+// @Description Delete a service by name
+// @Tags services
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param name formData string true "Service name"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/services/delete [post]
+// @Router /admin/services/delete [post]
 // deleteService deletes a service
 func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 	// Get form values
@@ -408,7 +303,15 @@ func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 	})
 }
 
-// getRunningServices returns a list of running services in JSON format
+// @Summary Get running services
+// @Description Get a list of all currently running services
+// @Tags services
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string][]ProcessDisplayInfo
+// @Failure 500 {object} map[string]string
+// @Router /api/services/running [get]
+// @Router /admin/services/running [get]
 func (h *ServiceHandler) getRunningServices(c *fiber.Ctx) error {
 	// Get the list of processes
 	processes, err := h.getProcessList()
@@ -436,11 +339,23 @@ func (h *ServiceHandler) getRunningServices(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Get process logs
+// @Description Get logs for a specific process
+// @Tags services
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param name formData string true "Service name"
+// @Param lines formData integer false "Number of log lines to retrieve"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/services/logs [post]
+// @Router /admin/services/logs [post]
 // getProcessLogs retrieves logs for a specific process
 func (h *ServiceHandler) getProcessLogs(c *fiber.Ctx) error {
 	// Get form values
 	name := c.FormValue("name")
-	
+
 	// For backward compatibility, try ID field if name is empty
 	if name == "" {
 		name = c.FormValue("id")
@@ -451,7 +366,7 @@ func (h *ServiceHandler) getProcessLogs(c *fiber.Ctx) error {
 			})
 		}
 	}
-	
+
 	// Get the number of lines to retrieve
 	linesStr := c.FormValue("lines")
 	lines := DefaultLogLines
@@ -480,6 +395,13 @@ func (h *ServiceHandler) getProcessLogs(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Get services page
+// @Description Get the services management page
+// @Tags admin
+// @Produce html
+// @Success 200 {string} string "HTML content"
+// @Failure 500 {object} map[string]string
+// @Router /admin/services/ [get]
 // getServicesPage renders the services page
 func (h *ServiceHandler) getServicesPage(c *fiber.Ctx) error {
 	// Get processes to display on the initial page load
@@ -499,6 +421,13 @@ func (h *ServiceHandler) getServicesPage(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Get services data
+// @Description Get services data for AJAX updates
+// @Tags admin
+// @Produce html
+// @Success 200 {string} string "HTML content"
+// @Failure 500 {object} map[string]string
+// @Router /admin/services/data [get]
 // getServicesData returns only the services fragment for AJAX updates
 func (h *ServiceHandler) getServicesData(c *fiber.Ctx) error {
 	// Get processes

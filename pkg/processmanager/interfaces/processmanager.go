@@ -28,9 +28,6 @@ type ProcessManagerInterface interface {
 
 	// GetProcessLogs returns the logs for a specific process
 	GetProcessLogs(name string, lines int) (string, error)
-
-	// GetSecret returns the authentication secret
-	GetSecret() string
 }
 
 // ProcessStartResult represents the result of starting a process

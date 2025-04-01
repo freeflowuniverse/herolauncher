@@ -12,14 +12,12 @@ import (
 // Handler implements the OpenRPC handlers for process manager operations
 type Handler struct {
 	processManager interfaces.ProcessManagerInterface
-	secret         string
 }
 
 // NewHandler creates a new RPC handler for process manager operations
-func NewHandler(processManager interfaces.ProcessManagerInterface, secret string) *Handler {
+func NewHandler(processManager interfaces.ProcessManagerInterface) *Handler {
 	return &Handler{
 		processManager: processManager,
-		secret:         secret,
 	}
 }
 
