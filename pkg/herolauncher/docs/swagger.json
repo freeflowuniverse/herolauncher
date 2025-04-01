@@ -164,6 +164,9 @@
     "definitions": {
         "api.ErrorResponse": {
             "type": "object",
+            "required": [
+                "error"
+            ],
             "properties": {
                 "error": {
                     "type": "string"
@@ -172,6 +175,10 @@
         },
         "api.ExecuteCommandRequest": {
             "type": "object",
+            "required": [
+                "args",
+                "command"
+            ],
             "properties": {
                 "args": {
                     "type": "array",
@@ -186,6 +193,9 @@
         },
         "api.ExecuteCommandResponse": {
             "type": "object",
+            "required": [
+                "job_id"
+            ],
             "properties": {
                 "job_id": {
                     "type": "string"
@@ -194,6 +204,9 @@
         },
         "api.JetTemplateRequest": {
             "type": "object",
+            "required": [
+                "template"
+            ],
             "properties": {
                 "template": {
                     "type": "string"
@@ -202,6 +215,11 @@
         },
         "api.JetTemplateResponse": {
             "type": "object",
+            "required": [
+                "error",
+                "message",
+                "valid"
+            ],
             "properties": {
                 "error": {
                     "type": "string"
@@ -216,6 +234,16 @@
         },
         "api.JobResponse": {
             "type": "object",
+            "required": [
+                "args",
+                "command",
+                "end_time",
+                "error",
+                "id",
+                "output",
+                "start_time",
+                "status"
+            ],
             "properties": {
                 "args": {
                     "type": "array",

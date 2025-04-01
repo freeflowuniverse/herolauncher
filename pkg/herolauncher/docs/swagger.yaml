@@ -4,6 +4,8 @@ definitions:
     properties:
       error:
         type: string
+    required:
+    - error
     type: object
   api.ExecuteCommandRequest:
     properties:
@@ -13,16 +15,23 @@ definitions:
         type: array
       command:
         type: string
+    required:
+    - args
+    - command
     type: object
   api.ExecuteCommandResponse:
     properties:
       job_id:
         type: string
+    required:
+    - job_id
     type: object
   api.JetTemplateRequest:
     properties:
       template:
         type: string
+    required:
+    - template
     type: object
   api.JetTemplateResponse:
     properties:
@@ -32,6 +41,10 @@ definitions:
         type: string
       valid:
         type: boolean
+    required:
+    - error
+    - message
+    - valid
     type: object
   api.JobResponse:
     properties:
@@ -53,6 +66,15 @@ definitions:
         type: string
       status:
         type: string
+    required:
+    - args
+    - command
+    - end_time
+    - error
+    - id
+    - output
+    - start_time
+    - status
     type: object
 host: localhost:9001
 info:
