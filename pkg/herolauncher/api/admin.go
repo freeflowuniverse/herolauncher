@@ -2,11 +2,10 @@ package api
 
 import (
 	"fmt"
-	"runtime"
+	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/gofiber/fiber/v2"
-	"github.com/shirou/gopsutil/v3/host"
 )
 
 // UptimeProvider defines an interface for getting system uptime
@@ -45,37 +44,62 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 
 	// @Summary Get hardware stats
 	// @Description Get hardware statistics in JSON format
-	// @Tags api
+	// @Tags admin
 	// @Accept json
 	// @Produce json
 	// @Success 200 {object} map[string]interface{}
+	// @Failure 500 {object} ErrorResponse
 	// @Router /api/hardware-stats [get]
 	admin.Get("/hardware-stats", h.getHardwareStatsJSON)
 
 	// @Summary Get process stats
 	// @Description Get process statistics in JSON format
-	// @Tags api
+	// @Tags admin
 	// @Accept json
 	// @Produce json
 	// @Success 200 {object} map[string]interface{}
+	// @Failure 500 {object} ErrorResponse
 	// @Router /api/process-stats [get]
 	admin.Get("/process-stats", h.getProcessStatsJSON)
 }
 
 // getProcessStatsJSON returns process statistics in JSON format for API consumption
 func (h *AdminHandler) getProcessStatsJSON(c *fiber.Ctx) error {
-	// Get process stats from the StatsManager
-	var processStats map[string]interface{}
+	// Get process stats from the StatsManager (limit to top 30 processes)
+	var processData *stats.ProcessStats
+	var err error
 	if h.statsManager != nil {
-		processStats = h.statsManager.GetProcessStats()
+		processData, err = h.statsManager.GetProcessStats(30)
 	} else {
 		// Fallback to direct function call if StatsManager is not available
-		processStats = stats.GetProcessStats()
+		processData, err = stats.GetProcessStats(30)
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error": "Failed to get process stats: " + err.Error(),
+		})
 	}
 
+	// Convert to []fiber.Map for JSON response
+	processStats := make([]fiber.Map, len(processData.Processes))
+	for i, proc := range processData.Processes {
+		processStats[i] = fiber.Map{
+			"pid":             proc.PID,
+			"name":            proc.Name,
+			"status":          proc.Status,
+			"cpu_percent":     proc.CPUPercent,
+			"memory_mb":       proc.MemoryMB,
+			"create_time_str": proc.CreateTime,
+			"is_current":      proc.IsCurrent,
+		}
+	}
+
+	// Return JSON response
 	return c.JSON(fiber.Map{
-		"success": true,
-		"data":    processStats,
+		"success":   true,
+		"processes": processStats,
+		"timestamp": time.Now().Unix(),
 	})
 }
 
@@ -84,14 +108,20 @@ func (h *AdminHandler) getHardwareStatsJSON(c *fiber.Ctx) error {
 	// Get hardware stats from the StatsManager
 	var hardwareStats map[string]interface{}
 	if h.statsManager != nil {
-		hardwareStats = h.statsManager.GetHardwareStats()
+		hardwareStats = h.statsManager.GetHardwareStatsJSON()
 	} else {
 		// Fallback to direct function call if StatsManager is not available
-		hardwareStats = stats.GetHardwareStats()
+		hardwareStats = stats.GetHardwareStatsJSON()
 	}
 
-	return c.JSON(fiber.Map{
+	// Convert to fiber.Map for JSON response
+	response := fiber.Map{
 		"success": true,
-		"data":    hardwareStats,
-	})
+	}
+	for k, v := range hardwareStats {
+		response[k] = v
+	}
+
+	// Return JSON response
+	return c.JSON(response)
 }

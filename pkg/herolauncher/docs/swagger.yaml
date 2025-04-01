@@ -1,10 +1,5 @@
-basePath: /
+basePath: /api
 definitions:
-  api.DeleteKeyResponse:
-    properties:
-      count:
-        type: integer
-    type: object
   api.ErrorResponse:
     properties:
       error:
@@ -24,78 +19,18 @@ definitions:
       job_id:
         type: string
     type: object
-  api.GetKeyResponse:
+  api.JetTemplateRequest:
     properties:
-      value:
+      template:
         type: string
     type: object
-  api.GetKeysResponse:
+  api.JetTemplateResponse:
     properties:
-      keys:
-        items:
-          type: string
-        type: array
-    type: object
-  api.HDelKeyRequest:
-    properties:
-      fields:
-        items:
-          type: string
-        type: array
-      key:
+      error:
         type: string
-    type: object
-  api.HDelKeyResponse:
-    properties:
-      count:
-        type: integer
-    type: object
-  api.HGetKeyResponse:
-    properties:
-      value:
+      message:
         type: string
-    type: object
-  api.HKeysResponse:
-    properties:
-      fields:
-        items:
-          type: string
-        type: array
-    type: object
-  api.HLenResponse:
-    properties:
-      length:
-        type: integer
-    type: object
-  api.HSetKeyRequest:
-    properties:
-      field:
-        type: string
-      key:
-        type: string
-      value:
-        type: string
-    type: object
-  api.HSetKeyResponse:
-    properties:
-      added:
-        type: boolean
-    type: object
-  api.IncrKeyResponse:
-    properties:
-      value:
-        type: integer
-    type: object
-  api.InstallPackageRequest:
-    properties:
-      package_name:
-        type: string
-    type: object
-  api.InstallPackageResponse:
-    properties:
-      output:
-        type: string
-      success:
+      valid:
         type: boolean
     type: object
   api.JobResponse:
@@ -119,71 +54,15 @@ definitions:
       status:
         type: string
     type: object
-  api.ListPackagesResponse:
-    properties:
-      packages:
-        items:
-          type: string
-        type: array
-    type: object
-  api.SearchPackagesResponse:
-    properties:
-      packages:
-        items:
-          type: string
-        type: array
-    type: object
-  api.SetKeyRequest:
-    properties:
-      expiration_seconds:
-        type: integer
-      key:
-        type: string
-      value:
-        type: string
-    type: object
-  api.SetKeyResponse:
-    properties:
-      success:
-        type: boolean
-    type: object
-  api.UninstallPackageRequest:
-    properties:
-      package_name:
-        type: string
-    type: object
-  api.UninstallPackageResponse:
-    properties:
-      output:
-        type: string
-      success:
-        type: boolean
-    type: object
-  routes.JetTemplateRequest:
-    properties:
-      template:
-        type: string
-    type: object
-  routes.JetTemplateResponse:
-    properties:
-      error:
-        type: string
-      message:
-        type: string
-      valid:
-        type: boolean
-    type: object
-host: localhost:9021
+host: localhost:9001
 info:
   contact:
-    email: support@herolauncher.io
-    name: HeroLauncher Support
-    url: https://github.com/freeflowuniverse/herolauncher
-  description: HeroLauncher API provides endpoints for managing services, processes,
-    and system resources
+    email: support@freeflowuniverse.org
+    name: API Support
+  description: API for HeroLauncher - a modular service manager
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
   title: HeroLauncher API
   version: "1.0"
@@ -252,7 +131,7 @@ paths:
       summary: Get job details
       tags:
       - executor
-  /api/jet/checkjet:
+  /api/jet/validate:
     post:
       consumes:
       - application/json
@@ -264,339 +143,23 @@ paths:
         name: template
         required: true
         schema:
-          $ref: '#/definitions/routes.JetTemplateRequest'
+          $ref: '#/definitions/api.JetTemplateRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/routes.JetTemplateResponse'
+            $ref: '#/definitions/api.JetTemplateResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/api.ErrorResponse'
+            additionalProperties: true
+            type: object
       summary: Validate a Jet template
       tags:
       - jet
-  /api/packages/install:
-    post:
-      consumes:
-      - application/json
-      description: Install a package using the appropriate package manager
-      parameters:
-      - description: Package to install
-        in: body
-        name: package
-        required: true
-        schema:
-          $ref: '#/definitions/api.InstallPackageRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.InstallPackageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Install a package
-      tags:
-      - packages
-  /api/packages/list:
-    get:
-      description: Get a list of all installed packages
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.ListPackagesResponse'
-      summary: List installed packages
-      tags:
-      - packages
-  /api/packages/search/{query}:
-    get:
-      description: Search for packages using the appropriate package manager
-      parameters:
-      - description: Search query
-        in: path
-        name: query
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.SearchPackagesResponse'
-      summary: Search for packages
-      tags:
-      - packages
-  /api/packages/uninstall:
-    post:
-      consumes:
-      - application/json
-      description: Uninstall a package using the appropriate package manager
-      parameters:
-      - description: Package to uninstall
-        in: body
-        name: package
-        required: true
-        schema:
-          $ref: '#/definitions/api.UninstallPackageRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.UninstallPackageResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Uninstall a package
-      tags:
-      - packages
-  /api/redis/del/{key}:
-    delete:
-      description: Delete a key and return the number of keys removed
-      parameters:
-      - description: Key to delete
-        in: path
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.DeleteKeyResponse'
-      summary: Delete a key
-      tags:
-      - redis
-  /api/redis/get/{key}:
-    get:
-      description: Get the value of a key
-      parameters:
-      - description: Key to get
-        in: path
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.GetKeyResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Get a key
-      tags:
-      - redis
-  /api/redis/hdel:
-    post:
-      consumes:
-      - application/json
-      description: Delete one or more fields from a hash stored at key
-      parameters:
-      - description: Hash fields to delete
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/api.HDelKeyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.HDelKeyResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Delete hash fields
-      tags:
-      - redis
-  /api/redis/hget/{key}/{field}:
-    get:
-      description: Get the value of a field in a hash stored at key
-      parameters:
-      - description: Hash key
-        in: path
-        name: key
-        required: true
-        type: string
-      - description: Hash field
-        in: path
-        name: field
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.HGetKeyResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Get a hash field
-      tags:
-      - redis
-  /api/redis/hkeys/{key}:
-    get:
-      description: Get all field names in a hash stored at key
-      parameters:
-      - description: Hash key
-        in: path
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.HKeysResponse'
-      summary: Get hash keys
-      tags:
-      - redis
-  /api/redis/hlen/{key}:
-    get:
-      description: Get the number of fields in a hash stored at key
-      parameters:
-      - description: Hash key
-        in: path
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.HLenResponse'
-      summary: Get hash length
-      tags:
-      - redis
-  /api/redis/hset:
-    post:
-      consumes:
-      - application/json
-      description: Set a field in a hash stored at key
-      parameters:
-      - description: Hash field data
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/api.HSetKeyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.HSetKeyResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Set a hash field
-      tags:
-      - redis
-  /api/redis/incr/{key}:
-    post:
-      description: Increment the integer value of a key by one
-      parameters:
-      - description: Key to increment
-        in: path
-        name: key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.IncrKeyResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Increment a key
-      tags:
-      - redis
-  /api/redis/keys/{pattern}:
-    get:
-      description: Get all keys matching the given pattern
-      parameters:
-      - description: Pattern to match
-        in: path
-        name: pattern
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.GetKeysResponse'
-      summary: Get keys matching a pattern
-      tags:
-      - redis
-  /api/redis/set:
-    post:
-      consumes:
-      - application/json
-      description: Set a key with a value and optional expiration
-      parameters:
-      - description: Key data
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/api.SetKeyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/api.SetKeyResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/api.ErrorResponse'
-      summary: Set a key
-      tags:
-      - redis
 schemes:
 - http
 - https
-securityDefinitions:
-  ApiKeyAuth:
-    in: header
-    name: Authorization
-    type: apiKey
 swagger: "2.0"

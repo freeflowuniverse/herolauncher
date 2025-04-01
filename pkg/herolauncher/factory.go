@@ -13,7 +13,7 @@ import (
 
 	"github.com/freeflowuniverse/herolauncher/pkg/executor"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
-	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api/routes"
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/pages"
 	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
@@ -164,13 +164,6 @@ func New(config Config) *HeroLauncher {
 
 // setupRoutes initializes and registers all route handlers
 func (hl *HeroLauncher) setupRoutes() {
-	// Initialize route handlers
-	executorHandler := routes.NewExecutorHandler(hl.executorService)
-	packageManagerHandler := routes.NewPackageManagerHandler(hl.packageManager)
-	redisHandler := routes.NewRedisHandler(hl.redisServer)
-	serviceHandler := routes.NewServiceHandler(hl.pm, log.Default())
-	vfsHandler := routes.NewVFSHandler(hl.vfsClient, log.Default())
-	jetHandler := routes.NewJetHandler()
 	// Initialize StatsManager
 	statsManager, err := stats.NewStatsManagerWithDefaults()
 	if err != nil {
@@ -178,16 +171,37 @@ func (hl *HeroLauncher) setupRoutes() {
 		statsManager = nil
 	}
 
-	// Pass HeroLauncher as an UptimeProvider and StatsManager
-	adminHandler := routes.NewAdminHandler(hl, statsManager)
+	// Initialize API handlers
+	apiAdminHandler := api.NewAdminHandler(hl, statsManager)
+	apiServiceHandler := api.NewServiceHandler(hl.pm, log.Default())
 
-	// Register routes
+	// Initialize Page handlers
+	pageAdminHandler := pages.NewAdminHandler(hl, statsManager)
+	pageServiceHandler := pages.NewServiceHandler(hl.pm, log.Default())
+
+	// Register API routes
+	apiAdminHandler.RegisterRoutes(hl.app)
+	apiServiceHandler.RegisterRoutes(hl.app)
+
+	// Register Page routes
+	pageAdminHandler.RegisterRoutes(hl.app)
+	pageServiceHandler.RegisterRoutes(hl.app)
+
+	// TODO: Move these to appropriate API or pages packages
+	executorHandler := api.NewExecutorHandler(hl.executorService)
+	//vfsHandler := routesold.NewVFSHandler(hl.vfsClient, log.Default())
+
+	// Create new API handlers
+	redisAddr := "localhost:" + hl.config.RedisTCPPort
+	redisHandler := api.NewRedisHandler(redisAddr, false)
+	jetHandler := api.NewJetHandler()
+
+	// Register legacy routes (to be migrated)
 	executorHandler.RegisterRoutes(hl.app)
-	packageManagerHandler.RegisterRoutes(hl.app)
+	//vfsHandler.RegisterRoutes(hl.app)
+
+	// Register new API routes
 	redisHandler.RegisterRoutes(hl.app)
-	adminHandler.RegisterRoutes(hl.app)
-	serviceHandler.RegisterRoutes(hl.app)
-	vfsHandler.RegisterRoutes(hl.app)
 	jetHandler.RegisterRoutes(hl.app)
 }
 

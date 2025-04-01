@@ -1,10 +1,9 @@
-package routes
+package api
 
 import (
 	"strings"
 
 	"github.com/CloudyKit/jet/v6"
-	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -32,8 +31,11 @@ func NewJetHandler() *JetHandler {
 
 // RegisterRoutes registers Jet template routes to the fiber app
 func (h *JetHandler) RegisterRoutes(app *fiber.App) {
-	// Register the checkjet endpoint directly at the root level
-	app.Post("/checkjet", h.validateTemplate)
+	// Create a group for Jet API endpoints
+	jetGroup := app.Group("/api/jet")
+
+	// Register the checkjet endpoint
+	jetGroup.Post("/validate", h.validateTemplate)
 }
 
 // @Summary Validate a Jet template
@@ -43,19 +45,21 @@ func (h *JetHandler) RegisterRoutes(app *fiber.App) {
 // @Produce json
 // @Param template body JetTemplateRequest true "Jet template to validate"
 // @Success 200 {object} JetTemplateResponse
-// @Failure 400 {object} api.ErrorResponse
-// @Router /api/jet/checkjet [post]
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/jet/validate [post]
 func (h *JetHandler) validateTemplate(c *fiber.Ctx) error {
 	var req JetTemplateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(api.ErrorResponse{
-			Error: "Invalid request: " + err.Error(),
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Invalid request: " + err.Error(),
 		})
 	}
 
 	if req.Template == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(api.ErrorResponse{
-			Error: "Template cannot be empty",
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Template cannot be empty",
 		})
 	}
 
@@ -85,21 +89,24 @@ func (h *JetHandler) validateTemplate(c *fiber.Ctx) error {
 			strings.Contains(errMsg, "could not be found") ||
 			strings.Contains(errMsg, "template /") {
 			// Still valid since it's only a dependency error, not a syntax error
-			return c.JSON(JetTemplateResponse{
-				Valid:   true,
-				Message: "Template syntax is valid (ignoring extends/include errors)",
+			return c.JSON(fiber.Map{
+				"success": true,
+				"valid":   true,
+				"message": "Template syntax is valid (ignoring extends/include errors)",
 			})
 		}
 
-		return c.JSON(JetTemplateResponse{
-			Valid: false,
-			Error: errMsg,
+		return c.JSON(fiber.Map{
+			"success": false,
+			"valid":   false,
+			"error":   errMsg,
 		})
 	}
 
 	// If no error, the template is valid
-	return c.JSON(JetTemplateResponse{
-		Valid:   true,
-		Message: "Template is valid",
+	return c.JSON(fiber.Map{
+		"success": true,
+		"valid":   true,
+		"message": "Template is valid",
 	})
 }

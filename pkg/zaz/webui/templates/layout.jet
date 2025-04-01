@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {{ if .pageTitle }}
-    <title>{{.pageTitle}} - Freezone Manager</title>
-    {{ else }}
-    <title>Freezone Manager</title>
-    {{ end }}
+    <title>
+      Zanzibar Autonomous Zone Admin
+    </title>
     <link rel="icon" href="/img/freezone-icon.svg" type="image/svg+xml">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
@@ -22,7 +20,7 @@
     </style>
     {{ end }}
 </head>
-<body class="{{ if .bodyClass }}{{.bodyClass}}{{ else }}{{ end }}">
+<body class=".bodyClass">
     {{ if .flashMessage }}
     <div class="flash-message {{.flashMessage.Type}}">
         <div class="container">
@@ -64,6 +62,5 @@
       {{.customJS}}
     </script>
     {{ end }}
-    {{ yield scripts }}
 </body>
 </html>
