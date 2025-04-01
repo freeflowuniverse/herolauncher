@@ -1,0 +1,83 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Vote Details
+      .header-actions.button-group
+        a(href="#" role="button" class="primary small") Cast Vote
+        a(href="#" role="button" class="secondary small") View Results
+        a(href="/votes" role="button" class="outline small") Back to List
+        
+    .vote-info.grid
+      .vote-details
+        h3 Example Vote Title
+        
+        p.company
+          strong Company: 
+          a(href="#") Example Company
+        p.status
+          strong Status: 
+          span(class="status Open") Open
+        p.type
+          strong Vote Type: 
+          span Board Resolution
+        p.majority
+          strong Majority Required: 
+          span Simple Majority
+        
+      .vote-dates
+        h3 Voting Period
+        p
+          strong Start Date: 
+          span 2025-03-20
+        p
+          strong Deadline: 
+          span 2025-04-05
+        
+      .vote-description
+        h3 Description
+        p This is an example vote description for testing purposes. It outlines the purpose of the vote and provides context for voters.
+      
+    section.vote-options
+      h3 Vote Options
+      
+      .options-list
+        .option-card
+          h4 Option 1: Approve
+          p Approve the proposed resolution
+        .option-card
+          h4 Option 2: Reject
+          p Reject the proposed resolution
+        .option-card
+          h4 Option 3: Abstain
+          p Abstain from voting
+      
+    section.eligible-voters
+      h3 Eligible Voters
+      
+      p All shareholders of Example Company are eligible to vote.
+      
+    section.cast-vote
+      h3 Cast Your Vote
+      
+      form(action="#" method="post")
+        fieldset
+          legend Select Your Vote
+          
+          .radio-item
+            input(type="radio" id="vote_option_0" name="vote_option" value="0")
+            label(for="vote_option_0") Option 1: Approve
+          .radio-item
+            input(type="radio" id="vote_option_1" name="vote_option" value="1")
+            label(for="vote_option_1") Option 2: Reject
+          .radio-item
+            input(type="radio" id="vote_option_2" name="vote_option" value="2")
+            label(for="vote_option_2") Option 3: Abstain
+        
+        div
+          label(for="comment") Comment (Optional)
+          textarea(id="comment" name="comment" placeholder="Add an optional comment with your vote" rows="3")
+        
+        .form-actions
+          button(type="submit" role="button") Submit Vote

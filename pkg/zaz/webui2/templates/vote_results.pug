@@ -1,0 +1,140 @@
+extends layout
+
+block content
+  article.compact
+    header.slim-header
+      h2 Vote Results
+      .header-actions.button-group
+        a(href="/votes/{{.vote.ID}}" role="button" class="outline small") Back to Vote Details
+        a(href="/votes" role="button" class="outline small") Back to List
+        
+    .vote-info.grid
+      .vote-details
+        h3 {{.vote.Title}}
+        
+        p.company
+          strong Company: 
+          a(href="/companies/{{.vote.CompanyID}}") {{.vote.CompanyName}}
+        p.status
+          strong Status: 
+          span(class="status {{.vote.Status}}") {{.vote.Status}}
+        p.completed
+          strong Completed: 
+          span {{.vote.CompletedDate.Format "2006-01-02"}}
+        
+      .vote-summary
+        h3 Result Summary
+        p
+          strong Total Eligible Voters: 
+          span {{.vote.TotalEligibleVoters}}
+        p
+          strong Total Votes Cast: 
+          span {{.vote.TotalVotesCast}}
+        p
+          strong Participation Rate: 
+          span {{.vote.ParticipationRate}}%
+        p
+          strong Outcome: 
+          span.outcome {{.vote.Outcome}}
+      
+    section.results-chart
+      h3 Results Visualization
+      
+      .chart-container
+        #results-chart(style="width: 100%; height: 400px;")
+      
+    section.results-table
+      h3 Detailed Results
+      
+      table
+        thead
+          tr
+            th Option
+            th Votes
+            th Percentage
+        tbody
+          | {{range .vote.Results}}
+          tr
+            td {{.Option}}
+            td {{.Votes}}
+            td {{printf "%.1f" .Percentage}}%
+          | {{end}}
+      
+    section.votes-cast
+      h3 Individual Votes
+      
+      | {{if .vote.VotesCast}}
+      table
+        thead
+          tr
+            th Voter
+            th Vote
+            th Time
+            th Comment
+        tbody
+          | {{range .vote.VotesCast}}
+          tr
+            td {{.VoterName}}
+            td {{.Option}}
+            td {{.Timestamp}}
+            td {{if .Comment}}{{.Comment}}{{else}}-{{end}}
+          | {{end}}
+      | {{else}}
+      p.no-data No individual votes to display.
+      | {{end}}
+
+block scripts
+  script.
+    // Initialize the results chart
+    document.addEventListener('DOMContentLoaded', function() {
+      const chart = echarts.init(document.getElementById('results-chart'));
+      
+      const options = {
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        legend: {
+          orient: 'vertical',
+          left: 10,
+          data: [{{range .vote.Results}}'{{.Option}}',{{end}}]
+        },
+        series: [
+          {
+            name: 'Vote Results',
+            type: 'pie',
+            radius: ['50%', '70%'],
+            avoidLabelOverlap: false,
+            label: {
+              show: false,
+              position: 'center'
+            },
+            emphasis: {
+              label: {
+                show: true,
+                fontSize: '18',
+                fontWeight: 'bold'
+              }
+            },
+            labelLine: {
+              show: false
+            },
+            data: [
+              {{range .vote.Results}}
+              {
+                value: {{.Votes}},
+                name: '{{.Option}}'
+              },
+              {{end}}
+            ]
+          }
+        ]
+      };
+      
+      chart.setOption(options);
+      
+      // Resize chart when window size changes
+      window.addEventListener('resize', function() {
+        chart.resize();
+      });
+    });

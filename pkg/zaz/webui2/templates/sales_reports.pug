@@ -1,0 +1,168 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Sales Reports
+      p Analyze sales performance and generate reports
+    
+    .filters
+      form.filter-form(action="/sales/reports" method="get")
+        .grid
+          div
+            label(for="company_id") Company
+            select(id="company_id" name="company_id")
+              option(value="") All Companies
+              option(value="1") Example Company
+              option(value="2") Another Company
+          
+          div
+            label(for="period") Time Period
+            select(id="period" name="period")
+              option(value="this_month") This Month
+              option(value="last_month") Last Month
+              option(value="this_quarter") This Quarter
+              option(value="last_quarter") Last Quarter
+              option(value="this_year") This Year
+              option(value="custom") Custom Range
+        
+        .custom-date-range(style="display: none;")
+          .grid
+            div
+              label(for="start_date") Start Date
+              input(type="date" id="start_date" name="start_date" value="2025-03-01")
+            
+            div
+              label(for="end_date") End Date
+              input(type="date" id="end_date" name="end_date" value="2025-03-28")
+        
+        .grid
+          div
+            label(for="type") Sale Type
+            select(id="type" name="type")
+              option(value="") All Types
+              option(value="product") Products
+              option(value="service") Services
+              option(value="subscription") Subscriptions
+          
+          div
+            label(for="status") Status
+            select(id="status" name="status")
+              option(value="") All Statuses
+              option(value="pending") Pending
+              option(value="paid") Paid
+              option(value="completed") Completed
+              option(value="cancelled") Cancelled
+        
+        .filter-actions
+          button(type="submit" role="button") Generate Report
+          button(type="button" class="secondary" id="export-report") Export CSV
+    
+    .report-summary
+      h3 Summary: Sales Report
+      
+      .grid
+        div
+          article
+            header
+              h4 Total Sales
+            p.big-number
+              | {{if .monthlySales}}
+              | ${{printf "%.2f" (sum .monthlySales)}}
+              | {{else}}
+              | $0.00
+              | {{end}}
+        
+        div
+          article
+            header
+              h4 Number of Transactions
+            p.big-number {{len .companySales}}
+            p.small-text
+              | {{if and .monthlySales (gt (len .companySales) 0)}}
+              | Average: ${{printf "%.2f" (div (sum .monthlySales) (len .companySales))}} per sale
+              | {{else}}
+              | No sales data available
+              | {{end}}
+        
+        div
+          article
+            header
+              h4 Top Performing
+            p.medium-text
+              | {{if .companySales}}
+              | {{topCompany .companySales}}
+              | {{else}}
+              | No data available
+              | {{end}}
+            p.small-text
+              | {{if .companySales}}
+              | ${{printf "%.2f" (topCompanyAmount .companySales)}}
+              | {{else}}
+              | $0.00
+              | {{end}}
+    
+    .report-charts
+      .grid
+        div
+          h3 Sales by Type
+          .chart-container
+            #sales-by-type-chart(style="width: 100%; height: 300px;")
+            p.chart-placeholder Sales by Type chart will appear here
+        
+        div
+          h3 Sales Trend
+          .chart-container
+            #sales-trend-chart(style="width: 100%; height: 300px;")
+            p.chart-placeholder Sales Trend chart will appear here
+    
+    .report-data
+      h3 Detailed Sales Data
+      
+      table
+        thead
+          tr
+            th Date
+            th Company
+            th Type
+            th Customer
+            th Amount
+            th Status
+        tbody
+          | {{if .monthlySales}}
+          | {{range $month, $amount := .monthlySales}}
+          tr
+            td {{$month}} 2025
+            td -
+            td -
+            td -
+            td ${{printf "%.2f" $amount}}
+            td -
+          | {{end}}
+          | {{else}}
+          tr
+            td(colspan="6") No sales data available
+          | {{end}}
+
+block scripts
+  script.
+    // Toggle custom date range based on period selection
+    document.getElementById('period').addEventListener('change', function() {
+      const customDateRange = document.querySelector('.custom-date-range');
+      
+      if (this.value === 'custom') {
+        customDateRange.style.display = 'block';
+      } else {
+        customDateRange.style.display = 'none';
+      }
+    });
+    
+    // Placeholder for chart initialization
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Charts would be initialized here');
+      
+      // Export to CSV functionality
+      document.getElementById('export-report').addEventListener('click', function() {
+        alert('CSV export functionality would be triggered here');
+      });
+    });

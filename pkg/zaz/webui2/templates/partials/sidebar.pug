@@ -1,0 +1,50 @@
+//- sidebar.pug - Vertical navigation menu for the Freezone Manager
+aside.sidebar.left-sidebar#freezone-menu
+  header
+    h4 Navigation
+    hr
+  nav.is-sticky
+    details(data-section="dashboard")
+      summary Dashboard
+      ul
+        li: a.secondary(href="/" data-path="/") Overview
+    
+    details(data-section="companies")
+      summary Companies
+      ul
+        li: a.secondary(href="/companies" data-path="/companies") All Companies
+        li: a.secondary(href="/companies/create" data-path="/companies/create") Register Company
+    
+    details(data-section="shareholders")
+      summary Shareholders
+      ul
+        li: a.secondary(href="/shareholders" data-path="/shareholders") All Shareholders
+        li: a.secondary(href="/shareholders/create" data-path="/shareholders/create") Add Shareholder
+    
+    details(data-section="meetings")
+      summary Meetings
+      ul
+        li: a.secondary(href="/boardmeetings" data-path="/boardmeetings") All Meetings
+        li: a.secondary(href="/boardmeetings/create" data-path="/boardmeetings/create") Schedule Meeting
+    
+    details(data-section="voting")
+      summary Voting
+      ul
+        li: a.secondary(href="/votes" data-path="/votes") All Votes
+        li: a.secondary(href="/votes/create" data-path="/votes/create") Create Vote
+        li: a.secondary(href="/votes/results" data-path="/votes/results") Vote Results
+    
+    details(data-section="sales")
+      summary Sales
+      ul
+        li: a.secondary(href="/sales" data-path="/sales") All Sales
+        li: a.secondary(href="/sales/products" data-path="/sales/products") Products
+        li: a.secondary(href="/sales/services" data-path="/sales/services") Services
+        li: a.secondary(href="/sales/reports" data-path="/sales/reports") Sales Reports
+    
+    details(data-section="account")
+      summary Account
+      ul
+        li: a.secondary(href="/login" data-path="/login") Login
+        li: a.secondary(href="/register" data-path="/register") Register
+        li: a.secondary(href="/logout" data-path="/logout") Logout

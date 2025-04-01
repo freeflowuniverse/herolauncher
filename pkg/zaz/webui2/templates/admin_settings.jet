@@ -1,0 +1,131 @@
+{{ extends "layout.jet" }}
+
+{{ block content() }}
+<article>
+    <header>
+        <h2>System Settings</h2>
+        <p>Configure the Freezone Manager system settings</p>
+    </header>
+
+    {{ if success }}
+    <div class="flash-message success">
+        <div class="container">
+            <p>{{ success }}</p>
+        </div>
+    </div>
+    {{ end }}
+
+    {{ if error }}
+    <div class="flash-message error">
+        <div class="container">
+            <p>{{ error }}</p>
+        </div>
+    </div>
+    {{ end }}
+
+    <form action="/admin/settings" method="post">
+        {{ if csrfToken }}
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        {{ end }}
+
+        <fieldset>
+            <legend>General Settings</legend>
+            <div class="grid">
+                <div>
+                    <label for="site_name">Site Name</label>
+                    <input type="text" id="site_name" name="site_name" value="{{ settings.SiteName }}">
+                </div>
+                <div>
+                    <label for="site_description">Site Description</label>
+                    <input type="text" id="site_description" name="site_description" value="{{ settings.SiteDescription }}">
+                </div>
+            </div>
+            <div class="grid">
+                <div>
+                    <label for="company_email">Company Email</label>
+                    <input type="email" id="company_email" name="company_email" value="{{ settings.CompanyEmail }}">
+                </div>
+                <div>
+                    <label for="support_email">Support Email</label>
+                    <input type="email" id="support_email" name="support_email" value="{{ settings.SupportEmail }}">
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Security Settings</legend>
+            <div class="grid">
+                <div>
+                    <label for="session_timeout">Session Timeout (minutes)</label>
+                    <input type="number" id="session_timeout" name="session_timeout" min="5" value="{{ settings.SessionTimeout }}">
+                </div>
+                <div>
+                    <label for="password_policy">Password Policy</label>
+                    <select id="password_policy" name="password_policy">
+                        <option value="basic" {{ if settings.PasswordPolicy == "basic" }}selected{{ end }}>Basic (min 8 chars)</option>
+                        <option value="standard" {{ if settings.PasswordPolicy == "standard" }}selected{{ end }}>Standard (min 8 chars, mixed case, numbers)</option>
+                        <option value="strong" {{ if settings.PasswordPolicy == "strong" }}selected{{ end }}>Strong (min 12 chars, mixed case, numbers, symbols)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid">
+                <div>
+                    <label for="login_attempts">Max Login Attempts</label>
+                    <input type="number" id="login_attempts" name="login_attempts" min="3" value="{{ settings.MaxLoginAttempts }}">
+                </div>
+                <div>
+                    <label for="lockout_duration">Lockout Duration (minutes)</label>
+                    <input type="number" id="lockout_duration" name="lockout_duration" min="5" value="{{ settings.LockoutDuration }}">
+                </div>
+            </div>
+            <div class="checkbox-item">
+                <input type="checkbox" id="enable_2fa" name="enable_2fa" {{ if settings.Enable2FA }}checked{{ end }}>
+                <label for="enable_2fa">Enable Two-Factor Authentication</label>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Email Settings</legend>
+            <div class="grid">
+                <div>
+                    <label for="smtp_host">SMTP Host</label>
+                    <input type="text" id="smtp_host" name="smtp_host" value="{{ settings.SMTPHost }}">
+                </div>
+                <div>
+                    <label for="smtp_port">SMTP Port</label>
+                    <input type="number" id="smtp_port" name="smtp_port" value="{{ settings.SMTPPort }}">
+                </div>
+            </div>
+            <div class="grid">
+                <div>
+                    <label for="smtp_username">SMTP Username</label>
+                    <input type="text" id="smtp_username" name="smtp_username" value="{{ settings.SMTPUsername }}">
+                </div>
+                <div>
+                    <label for="smtp_password">SMTP Password</label>
+                    <input type="password" id="smtp_password" name="smtp_password" value="{{ settings.SMTPPassword }}">
+                </div>
+            </div>
+             <div class="grid">
+                <div>
+                    <label for="smtp_encryption">SMTP Encryption</label>
+                     <select id="smtp_encryption" name="smtp_encryption">
+                        <option value="none" {{ if settings.SMTPEncryption == "none" }}selected{{ end }}>None</option>
+                        <option value="ssl_tls" {{ if settings.SMTPEncryption == "ssl_tls" }}selected{{ end }}>SSL/TLS</option>
+                        <option value="starttls" {{ if settings.SMTPEncryption == "starttls" }}selected{{ end }}>STARTTLS</option>
+                    </select>
+                </div>
+                <div>
+                     <label for="from_email">From Email Address</label>
+                    <input type="email" id="from_email" name="from_email" value="{{ settings.FromEmail }}">
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" role="button">Save Settings</button>
+            <a href="/admin" role="button" class="secondary">Cancel</a>
+        </div>
+    </form>
+</article>
+{{ end }}

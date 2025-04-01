@@ -1,0 +1,134 @@
+{{extends "layout"}}
+
+{{block content()}}
+  <article class="compact">
+    <header class="slim-header">
+      <h2>Company Details</h2>
+      <div class="header-actions button-group">
+        <a href="/companies/{{.company.ID}}/edit" role="button" class="secondary small">Edit Company</a>
+        <a href="/companies" role="button" class="outline small">Back to List</a>
+      </div>
+    </header>
+
+    <div class="company-info grid">
+      <div class="company-profile">
+        <h3>{{.company.Name}}</h3>
+
+        <p class="registration">
+          <strong>Registration #:</strong>
+          <span>{{.company.RegistrationNumber}}</span>
+        </p>
+        <p class="incorporation">
+          <strong>Incorporated:</strong>
+          <span>{{.company.IncorporationDate.Format "2006-01-02"}}</span>
+        </p>
+        <p class="status">
+          <strong>Status:</strong>
+          <span class="status">{{.company.Status}}</span>
+        </p>
+        <p class="business-type">
+          <strong>Business Type:</strong>
+          <span>{{.company.BusinessType}}</span>
+        </p>
+        <p class="industry">
+          <strong>Industry:</strong>
+          <span>{{.company.Industry}}</span>
+        </p>
+      </div>
+
+      <div class="company-contact">
+        <h3>Contact Information</h3>
+        <p>
+          <strong>Email:</strong>
+          <a href="mailto:{{.company.Email}}">{{.company.Email}}</a>
+        </p>
+        <p>
+          <strong>Phone:</strong>
+          <span>{{.company.Phone}}</span>
+        </p>
+        <p>
+          <strong>Website:</strong>
+          {{if .company.Website}}
+          <a href="{{.company.Website}}" target="_blank">{{.company.Website}}</a>
+          {{end}}
+        </p>
+        <p>
+          <strong>Address:</strong>
+          <span>{{.company.Address}}</span>
+        </p>
+      </div>
+    </div>
+
+    <section class="shareholders">
+      <header>
+        <h3>Shareholders</h3>
+        <a href="/companies/{{.company.ID}}/shareholders/create" role="button" class="primary small">Add Shareholder</a>
+      </header>
+
+      {{if .shareholders}}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Shares</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .shareholders}}
+          <tr>
+            <td>{{.Name}}</td>
+            <td>{{.Shares}}</td>
+            <td class="actions">
+              <a href="/companies/{{$.company.ID}}/shareholders/{{.ID}}" title="View Details">Details</a>
+              <a href="/companies/{{$.company.ID}}/shareholders/{{.ID}}/edit" title="Edit Shareholder">Edit</a>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty-state">
+        <p>No shareholders found</p>
+        <a href="/companies/{{.company.ID}}/shareholders/create" role="button">Add your first shareholder</a>
+      </div>
+      {{end}}
+    </section>
+
+    <section class="board-meetings">
+      <header>
+        <h3>Board Meetings</h3>
+        <a href="/companies/{{.company.ID}}/boardmeetings/create" role="button" class="primary small">Schedule Meeting</a>
+      </header>
+
+      {{if .boardmeetings}}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Topic</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .boardmeetings}}
+          <tr>
+            <td>{{.Date.Format "2006-01-02"}}</td>
+            <td>{{.Topic}}</td>
+            <td class="actions">
+              <a href="/companies/{{$.company.ID}}/boardmeetings/{{.ID}}" title="View Details">Details</a>
+              <a href="/companies/{{$.company.ID}}/boardmeetings/{{.ID}}/minutes" title="View Minutes">Minutes</a>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty-state">
+        <p>No board meetings scheduled</p>
+        <a href="/companies/{{.company.ID}}/boardmeetings/create" role="button">Schedule your first board meeting</a>
+      </div>
+      {{end}}
+    </section>
+  </article>
+{{end}}

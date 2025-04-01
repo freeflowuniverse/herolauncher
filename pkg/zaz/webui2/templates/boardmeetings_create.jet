@@ -1,0 +1,68 @@
+{{ extends "layout.jet" }}
+
+{{ block content() }}
+<article>
+    <header>
+        <h2>Schedule Board Meeting</h2>
+        <p>Create a new board meeting for a company</p>
+    </header>
+
+    {{ if error }}
+    <div class="form-errors" role="alert">
+        <h4>Please correct the following errors:</h4>
+        <p>{{ error }}</p>
+    </div>
+    {{ end }}
+
+    <form action="/boardmeetings/create" method="post">
+        {{ if csrfToken }}
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        {{ end }}
+
+        <div class="grid">
+            <div>
+                <label for="title">Meeting Title</label>
+                <input type="text" id="title" name="title" placeholder="Enter meeting title" value="{{ form.Title | default('') }}" required>
+            </div>
+
+            <div>
+                <label for="company_id">Company</label>
+                <select id="company_id" name="company_id" required>
+                    <option value="" {{ if form.CompanyID == "" }}selected{{ end }} disabled>Select company</option>
+                    {{ range companies }}
+                    <option value="{{ .ID }}" {{ if form.CompanyID == .ID }}selected{{ end }}>{{ .Name }}</option>
+                    {{ end }}
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for="date">Meeting Date</label>
+                <input type="date" id="date" name="date" value="{{ form.Date | default('') }}" required>
+            </div>
+
+            <div>
+                <label for="location">Location</label>
+                <input type="text" id="location" name="location" placeholder="Meeting location (e.g., Office, Zoom Link)" value="{{ form.Location | default('') }}" required>
+            </div>
+        </div>
+
+        <div>
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Brief description or main purpose of the meeting" rows="4">{{ form.Description | default('') }}</textarea>
+        </div>
+
+        <fieldset>
+            <legend>Attendees</legend>
+            <p>Attendees can be added after scheduling the meeting from the meeting details page.</p>
+            {{/* Potential enhancement: Allow adding initial attendees here */}}
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" role="button">Schedule Meeting</button>
+            <a href="/boardmeetings" role="button" class="secondary">Cancel</a>
+        </div>
+    </form>
+</article>
+{{ end }}

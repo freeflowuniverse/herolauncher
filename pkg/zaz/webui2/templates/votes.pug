@@ -1,0 +1,51 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Votes
+      p Manage all votes and resolutions in the Freezone
+
+    .action-bar
+      a(href="/votes/create" role="button") Create Vote
+      form.search-form(action="/votes" method="get")
+        input(type="search" name="search" placeholder="Search votes..." value="{{.search}}")
+        button(type="submit") Search
+    
+    | {{if .votes}}
+    table
+      thead
+        tr
+          th ID
+          th Company
+          th Resolution
+          th Status
+          th Deadline
+          th Actions
+      tbody
+        | {{range .votes}}
+        tr
+          td {{.ID}}
+          td {{.CompanyID}}
+          td {{.Title}}
+          td {{.Status}}
+          td {{.EndDate.Format "2006-01-02"}}
+          td.actions
+            a(href="/votes/{{.ID}}" title="View Details") Details
+            | {{if eq .Status "Open"}}
+            a(href="/votes/{{.ID}}/cast" title="Cast Vote") Vote
+            | {{end}}
+            | {{if eq .Status "Completed"}}
+            a(href="/votes/{{.ID}}/results" title="View Results") Results
+            | {{end}}
+        | {{end}}
+    | {{else}}
+    .empty-state
+      p No votes found
+      | {{if .search}}
+      p No results for "{{.search}}"
+      a(href="/votes") Clear search
+      | {{else}}
+      a(href="/votes/create" role="button") Create your first vote
+      | {{end}}
+    | {{end}}

@@ -1,0 +1,26 @@
+//- right-sidebar.pug - Right sidebar component for the Freezone Manager
+aside.sidebar.right-sidebar
+  header
+    h4 Quick Actions
+    hr
+  nav.is-sticky
+    details(open)
+      summary Actions
+      ul
+        li: a.secondary(href="#") Create Report
+        li: a.secondary(href="#") Export Data
+        li: a.secondary(href="#") Print View
+    
+    details(open)
+      summary Recent Items
+      ul#recent-items
+        li: a.secondary(href="#") Company Alpha
+        li: a.secondary(href="#") Shareholder Meeting
+        li: a.secondary(href="#") Q1 Sales Report
+    
+    details(open)
+      summary Notifications
+      ul#notifications
+        li: a.secondary(href="#") New vote request
+        li: a.secondary(href="#") Meeting reminder
+        li: a.secondary(href="#") Document approval

@@ -1,0 +1,48 @@
+extends layout
+
+block content
+  article
+    header
+      h2 Services
+      p Manage all services offered in the Freezone
+
+    .action-bar
+      a(href="/sales/services/create" role="button") Add Service
+      form.search-form(action="/sales/services" method="get")
+        input(type="search" name="search" placeholder="Search services..." value="{{.search}}")
+        button(type="submit") Search
+    
+    | {{if .services}}
+    table
+      thead
+        tr
+          th ID
+          th Name
+          th Company
+          th Category
+          th Rate
+          th Duration
+          th Actions
+      tbody
+        | {{range .services}}
+        tr
+          td {{.ID}}
+          td {{.Name}}
+          td {{.CompanyName}}
+          td {{.Category}}
+          td ${{.Rate}}
+          td {{.Duration}}
+          td.actions
+            a(href="/sales/services/{{.ID}}" title="View Details") Details
+            a(href="/sales/services/{{.ID}}/edit" title="Edit Service") Edit
+        | {{end}}
+    | {{else}}
+    .empty-state
+      p No services found
+      | {{if .search}}
+      p No results for "{{.search}}"
+      a(href="/sales/services") Clear search
+      | {{else}}
+      a(href="/sales/services/create" role="button") Add your first service
+      | {{end}}
+    | {{end}}
