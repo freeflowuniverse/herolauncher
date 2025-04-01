@@ -50,6 +50,7 @@ require (
 	github.com/go-openapi/spec v0.20.4 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/gofiber/template v1.8.3 // indirect
+	github.com/gofiber/template/jet/v2 v2.1.11 // indirect
 	github.com/gofiber/utils v1.1.0 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect

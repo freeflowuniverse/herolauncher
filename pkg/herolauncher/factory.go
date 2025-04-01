@@ -26,7 +26,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/swagger"
-	"github.com/gofiber/template/pug/v2"
+	"github.com/gofiber/template/jet/v2"
 )
 
 // Config holds the configuration for the HeroLauncher server
@@ -106,7 +106,7 @@ func New(config Config) *HeroLauncher {
 		log.Fatalf("Failed to get absolute path for templates: %v", err)
 	}
 
-	engine := pug.New(absTemplatePath, ".pug")
+	engine := jet.New(absTemplatePath, ".jet")
 	engine.Debug(true) // Enable debug mode to see template errors
 	// Reload templates on each render in development
 	engine.Reload(true)

@@ -1,5 +1,5 @@
-{{ extends "./layout.jet" }}
-{{ block content() }}
+{{ extends "layout" }}
+{{ block documentBody() }}
 <article>
     <header>
         <h2>Dashboard</h2>

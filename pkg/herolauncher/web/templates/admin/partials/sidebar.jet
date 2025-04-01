@@ -4,10 +4,12 @@
     <div class="sidebar-section">
       <div class="sidebar-heading">Introduction</div>
       <a class="sidebar-link" href="/admin">Dashboard</a>
+    </div>
     
     <div class="sidebar-section">
       <div class="sidebar-heading">Statistics</div>
       <a class="sidebar-link" href="/admin/stats">Overview</a>
+    </div>
     
     <div class="sidebar-section collapsible">
       <div class="sidebar-heading toggle">Services</div>
@@ -16,6 +18,7 @@
         <a class="sidebar-link child" href="/admin/services/running">Running Services</a>
         <a class="sidebar-link child" href="/admin/services/stopped">Stopped Services</a>
       </div>
+    </div>
     
     <div class="sidebar-section collapsible">
       <div class="sidebar-heading toggle">Package Manager</div>
@@ -24,6 +27,7 @@
         <a class="sidebar-link child" href="/admin/packages/install">Install Packages</a>
         <a class="sidebar-link child" href="/admin/packages/update">Update Packages</a>
       </div>
+    </div>
     
     <div class="sidebar-section collapsible">
       <div class="sidebar-heading toggle">System</div>
@@ -33,6 +37,7 @@
         <a class="sidebar-link" href="/admin/system/logs">Logs</a>
         <a class="sidebar-link" href="/admin/system/settings">Settings</a>
       </div>
+    </div>
     
     <div class="sidebar-section collapsible">
       <div class="sidebar-heading toggle">OpenRPC</div>
@@ -41,6 +46,7 @@
         <a class="sidebar-link child" href="/admin/openrpc/vfs">Virtual Filesystem</a>
         <a class="sidebar-link child" href="/admin/openrpc/vfs/logs">VFS Logs</a>
       </div>
+    </div>
     
     <div class="sidebar-section collapsible">
       <div class="sidebar-heading toggle">API Reference</div>
@@ -49,5 +55,6 @@
         <a class="sidebar-link child" href="/admin/api/authentication">Authentication</a>
         <a class="sidebar-link child" href="/admin/api/endpoints">Endpoints</a>
       </div>
+    </div>
   </nav>
 </div>

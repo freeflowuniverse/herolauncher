@@ -1,19 +1,26 @@
 <!-- header.jet -->
-header
-  nav.top-nav
-    .brand
-      a(href="/admin")
-        img.brand-icon(src="/img/hero-icon.svg", alt="HeroLauncher Logo", width="24", height="24")
-        span HeroLauncher
+<header>
+  <nav class="top-nav">
+    <div class="brand">
+      <a href="/admin">
+        <img class="brand-icon" src="/img/hero-icon.svg" alt="HeroLauncher Logo" width="24" height="24">
+        <span>HeroLauncher</span>
+      </a>
+    </div>
     
-    .nav-links
-      a.nav-link(href="/admin") Home
-      a.nav-link(href="/admin/services") Services
-      a.nav-link(href="/admin/packages") Packages
-      a.nav-link(href="/admin/system/info") System
+    <div class="nav-links">
+      <a class="nav-link" href="/admin">Home</a>
+      <a class="nav-link" href="/admin/services">Services</a>
+      <a class="nav-link" href="/admin/packages">Packages</a>
+      <a class="nav-link" href="/admin/system/info">System</a>
+    </div>
     
-    .nav-right
-      input.search-box(type="search", placeholder="Search...")
-      button.menu-toggle(aria-label="Toggle menu")
-        span Menu
-      a(role="button", href="/") Back to App
+    <div class="nav-right">
+      <input class="search-box" type="search" placeholder="Search...">
+      <button class="menu-toggle" aria-label="Toggle menu">
+        <span>Menu</span>
+      </button>
+      <a role="button" href="/">Back to App</a>
+    </div>
+  </nav>
+</header>

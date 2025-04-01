@@ -12,7 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/pug/v2"
+	"github.com/gofiber/template/jet/v2"
 )
 
 // Server represents the Freezone Manager web UI server
@@ -20,16 +20,16 @@ type Server struct {
 	app       *fiber.App
 	config    Config
 	startTime time.Time
-	
+
 	// Store for database operations
-	store     *models.Store
-	
+	store *models.Store
+
 	// Handlers
-	authHandler        *webhandlers.AuthHandler
-	companyHandler     *webhandlers.CompanyHandler
-	shareholderHandler *webhandlers.ShareholderHandler
+	authHandler         *webhandlers.AuthHandler
+	companyHandler      *webhandlers.CompanyHandler
+	shareholderHandler  *webhandlers.ShareholderHandler
 	boardMeetingHandler *webhandlers.BoardMeetingHandler
-	voteHandler        *webhandlers.VoteHandler
+	voteHandler         *webhandlers.VoteHandler
 }
 
 // NewServer creates a new instance of the Freezone Manager UI server
@@ -40,65 +40,65 @@ func NewServer(config Config) *Server {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	
+
 	// Create store
 	store := models.NewStore("default")
-	
+
 	// Generate fake data
 	models.GenerateFakeData()
 	log.Printf("Database initialized with fake data")
 
 	// Initialize template engine
-	engine := pug.New(config.TemplatesPath, ".pug")
+	engine := jet.New(config.TemplatesPath, ".jet")
 	engine.Debug(true)  // Enable debug mode
 	engine.Reload(true) // Reload templates on each render
-	
+
 	// Initialize handlers
 	authHandler := webhandlers.NewAuthHandler(store)
 	companyHandler := webhandlers.NewCompanyHandler(store)
 	shareholderHandler := webhandlers.NewShareholderHandler(store)
 	boardMeetingHandler := webhandlers.NewBoardMeetingHandler(store)
 	voteHandler := webhandlers.NewVoteHandler(store)
-	
+
 	// Add template functions
 	// User function returns a mock user for demonstration
 	engine.AddFunc("user", func() map[string]interface{} {
 		return map[string]interface{}{
-			"id": 1,
-			"name": "Demo User",
+			"id":    1,
+			"name":  "Demo User",
 			"email": "demo@example.com",
-			"role": "Admin",
+			"role":  "Admin",
 		}
 	})
-	
+
 	// Companies function returns a list of sample companies
 	engine.AddFunc("companies", func() []map[string]interface{} {
 		// Get companies using model function directly
 		companies := models.GetAllCompanies()
 		result := make([]map[string]interface{}, len(companies))
-		
+
 		// Log the number of companies being passed to the template
 		log.Printf("Passing %d companies to the template", len(companies))
-		
+
 		for i, company := range companies {
 			result[i] = map[string]interface{}{
-				"ID": company.ID,
-				"Name": company.Name,
+				"ID":                company.ID,
+				"Name":              company.Name,
 				"IncorporationDate": company.IncorporationDate,
-				"Status": company.Status,
-				"Industry": company.Industry,
-				"Shareholders": company.Shareholders,
+				"Status":            company.Status,
+				"Industry":          company.Industry,
+				"Shareholders":      company.Shareholders,
 			}
 		}
-		
+
 		return result
 	})
-	
+
 	// Search function for the template
 	engine.AddFunc("search", func() string {
 		return ""
 	})
-	
+
 	// Sum function to sum values in a map
 	engine.AddFunc("sum", func(values map[string]float64) float64 {
 		var total float64
@@ -107,7 +107,7 @@ func NewServer(config Config) *Server {
 		}
 		return total
 	})
-	
+
 	// Div function to divide two numbers
 	engine.AddFunc("div", func(a, b float64) float64 {
 		if b == 0 {
@@ -115,7 +115,7 @@ func NewServer(config Config) *Server {
 		}
 		return a / b
 	})
-	
+
 	// TopCompany function to get the company with highest sales
 	engine.AddFunc("topCompany", func(companySales map[string]float64) string {
 		var topCompany string
@@ -128,7 +128,7 @@ func NewServer(config Config) *Server {
 		}
 		return topCompany
 	})
-	
+
 	// TopCompanyAmount function to get the amount of the top company
 	engine.AddFunc("topCompanyAmount", func(companySales map[string]float64) float64 {
 		var maxSales float64
@@ -139,86 +139,83 @@ func NewServer(config Config) *Server {
 		}
 		return maxSales
 	})
-	
+
 	// CompaniesCount function for the template
 	engine.AddFunc("companiesCount", func() int {
 		return len(models.GetAllCompanies())
 	})
-	
+
 	// ActiveCompaniesCount function for the template
 	engine.AddFunc("activeCompaniesCount", func() int {
 		return len(models.GetActiveCompanies())
 	})
-	
+
 	// ShareholdersCount function for the template
 	engine.AddFunc("shareholdersCount", func() int {
 		return len(models.GetAllShareholders())
 	})
-	
+
 	// Error function for the login template
 	engine.AddFunc("error", func() string {
 		return ""
 	})
-	
+
 	// CurrentPath function to help with highlighting active navigation links
 	engine.AddFunc("currentPath", func() string {
 		return "/" // Default to home path
 	})
-	
+
 	// Company function returns a sample company for the details page
 	engine.AddFunc("company", func() map[string]interface{} {
 		companies := models.GetAllCompanies()
 		if len(companies) == 0 {
 			return map[string]interface{}{}
 		}
-		
+
 		// Use the first company in the store
 		company := companies[0]
-		
+
 		// Format shareholders for template
 		shareholders := make([]map[string]interface{}, len(company.Shareholders))
 		for i, sh := range company.Shareholders {
 			shareholders[i] = map[string]interface{}{
-				"id": sh.ID,
-				"name": sh.Name,
-				"shares": sh.Shares,
+				"id":         sh.ID,
+				"name":       sh.Name,
+				"shares":     sh.Shares,
 				"percentage": sh.Percentage,
-				"since": sh.Since.Format("2006-01-02"),
+				"since":      sh.Since.Format("2006-01-02"),
 			}
 		}
-		
+
 		// Format board meetings for template
 		meetings := make([]map[string]interface{}, len(company.BoardMeetings))
 		for i, bm := range company.BoardMeetings {
 			meetings[i] = map[string]interface{}{
-				"id": bm.ID,
-				"date": bm.Date.Format("2006-01-02"),
-				"title": bm.Title,
+				"id":              bm.ID,
+				"date":            bm.Date.Format("2006-01-02"),
+				"title":           bm.Title,
 				"attendees_count": len(bm.Attendees),
-				"status": bm.Status,
+				"status":          bm.Status,
 			}
 		}
-		
+
 		// Return formatted company data
 		return map[string]interface{}{
-			"id": company.ID,
-			"name": company.Name,
+			"id":                  company.ID,
+			"name":                company.Name,
 			"registration_number": company.RegistrationNumber,
-			"incorporation_date": company.IncorporationDate.Format("2006-01-02"),
-			"status": company.Status,
-			"business_type": company.BusinessType,
-			"industry": company.Industry,
-			"email": company.Email,
-			"phone": company.Phone,
-			"website": company.Website,
-			"description": company.Description,
-			"shareholders": shareholders,
-			"boardmeetings": meetings,
+			"incorporation_date":  company.IncorporationDate.Format("2006-01-02"),
+			"status":              company.Status,
+			"business_type":       company.BusinessType,
+			"industry":            company.Industry,
+			"email":               company.Email,
+			"phone":               company.Phone,
+			"website":             company.Website,
+			"description":         company.Description,
+			"shareholders":        shareholders,
+			"boardmeetings":       meetings,
 		}
 	})
-	
-
-
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
@@ -232,7 +229,7 @@ func NewServer(config Config) *Server {
 					})
 				}
 			}
-			
+
 			// Handle view errors
 			return c.Status(fiber.StatusInternalServerError).Render("error", fiber.Map{
 				"title": "Error",
@@ -257,15 +254,15 @@ func NewServer(config Config) *Server {
 
 	// Create server instance
 	srv := &Server{
-		app:                app,
-		config:             config,
-		startTime:          time.Now(),
-		store:              store,
-		authHandler:        authHandler,
-		companyHandler:     companyHandler,
-		shareholderHandler: shareholderHandler,
+		app:                 app,
+		config:              config,
+		startTime:           time.Now(),
+		store:               store,
+		authHandler:         authHandler,
+		companyHandler:      companyHandler,
+		shareholderHandler:  shareholderHandler,
 		boardMeetingHandler: boardMeetingHandler,
-		voteHandler:        voteHandler,
+		voteHandler:         voteHandler,
 	}
 
 	// Setup routes
@@ -279,7 +276,7 @@ func (s *Server) setupRoutes() {
 	// Use the handlers initialized in NewServer
 
 	// Register routes
-	
+
 	// Auth routes
 	s.app.Get("/login", s.authHandler.GetLogin)
 	s.app.Post("/login", s.authHandler.PostLogin)
@@ -317,8 +314,6 @@ func (s *Server) setupRoutes() {
 	s.app.Post("/votes/create", s.voteHandler.PostCreateVote)
 	s.app.Get("/votes/:id", s.voteHandler.GetVoteDetails)
 
-
-
 	// API routes
 	api := s.app.Group("/api")
 	api.Get("/companies", s.companyHandler.GetCompaniesAPI)
@@ -331,7 +326,7 @@ func (s *Server) setupRoutes() {
 // GetUptime returns the uptime of the Freezone Manager UI server
 func (s *Server) GetUptime() string {
 	uptimeDuration := time.Since(s.startTime)
-	
+
 	totalSeconds := int(uptimeDuration.Seconds())
 	days := totalSeconds / (24 * 3600)
 	hours := (totalSeconds % (24 * 3600)) / 3600
