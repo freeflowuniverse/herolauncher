@@ -60,24 +60,27 @@ func NewServiceHandler(socketPath, secret string, logger *log.Logger) *ServiceHa
 
 // RegisterRoutes registers service API routes
 func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
+	// Register common routes to both API and admin groups
+	serviceRoutes := func(group fiber.Router) {
+		group.Get("/running", h.getRunningServices)
+		group.Post("/start", h.startService)
+		group.Post("/stop", h.stopService)
+		group.Post("/restart", h.restartService)
+		group.Post("/delete", h.deleteService)
+		group.Post("/logs", h.getProcessLogs)
+	}
 
+	// Apply common routes to API group
 	apiServices := app.Group("/api/services")
-	apiServices.Get("/running", h.getRunningServices)
-	apiServices.Post("/start", h.startService)
-	apiServices.Post("/stop", h.stopService)
-	apiServices.Post("/restart", h.restartService)
-	apiServices.Post("/delete", h.deleteService)
-	apiServices.Post("/logs", h.getProcessLogs)
+	serviceRoutes(apiServices)
 
+	// Apply common routes to admin group and add admin-specific routes
 	adminServices := app.Group("/admin/services")
+	serviceRoutes(adminServices)
+
+	// Admin-only routes
 	adminServices.Get("/", h.getServicesPage)
 	adminServices.Get("/data", h.getServicesData)
-	adminServices.Get("/running", h.getRunningServices)
-	adminServices.Post("/start", h.startService)
-	adminServices.Post("/stop", h.stopService)
-	adminServices.Post("/restart", h.restartService)
-	adminServices.Post("/delete", h.deleteService)
-	adminServices.Post("/logs", h.getProcessLogs)
 }
 
 // getProcessList gets a list of processes from the process manager

@@ -34,17 +34,17 @@ impl FakeHandlerClient {
     }
     
     /// Connect to the server
-    pub fn connect(&mut self) -> Result<()> {
+    pub fn connect(&self) -> Result<()> {
         self.client.connect()
     }
     
     /// Close the connection
-    pub fn close(&mut self) -> Result<()> {
+    pub fn close(&self) -> Result<()> {
         self.client.close()
     }
     
     /// Return a success message
-    pub fn return_success(&mut self, message: Option<&str>) -> Result<String> {
+    pub fn return_success(&self, message: Option<&str>) -> Result<String> {
         let mut script = "!!fake.return_success".to_string();
         
         if let Some(msg) = message {
@@ -55,7 +55,7 @@ impl FakeHandlerClient {
     }
     
     /// Return an error message
-    pub fn return_error(&mut self, message: Option<&str>) -> Result<String> {
+    pub fn return_error(&self, message: Option<&str>) -> Result<String> {
         let mut script = "!!fake.return_error".to_string();
         
         if let Some(msg) = message {
@@ -67,7 +67,7 @@ impl FakeHandlerClient {
     }
     
     /// Return a JSON response
-    pub fn return_json(&mut self, message: Option<&str>, status: Option<&str>, code: Option<i32>) -> Result<FakeResponse> {
+    pub fn return_json(&self, message: Option<&str>, status: Option<&str>, code: Option<i32>) -> Result<FakeResponse> {
         let mut script = "!!fake.return_json".to_string();
         
         if let Some(msg) = message {
@@ -92,7 +92,7 @@ impl FakeHandlerClient {
     }
     
     /// Return an invalid JSON response
-    pub fn return_invalid_json(&mut self) -> Result<FakeResponse> {
+    pub fn return_invalid_json(&self) -> Result<FakeResponse> {
         let script = "!!fake.return_invalid_json";
         let response = self.client.send_command(&script)?;
         
@@ -104,13 +104,13 @@ impl FakeHandlerClient {
     }
     
     /// Return an empty response
-    pub fn return_empty(&mut self) -> Result<String> {
+    pub fn return_empty(&self) -> Result<String> {
         let script = "!!fake.return_empty";
         self.client.send_command(&script)
     }
     
     /// Return a large response
-    pub fn return_large(&mut self, size: Option<i32>) -> Result<String> {
+    pub fn return_large(&self, size: Option<i32>) -> Result<String> {
         let mut script = "!!fake.return_large".to_string();
         
         if let Some(size_val) = size {
@@ -121,13 +121,13 @@ impl FakeHandlerClient {
     }
     
     /// Return a malformed error message
-    pub fn return_malformed_error(&mut self) -> Result<String> {
+    pub fn return_malformed_error(&self) -> Result<String> {
         let script = "!!fake.return_malformed_error";
         self.client.send_command(&script)
     }
     
     /// Get help information
-    pub fn help(&mut self) -> Result<String> {
+    pub fn help(&self) -> Result<String> {
         let script = "!!fake.help";
         self.client.send_command(&script)
     }
