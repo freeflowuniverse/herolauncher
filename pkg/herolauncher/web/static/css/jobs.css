@@ -1,0 +1,76 @@
+/* Jobs page styles */
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+.status-running {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+}
+
+.status-completed {
+    background-color: #e8f5e9;
+    color: #1b5e20;
+}
+
+.status-failed {
+    background-color: #ffebee;
+    color: #b71c1c;
+}
+
+.status-scheduled {
+    background-color: #fff8e1;
+    color: #ff6f00;
+}
+
+.status-canceled {
+    background-color: #ede7f6;
+    color: #4527a0;
+}
+
+/* Form styles */
+#jobs-filter-form {
+    margin-bottom: 20px;
+}
+
+/* Table styles */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th, 
+.table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f9f9f9;
+}
+
+.table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.button-small {
+    padding: 4px 8px;
+    font-size: 0.85em;
+}

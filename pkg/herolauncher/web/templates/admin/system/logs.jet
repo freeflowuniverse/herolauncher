@@ -1,49 +1,61 @@
-{{ extends "./layout" }}
+{{ extends "../layout" }}
 
 {{ block documentBody() }}
   <article>
     <header class="flex-container">
       <div>
-        <h2>System Logs</h2>
-        <p>View and filter system logs</p>
+        <h2>{{title}}</h2>
+        <p>View and filter logs from different sources</p>
       </div>
       <div>
-        <a href="#" role="button" class="outline">Export Logs</a>
+        <a href="/api/logs/export" role="button" class="outline">Export Logs</a>
       </div>
     </header>
 
     <article class="filter-controls">
-      <form class="log-controls">
+      <form class="log-controls" id="log-filter-form" action="/admin/system/logs" method="get" up-target="#logs-table-container" up-submit>
         <div class="grid filter-grid">
           <div class="filter-item">
+            <label for="log-type">Log Type</label>
+            <select id="log-type" name="log_type">
+              {{range logTypes}}
+                <option value="{{.}}" {{if selectedLogType == '.'}}selected{{end}}>{{if . == "all"}}All Logs{{else if . == "system"}}System Logs{{else if . == "service"}}Service Logs{{else if . == "job"}}Job Logs{{else if . == "process"}}Process Logs{{end}}</option>
+              {{end}}
+            </select>
+          </div>
+
+          <div class="filter-item">
             <label for="log-level">Log Level</label>
-            <select id="log-level">
-              <option value="all">All Levels</option>
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
-              <option value="debug">Debug</option>
+            <select id="log-level" name="type">
+              <option value="all" {{if typeParam == "all" || typeParam == ""}}selected{{end}}>All Levels</option>
+              <option value="info" {{if typeParam == "info"}}selected{{end}}>Info</option>
+              <option value="error" {{if typeParam == "error"}}selected{{end}}>Error</option>
             </select>
           </div>
 
           <div class="filter-item">
             <label for="log-source">Log Source</label>
-            <select id="log-source">
-              <option value="all">All Sources</option>
-              <option value="system">System</option>
-              <option value="redis">Redis</option>
-              <option value="executor">Executor</option>
-              <option value="packagemanager">Package Manager</option>
+            <select id="log-source" name="category">
+              <option value="" {{if categoryParam == ""}}selected{{end}}>All Sources</option>
+              <option value="system" {{if categoryParam == "system"}}selected{{end}}>System</option>
+              <option value="redis" {{if categoryParam == "redis"}}selected{{end}}>Redis</option>
+              <option value="executor" {{if categoryParam == "executor"}}selected{{end}}>Executor</option>
+              <option value="package" {{if categoryParam == "package"}}selected{{end}}>Package Manager</option>
             </select>
           </div>
 
           <div class="filter-item">
-            <label for="log-date">Date Range</label>
-            <input type="date" id="log-date">
+            <label for="log-from-date">From Date</label>
+            <input type="datetime-local" id="log-from-date" name="from">
+          </div>
+          
+          <div class="filter-item">
+            <label for="log-to-date">To Date</label>
+            <input type="datetime-local" id="log-to-date" name="to">
           </div>
 
           <div class="filter-button">
-            <button type="submit" class="filter-apply">Apply Filters</button>
+            <button type="submit" class="filter-apply" up-target="#logs-table-container">Apply Filters</button>
           </div>
         </div>
       </form>
@@ -54,76 +66,68 @@
         <h3>Log Output</h3>
       </header>
 
-      <div class="log-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Level</th>
-              <th>Source</th>
-              <th>Message</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>2025-03-14T06:15:22</td>
-              <td class="log-info">INFO</td>
-              <td>SYSTEM</td>
-              <td>Server started on port 9001</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:15:23</td>
-              <td class="log-info">INFO</td>
-              <td>REDIS</td>
-              <td>Redis server initialized</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:15:24</td>
-              <td class="log-info">INFO</td>
-              <td>EXECUTOR</td>
-              <td>Executor service ready</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:15:25</td>
-              <td class="log-info">INFO</td>
-              <td>PACKAGEMANAGER</td>
-              <td>Package manager initialized</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:16:30</td>
-              <td class="log-info">INFO</td>
-              <td>SYSTEM</td>
-              <td>New client connection from 127.0.0.1</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:17:45</td>
-              <td class="log-warning">WARNING</td>
-              <td>REDIS</td>
-              <td>High memory usage detected (75%)</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:18:12</td>
-              <td class="log-error">ERROR</td>
-              <td>EXECUTOR</td>
-              <td>Failed to execute command: permission denied</td>
-            </tr>
-            <tr>
-              <td>2025-03-14T06:20:05</td>
-              <td class="log-info">INFO</td>
-              <td>PACKAGEMANAGER</td>
-              <td>Package 'web-ui' installed successfully</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pagination">
-        <div class="pagination-info">
-          <span>Showing 1-8 of 124 logs</span>
+      <div id="logs-table-container">
+        <!-- Log content is loaded directly -->
+        {{ if isset(., "error") }}
+          <div class="alert alert-danger">{{ .error }}</div>
+        {{ end }}
+        
+        <!-- Include logs table -->
+        <div class="log-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Level</th>
+                <th>Source</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{if isset(., "logs")}}
+                {{range logs}}
+                <tr>
+                  <td>{{.timestamp}}</td>
+                  <td class="log-{{.type | lower}}">{{.type}}</td>
+                  <td>{{.category}}</td>
+                  <td>{{.message}}</td>
+                </tr>
+                {{else}}
+                <tr>
+                  <td colspan="4" class="text-center">No logs found matching your criteria</td>
+                </tr>
+                {{end}}
+              {{else}}
+              <tr>
+                <td colspan="4" class="text-center">Loading logs...</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
         </div>
-        <div class="pagination-controls">
-          <a href="#" role="button" class="outline secondary pagination-btn">← Previous</a>
-          <a href="#" role="button" class="outline secondary pagination-btn">Next →</a>
+        
+        <div class="pagination">
+          <div class="pagination-info">
+            {{if isset(., "logs")}}
+              {{if len(logs) > 0}}
+              <span>Showing {{showing}} of {{total}} logs</span>
+              {{else}}
+              <span>No logs found</span>
+              {{end}}
+            {{else}}
+            <span>Loading logs...</span>
+            {{end}}
+          </div>
+          <div class="pagination-controls">
+            {{if isset(., "page") && isset(., "totalPages")}}
+              {{if page > 1}}
+              <a href="/admin/system/logs?page={{page - 1}}{{if isset(., "categoryParam")}}&category={{categoryParam}}{{end}}{{if isset(., "typeParam")}}&type={{typeParam}}{{end}}{{if isset(., "fromParam")}}&from={{fromParam}}{{end}}{{if isset(., "toParam")}}&to={{toParam}}{{end}}" role="button" class="outline secondary" up-target="#logs-table-container">← Previous</a>
+              {{end}}
+              {{if page < totalPages}}
+              <a href="/admin/system/logs?page={{page + 1}}{{if isset(., "categoryParam")}}&category={{categoryParam}}{{end}}{{if isset(., "typeParam")}}&type={{typeParam}}{{end}}{{if isset(., "fromParam")}}&from={{fromParam}}{{end}}{{if isset(., "toParam")}}&to={{toParam}}{{end}}" role="button" class="outline secondary" up-target="#logs-table-container">Next →</a>
+              {{end}}
+            {{end}}
+          </div>
         </div>
       </div>
     </article>

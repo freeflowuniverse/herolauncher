@@ -1,0 +1,4975 @@
+package handlers
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/herojobs"
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+
+
+
+
+// MockHeroJobsClient is a mock implementation of the HeroJobs client
+type MockHeroJobsClient struct {
+	mock.Mock
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// Connect mocks the Connect method
+func (m *MockHeroJobsClient) Connect() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// Close mocks the Close method
+func (m *MockHeroJobsClient) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// SubmitJob mocks the SubmitJob method
+func (m *MockHeroJobsClient) SubmitJob(job *herojobs.Job) (*herojobs.Job, error) {
+	args := m.Called(job)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	return args.Get(0).(*herojobs.Job), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// GetJob mocks the GetJob method
+func (m *MockHeroJobsClient) GetJob(jobID string) (*herojobs.Job, error) {
+	args := m.Called(jobID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	return args.Get(0).(*herojobs.Job), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// DeleteJob mocks the DeleteJob method
+func (m *MockHeroJobsClient) DeleteJob(jobID string) error {
+	args := m.Called(jobID)
+	return args.Error(0)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// ListJobs mocks the ListJobs method
+func (m *MockHeroJobsClient) ListJobs(circleID, topic string) ([]string, error) {
+	args := m.Called(circleID, topic)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	return args.Get(0).([]string), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// QueueSize mocks the QueueSize method
+func (m *MockHeroJobsClient) QueueSize(circleID, topic string) (int64, error) {
+	args := m.Called(circleID, topic)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// QueueEmpty mocks the QueueEmpty method
+func (m *MockHeroJobsClient) QueueEmpty(circleID, topic string) error {
+	args := m.Called(circleID, topic)
+	return args.Error(0)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// QueueGet mocks the QueueGet method
+func (m *MockHeroJobsClient) QueueGet(circleID, topic string) (*herojobs.Job, error) {
+	args := m.Called(circleID, topic)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	return args.Get(0).(*herojobs.Job), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// CreateJob mocks the CreateJob method
+func (m *MockHeroJobsClient) CreateJob(circleID, topic, sessionKey, heroScript, rhaiScript string) (*herojobs.Job, error) {
+	args := m.Called(circleID, topic, sessionKey, heroScript, rhaiScript)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	return args.Get(0).(*herojobs.Job), args.Error(1)
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// setupTest initializes a test environment with a mock client
+func setupTest() (*JobHandler, *MockHeroJobsClient, *fiber.App) {
+	mockClient := new(MockHeroJobsClient)
+	
+	// Create a JobHandler with the mock client
+	handler := &JobHandler{
+		client: mockClient,
+		logger: nil, // We don't need a real logger for tests
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	// Create a Fiber app for testing
+	app := fiber.New()
+	
+	// Register the routes
+	handler.RegisterRoutes(app)
+	
+	return handler, mockClient, app
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// createTestRequest creates a test request with the given method, path, and body
+func createTestRequest(method, path string, body interface{}) (*http.Request, error) {
+	var reqBody io.Reader
+	
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+		reqBody = bytes.NewBuffer(jsonBody)
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	req := httptest.NewRequest(method, path, reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	
+	return req, nil
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestSubmitJob tests the submitJob handler
+func TestSubmitJob(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Create a test job
+	testJob := &herojobs.Job{
+		JobID:    "test-job-id",
+		CircleID: "test-circle",
+		Topic:    "test-topic",
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		connectError   error
+		submitError    error
+		submitResponse *herojobs.Job
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			connectError:   nil,
+			submitError:    nil,
+			submitResponse: testJob,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"jobid":"test-job-id","circleid":"test-circle","topic":"test-topic"}`,
+		},
+		{
+			name:           "Connection Error",
+			connectError:   errors.New("connection error"),
+			submitError:    nil,
+			submitResponse: nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Submit Error",
+			connectError:   nil,
+			submitError:    errors.New("submit error"),
+			submitResponse: nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to submit job: submit error"}`,
+		},
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Once()
+			if tc.connectError == nil {
+				mockClient.On("SubmitJob", mock.Anything).Return(tc.submitResponse, tc.submitError).Once()
+				mockClient.On("Close").Return().Once()
+			}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/submit", testJob)
+			assert.NoError(t, err)
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestGetJob tests the getJob handler
+func TestGetJob(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Create a test job
+	testJob := &herojobs.Job{
+		JobID:    "test-job-id",
+		CircleID: "test-circle",
+		Topic:    "test-topic",
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		jobID          string
+		connectError   error
+		getError       error
+		getResponse    *herojobs.Job
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			jobID:          "test-job-id",
+			connectError:   nil,
+			getError:       nil,
+			getResponse:    testJob,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"jobid":"test-job-id","circleid":"test-circle","topic":"test-topic"}`,
+		},
+		{
+			name:           "Connection Error",
+			jobID:          "test-job-id",
+			connectError:   errors.New("connection error"),
+			getError:       nil,
+			getResponse:    nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Get Error",
+			jobID:          "test-job-id",
+			connectError:   nil,
+			getError:       errors.New("get error"),
+			getResponse:    nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to get job: get error"}`,
+		},
+		{
+			name:           "Empty Job ID",
+			jobID:          "",
+			connectError:   nil,
+			getError:       nil,
+			getResponse:    nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Job ID is required"}`,
+		},
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.jobID != "" {
+				mockClient.On("GetJob", tc.jobID).Return(tc.getResponse, tc.getError).Maybe()
+				mockClient.On("Close").Return().Maybe()
+			}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+			
+			// Create test request
+			path := fmt.Sprintf("/api/jobs/get/%s", tc.jobID)
+			req, err := createTestRequest(http.MethodGet, path, nil)
+			assert.NoError(t, err)
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestDeleteJob tests the deleteJob handler
+func TestDeleteJob(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		jobID          string
+		connectError   error
+		deleteError    error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			jobID:          "test-job-id",
+			connectError:   nil,
+			deleteError:    nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Job test-job-id deleted successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			jobID:          "test-job-id",
+			connectError:   errors.New("connection error"),
+			deleteError:    nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Delete Error",
+			jobID:          "test-job-id",
+			connectError:   nil,
+			deleteError:    errors.New("delete error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to delete job: delete error"}`,
+		},
+		{
+			name:           "Empty Job ID",
+			jobID:          "",
+			connectError:   nil,
+			deleteError:    nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Job ID is required"}`,
+		},
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.jobID != "" {
+				mockClient.On("DeleteJob", tc.jobID).Return(tc.deleteError).Maybe()
+				mockClient.On("Close").Return().Maybe()
+			}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+			
+			// Create test request
+			path := fmt.Sprintf("/api/jobs/delete/%s", tc.jobID)
+			req, err := createTestRequest(http.MethodDelete, path, nil)
+			assert.NoError(t, err)
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestListJobs tests the listJobs handler
+func TestListJobs(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		listError      error
+		listResponse   []string
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			listError:      nil,
+			listResponse:   []string{"job1", "job2", "job3"},
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"jobs":["job1","job2","job3"]}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			listError:      nil,
+			listResponse:   nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "List Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			listError:      errors.New("list error"),
+			listResponse:   nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to list jobs: list error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			listError:      nil,
+			listResponse:   nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			listError:      nil,
+			listResponse:   nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("ListJobs", tc.circleID, tc.topic).Return(tc.listResponse, tc.listError).Maybe()
+				mockClient.On("Close").Return().Maybe()
+			}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+			
+			// Create test request
+			path := fmt.Sprintf("/api/jobs/list?circleid=%s&topic=%s", tc.circleID, tc.topic)
+			req, err := createTestRequest(http.MethodGet, path, nil)
+			assert.NoError(t, err)
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+// TestQueueSize tests the queueSize handler
+func TestQueueSize(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		sizeError      error
+		sizeResponse   int64
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			sizeError:      nil,
+			sizeResponse:   42,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"size":42}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			sizeError:      nil,
+			sizeResponse:   0,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Size Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			sizeError:      errors.New("size error"),
+			sizeResponse:   0,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to get queue size: size error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			sizeError:      nil,
+			sizeResponse:   0,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			sizeError:      nil,
+			sizeResponse:   0,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueSize", tc.circleID, tc.topic).Return(tc.sizeResponse, tc.sizeError).Maybe()
+				mockClient.On("Close").Return().Maybe()
+			}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+			
+			// Create test request
+			path := fmt.Sprintf("/api/jobs/queue/size?circleid=%s&topic=%s", tc.circleID, tc.topic)
+			req, err := createTestRequest(http.MethodGet, path, nil)
+			assert.NoError(t, err)
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+}
+
+// TestQueueEmpty tests the queueEmpty handler
+func TestQueueEmpty(t *testing.T) {
+	// Setup test environment
+	_, mockClient, app := setupTest()
+	
+	// Test cases
+	tests := []struct {
+		name           string
+		circleID       string
+		topic          string
+		connectError   error
+		emptyError     error
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "Success",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusOK,
+			expectedBody:   `{"status":"success","message":"Queue for circle test-circle and topic test-topic emptied successfully"}`,
+		},
+		{
+			name:           "Connection Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   errors.New("connection error"),
+			emptyError:     nil,
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to connect to HeroJobs server: connection error"}`,
+		},
+		{
+			name:           "Empty Error",
+			circleID:       "test-circle",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     errors.New("empty error"),
+			expectedStatus: fiber.StatusInternalServerError,
+			expectedBody:   `{"error":"Failed to empty queue: empty error"}`,
+		},
+		{
+			name:           "Empty Circle ID",
+			circleID:       "",
+			topic:          "test-topic",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Circle ID is required"}`,
+		},
+		{
+			name:           "Empty Topic",
+			circleID:       "test-circle",
+			topic:          "",
+			connectError:   nil,
+			emptyError:     nil,
+			expectedStatus: fiber.StatusBadRequest,
+			expectedBody:   `{"error":"Topic is required"}`,
+		},
+	}
+	
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock expectations
+			mockClient.On("Connect").Return(tc.connectError).Maybe()
+			if tc.connectError == nil && tc.circleID != "" && tc.topic != "" {
+				mockClient.On("QueueEmpty", tc.circleID, tc.topic).Return(tc.emptyError).Maybe()
+				mockClient.On("Close").Return(nil).Maybe()
+			}
+			
+			// Create request body
+			reqBody := map[string]string{
+				"circleid": tc.circleID,
+				"topic":    tc.topic,
+			}
+			reqBodyBytes, err := json.Marshal(reqBody)
+			assert.NoError(t, err)
+			
+			// Create test request
+			req, err := createTestRequest(http.MethodPost, "/api/jobs/queue/empty", bytes.NewReader(reqBodyBytes))
+			assert.NoError(t, err)
+			req.Header.Set("Content-Type", "application/json")
+			
+			// Perform the request
+			resp, err := app.Test(req)
+			assert.NoError(t, err)
+			
+			// Check status code
+			assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			
+			// Check response body
+			body, err := io.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			
+			// Verify that all expectations were met
+			mockClient.AssertExpectations(t)
+		})
+	}
+}

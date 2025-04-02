@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="/css/pico.min.css">
     <link rel="stylesheet" href="/css/admin.css">
     <link rel="stylesheet" href="/css/unpoly.min.css">
+    <link rel="stylesheet" href="/css/logs.css">
+    <link rel="stylesheet" href="/css/jobs.css">
     <style>
       :root {
         --font-size: 70%; /* Reduce font size by 30% */
@@ -29,7 +31,7 @@
     <script src="/js/unpoly.min.js"></script>
     <script src="/js/echarts/echarts.min.js"></script>
     <script src="/js/admin.js"></script>
-    <script src="/js/service-logs.js"></script>
+    {{block scripts()}}{{end}}
 
   </body>
 </html>

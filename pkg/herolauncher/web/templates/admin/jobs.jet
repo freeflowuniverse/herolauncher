@@ -1,0 +1,56 @@
+{{ extends "./layout" }}
+
+{{ block documentBody() }}
+<div class="main-content">
+    <header class="action-header">
+        <div>
+            <h2>Jobs</h2>
+            <p>Manage all your scheduled jobs</p>
+        </div>
+        <div>
+            <a href="/admin/jobs/new" class="button">Add New Job</a>
+        </div>
+    </header>
+    
+    {{if len(warning) > 0}}
+    <div class="alert alert-warning">
+        {{warning}}
+    </div>
+    {{end}}
+    
+    {{if len(error) > 0}}
+    <div class="alert alert-error">
+        {{error}}
+    </div>
+    {{end}}
+    
+    <section>
+        <div class="card">
+            <div class="card-title">Filter Jobs</div>
+            <div class="card-content">
+                <form action="/admin/jobs/list" up-target="#jobs-list">
+                    <div class="form-group">
+                        <label for="circleid">Circle ID</label>
+                        <input id="circleid" type="text" name="circleid" placeholder="Enter circle ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="topic">Topic</label>
+                        <input id="topic" type="text" name="topic" placeholder="Enter topic">
+                    </div>
+                    <div class="form-actions">
+                        <button class="button" type="submit">Filter Jobs</button>
+                        <a href="/admin/jobs/list" class="button" up-target="#jobs-list">Refresh</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="jobs-list">
+            <!-- This will be populated by the server response -->
+            <div up-hungry>
+                <a href="/admin/jobs/list" up-target="#jobs-list" up-preload up-eager></a>
+            </div>
+        </div>
+    </section>
+</div>
+{{ end }}

@@ -1,7 +1,5 @@
-{{ if isset(.) "error" }}
-  {{ if .error }}
+{{ if isset(., "error") }}
   <div class="alert alert-danger">{{ .error }}</div>
-  {{ end }}
 {{ end }}
 
 <table class="table table-striped" id="processes-stats">
@@ -16,10 +14,10 @@
     </tr>
   </thead>
   <tbody>
-    {{ if isset(.) "processes" }}
+    {{ if isset(., "processes") }}
       {{ if .processes }}
         {{ range .processes }}
-          <tr class="{{if isset(.) "is_current"}}{{if .is_current}}table-primary{{end}}{{end}}">
+          <tr class="{{ if .is_current }}table-primary{{ end }}">
             <td>{{.pid}}</td>
             <td>{{.name}}</td>
             <td>{{.status}}</td>

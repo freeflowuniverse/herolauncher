@@ -1,0 +1,48 @@
+<!-- This template contains just the process table content for AJAX updates -->
+<div class="processes-table-content">
+{{ if isset(., "error") }}
+  <div class="alert alert-danger">{{ .error }}</div>
+{{ end }}
+
+<!-- Debug info -->
+<div class="alert alert-info">
+  {{ if isset(., "debug") }}
+    Debug: {{ debug }}
+  {{ end }}
+  
+  <!-- Direct debug output to help troubleshoot -->
+  Has processes: {{ hasProcesses ? "Yes" : "No" }}
+  Process count: {{ processCount }}
+</div>
+
+<table class="table table-striped" id="processes-stats">
+  <thead>
+    <tr>
+      <th scope="col">PID</th>
+      <th scope="col">Name</th>
+      <th scope="col">Status</th>
+      <th scope="col">CPU (%)</th>
+      <th scope="col">Memory (MB)</th>
+      <th scope="col">Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ if hasProcesses }}
+        {{ range processStats }}
+          <tr{{ if .is_current == true }} class="table-primary"{{ end }}>
+            <td>{{ .pid }}</td>
+            <td>{{ .name }}</td>
+            <td>{{ .status }}</td>
+            <td>{{ .cpu_percent_str }}</td>
+            <td>{{ .memory_mb_str }}</td>
+            <td>{{ .create_time_str }}</td>
+          </tr>
+        {{ end }}
+    {{ else }}
+      <tr>
+        <td colspan="6">No process data available.</td>
+      </tr>
+    {{ end }}
+  </tbody>
+</table>
+</div>

@@ -2,9 +2,12 @@ package pages
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/handlers"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/gofiber/fiber/v2"
 	"github.com/shirou/gopsutil/v3/host"
@@ -19,10 +22,12 @@ type UptimeProvider interface {
 type AdminHandler struct {
 	uptimeProvider UptimeProvider
 	statsManager   *stats.StatsManager
+	pmSocketPath   string
+	pmSecret       string
 }
 
 // NewAdminHandler creates a new AdminHandler
-func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsManager) *AdminHandler {
+func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsManager, pmSocketPath, pmSecret string) *AdminHandler {
 	// If statsManager is nil, create a new one with default settings
 	if statsManager == nil {
 		var err error
@@ -36,6 +41,8 @@ func NewAdminHandler(uptimeProvider UptimeProvider, statsManager *stats.StatsMan
 	return &AdminHandler{
 		uptimeProvider: uptimeProvider,
 		statsManager:   statsManager,
+		pmSocketPath:   pmSocketPath,
+		pmSecret:       pmSecret,
 	}
 }
 
@@ -47,19 +54,53 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 	// Dashboard
 	admin.Get("/", h.getDashboard)
 
-	// Services
-	admin.Get("/services", h.getServices)
-
-	// Packages
-	admin.Get("/packages", h.getPackages)
+	// Create service handler with the correct socket path and secret
+	serviceHandler := handlers.NewServiceHandler(h.pmSocketPath, h.pmSecret)
+	// Services routes
+	admin.Get("/services", serviceHandler.GetServices)
+	admin.Get("/services/data", serviceHandler.GetServicesFragment)
+	admin.Post("/services/start", serviceHandler.StartService)
+	admin.Post("/services/stop", serviceHandler.StopService)
+	admin.Post("/services/restart", serviceHandler.RestartService)
+	admin.Post("/services/delete", serviceHandler.DeleteService)
+	admin.Get("/services/logs", serviceHandler.GetServiceLogs)
 
 	// System routes
 	admin.Get("/system/info", h.getSystemInfo)
 	admin.Get("/system/hardware-stats", h.getHardwareStats)
-	admin.Get("/system/processes", h.getProcesses)
-	admin.Get("/system/processes-data", h.getProcessesData)
-	admin.Get("/system/logs", h.getSystemLogs)
-	admin.Get("/system/logs-test", h.getSystemLogsTest)
+	
+	// Create process handler
+	processHandler := handlers.NewProcessHandler(h.statsManager)
+	admin.Get("/system/processes", processHandler.GetProcesses)
+	admin.Get("/system/processes-data", processHandler.GetProcessesData)
+	
+	// Create log handler
+	// Ensure log directory exists
+	// Using the same shared logs path as process manager
+	logDir := filepath.Join(os.TempDir(), "herolauncher_logs")
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		fmt.Printf("Error creating log directory: %v\n", err)
+	}
+	
+	logHandler, err := handlers.NewLogHandler(logDir)
+	if err != nil {
+		fmt.Printf("Error creating log handler: %v\n", err)
+		// Fallback to old implementation if log handler creation failed
+		admin.Get("/system/logs", h.getSystemLogs)
+		admin.Get("/system/logs-test", h.getSystemLogsTest)
+	} else {
+		fmt.Printf("Log handler created successfully\n")
+		// Use the log handler for log routes
+		admin.Get("/system/logs", logHandler.GetLogs)
+		// Keep the fragment endpoint for backward compatibility
+		// but it now just redirects to the main logs endpoint
+		admin.Get("/system/logs-fragment", logHandler.GetLogsFragment)
+		admin.Get("/system/logs-test", h.getSystemLogsTest) // Keep the test logs route
+		
+		// Log API endpoints
+		app.Get("/api/logs", logHandler.GetLogsAPI)
+	}
+	
 	admin.Get("/system/settings", h.getSystemSettings)
 
 	// OpenRPC routes
@@ -77,20 +118,6 @@ func (h *AdminHandler) RegisterRoutes(app *fiber.App) {
 func (h *AdminHandler) getDashboard(c *fiber.Ctx) error {
 	return c.Render("admin/index", fiber.Map{
 		"title": "Dashboard",
-	})
-}
-
-// getServices renders the services page
-func (h *AdminHandler) getServices(c *fiber.Ctx) error {
-	return c.Render("admin/services", fiber.Map{
-		"title": "Services",
-	})
-}
-
-// getPackages renders the packages page
-func (h *AdminHandler) getPackages(c *fiber.Ctx) error {
-	return c.Render("admin/packages", fiber.Map{
-		"title": "Packages",
 	})
 }
 
@@ -334,20 +361,20 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 	cpuUsage := "0.0%"
 	memUsage := "0.0%"
 	diskUsage := "0.0%"
-	
+
 	// Safely extract usage percentages
 	if cpuVal, ok := hardwareStats["cpu"].(map[string]interface{}); ok {
 		if usagePercent, ok := cpuVal["usage_percent"].(float64); ok {
 			cpuUsage = fmt.Sprintf("%.1f%%", usagePercent)
 		}
 	}
-	
+
 	if memVal, ok := hardwareStats["memory"].(map[string]interface{}); ok {
 		if usedPercent, ok := memVal["used_percent"].(float64); ok {
 			memUsage = fmt.Sprintf("%.1f%%", usedPercent)
 		}
 	}
-	
+
 	if diskVal, ok := hardwareStats["disk"].(map[string]interface{}); ok {
 		if usedPercent, ok := diskVal["used_percent"].(float64); ok {
 			diskUsage = fmt.Sprintf("%.1f%%", usedPercent)
@@ -366,44 +393,8 @@ func (h *AdminHandler) getHardwareStats(c *fiber.Ctx) error {
 	})
 }
 
-// getProcesses renders the processes page with initial process data
-func (h *AdminHandler) getProcesses(c *fiber.Ctx) error {
-	// Get process stats from the StatsManager
-	var processStats map[string]interface{}
-	var errorMsg string
-
-	if h.statsManager != nil {
-		processStats = h.statsManager.GetProcessStatsJSON(100) // Limit to 100 processes
-	} else {
-		// Fallback to direct function call if StatsManager is not available
-		processStats = stats.GetProcessStatsJSON(100) // Limit to 100 processes
-	}
-
-	// Extract processes list
-	var processList []map[string]interface{}
-	if processes, ok := processStats["processes"].([]interface{}); ok {
-		for _, proc := range processes {
-			if procMap, ok := proc.(map[string]interface{}); ok {
-				processList = append(processList, procMap)
-			}
-		}
-	}
-
-	// If processList is nil, initialize it as an empty slice to avoid template errors
-	if processList == nil {
-		processList = []map[string]interface{}{}
-		errorMsg = "No process data available"
-	}
-
-	// Sort processes by CPU usage (descending)
-	// This would typically be done in Go code, but for simplicity we'll let the template handle it
-
-	return c.Render("admin/system/processes", fiber.Map{
-		"title":     "System Processes",
-		"processes": processList,
-		"error":     errorMsg,
-	})
-}
+// getProcesses has been moved to the handlers package
+// See handlers.ProcessHandler.GetProcesses
 
 // getOpenRPCManager renders the OpenRPC Manager view page
 func (h *AdminHandler) getOpenRPCManager(c *fiber.Ctx) error {
@@ -424,7 +415,7 @@ func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
 	// Get query parameters
 	method := c.Query("method", "")
 	params := c.Query("params", "")
-	
+
 	// Define available methods and their display names
 	methods := []string{
 		"vfs_ls",
@@ -438,7 +429,7 @@ func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
 		"vfs_isdir",
 		"vfs_isfile",
 	}
-	
+
 	methodDisplayNames := map[string]string{
 		"vfs_ls":     "List Directory",
 		"vfs_read":   "Read File",
@@ -451,14 +442,14 @@ func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
 		"vfs_isdir":  "Is Directory",
 		"vfs_isfile": "Is File",
 	}
-	
+
 	// Generate method options HTML
 	methodOptions := generateMethodOptions(methods, methodDisplayNames)
-	
+
 	// Initialize variables
 	var requestJSON, responseJSON, responseTime string
 	var hasResponse bool
-	
+
 	// If a method is selected, make the OpenRPC call
 	if method != "" {
 		// Prepare the request
@@ -468,14 +459,14 @@ func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
 			"params": %s,
 			"id": 1
 		}`, method, params)
-		
+
 		// In a real implementation, we would make the actual OpenRPC call here
 		// For now, we'll just simulate a response
-		
+
 		// Simulate response time (would be real in production)
 		time.Sleep(100 * time.Millisecond)
 		responseTime = "100ms"
-		
+
 		// Simulate a response based on the method
 		switch method {
 		case "vfs_ls":
@@ -500,36 +491,36 @@ func (h *AdminHandler) getOpenRPCVFSLogs(c *fiber.Ctx) error {
 				"id": 1
 			}`
 		}
-		
+
 		hasResponse = true
 	}
-	
+
 	// Determine if this is an Unpoly request
 	isUnpoly := c.Get("X-Up-Target") != ""
-	
+
 	// If it's an Unpoly request, render just the logs fragment
 	if isUnpoly {
 		return c.Render("admin/openrpc/vfs_logs", fiber.Map{
-			"methodOptions": methodOptions,
+			"methodOptions":  methodOptions,
 			"selectedMethod": method,
-			"params": params,
-			"requestJSON": requestJSON,
-			"responseJSON": responseJSON,
-			"responseTime": responseTime,
-			"hasResponse": hasResponse,
+			"params":         params,
+			"requestJSON":    requestJSON,
+			"responseJSON":   responseJSON,
+			"responseTime":   responseTime,
+			"hasResponse":    hasResponse,
 		})
 	}
-	
+
 	// Otherwise render the full page
 	return c.Render("admin/openrpc/vfs_overview", fiber.Map{
-		"title": "VFS OpenRPC Logs",
-		"methodOptions": methodOptions,
+		"title":          "VFS OpenRPC Logs",
+		"methodOptions":  methodOptions,
 		"selectedMethod": method,
-		"params": params,
-		"requestJSON": requestJSON,
-		"responseJSON": responseJSON,
-		"responseTime": responseTime,
-		"hasResponse": hasResponse,
+		"params":         params,
+		"requestJSON":    requestJSON,
+		"responseJSON":   responseJSON,
+		"responseTime":   responseTime,
+		"hasResponse":    hasResponse,
 	})
 }
 
@@ -546,38 +537,5 @@ func generateMethodOptions(methods []string, methodDisplayNames map[string]strin
 	return strings.Join(options, "\n")
 }
 
-// getProcessesData returns the HTML fragment for processes data
-func (h *AdminHandler) getProcessesData(c *fiber.Ctx) error {
-	// Get process stats from the StatsManager
-	var processStats map[string]interface{}
-	var errorMsg string
-
-	if h.statsManager != nil {
-		processStats = h.statsManager.GetProcessStatsJSON(100) // Limit to 100 processes
-	} else {
-		// Fallback to direct function call if StatsManager is not available
-		processStats = stats.GetProcessStatsJSON(100) // Limit to 100 processes
-	}
-
-	// Extract processes list
-	var processList []map[string]interface{}
-	if processes, ok := processStats["processes"].([]interface{}); ok {
-		for _, proc := range processes {
-			if procMap, ok := proc.(map[string]interface{}); ok {
-				processList = append(processList, procMap)
-			}
-		}
-	}
-
-	// If processList is nil, initialize it as an empty slice to avoid template errors
-	if processList == nil {
-		processList = []map[string]interface{}{}
-		errorMsg = "No process data available"
-	}
-
-	// Render only the processes table fragment
-	return c.Render("admin/system/processes_table", fiber.Map{
-		"processes": processList,
-		"error":     errorMsg,
-	})
-}
+// Note: getProcessesData has been consolidated in the API routes file
+// to avoid duplication and ensure consistent behavior

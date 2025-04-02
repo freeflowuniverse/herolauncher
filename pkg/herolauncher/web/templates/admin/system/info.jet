@@ -72,6 +72,8 @@
 
 {{ block scripts() }}
 <script src="/js/echarts/echarts.min.js"></script>
-
-{{ include "partials/__stats_fetcher" }}
+<script src="/js/charts/cpu-chart.js"></script>
+<script src="/js/charts/memory-chart.js"></script>
+<script src="/js/charts/network-chart.js"></script>
+<script src="/js/charts/stats-fetcher.js"></script>
 {{ end }}

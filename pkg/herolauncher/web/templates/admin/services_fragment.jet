@@ -1,6 +1,3 @@
-{{ if .warning }}
-    <div class="alert alert-warning">{{ .warning }}</div>
-{{ end }}
 <table>
     <thead>
         <tr>
@@ -14,35 +11,29 @@
         </tr>
     </thead>
     <tbody>
-        {{ if .error }}
-        <tr>
-            <td colspan="7">
-                <div class="alert alert-danger">{{ .error }}</div>
-            </td>
-        </tr>
-        {{ else if .processes }}
-        {{ range .processes }}
+        {{ if processes }}
+        {{ range processes }}
         <tr>
             <td>{{ .Name }}</td>
             <td>
-                {{ if eq(.Status, "running") }}
+                {{ if .Status == "running" }}
                 <span class="badge success">Running</span>
-                {{ else if eq(.Status, "stopped") }}
+                {{ else if .Status == "stopped" }}
                 <span class="badge danger">Stopped</span>
                 {{ else }}
                 <span class="badge warning">{{ .Status }}</span>
                 {{ end }}
             </td>
             <td>{{ .ID }}</td>
-            <td>{{ if eq(.Status, "running") }}{{ .CPU }}{{ else }}-{{ end }}</td>
-            <td>{{ if eq(.Status, "running") }}{{ .Memory }}{{ else }}-{{ end }}</td>
-            <td>{{ if eq(.Status, "running") }}{{ .Uptime }}{{ else }}-{{ end }}</td>
+            <td>{{ if .Status == "running" }}{{ .CPU }}{{ else }}-{{ end }}</td>
+            <td>{{ if .Status == "running" }}{{ .Memory }}{{ else }}-{{ end }}</td>
+            <td>{{ if .Status == "running" }}{{ .Uptime }}{{ else }}-{{ end }}</td>
             <td>
                 <div class="button-group">
-                    <button class="button" onclick="restartProcess({{ .Name }})">Restart</button>
-                    <button class="button secondary" onclick="stopProcess({{ .Name }})">Stop</button>
-                    <button class="button danger" style="background-color: #e53935 !important; color: #fff !important;" onclick="deleteProcess({{ .Name }})">Delete</button>
-                    <button class="button info" onclick="showProcessLogs({{ .Name }})">Logs</button>
+                    <button class="button" onclick="restartProcess('{{ .Name }}')">Restart</button>
+                    <button class="button secondary" onclick="stopProcess('{{ .Name }}')">Stop</button>
+                    <button class="button danger" style="background-color: #e53935 !important; color: #fff !important;" onclick="deleteProcess('{{ .Name }}')">Delete</button>
+                    <button class="button info" onclick="showProcessLogs('{{ .Name }}')">Logs</button>
                 </div>
             </td>
         </tr>

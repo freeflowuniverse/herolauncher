@@ -1,4 +1,4 @@
-{{ extends "./layout" }}
+{{ extends "admin/layout" }}
 
 {{ block documentBody() }}
   <h1>Test Logs Page</h1>

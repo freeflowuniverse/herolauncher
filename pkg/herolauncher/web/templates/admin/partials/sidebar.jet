@@ -2,59 +2,22 @@
 <div class="sidebar-wrapper">
   <nav class="sidebar-nav">
     <div class="sidebar-section">
-      <div class="sidebar-heading">Introduction</div>
       <a class="sidebar-link" href="/admin">Dashboard</a>
     </div>
-    
     <div class="sidebar-section">
-      <div class="sidebar-heading">Statistics</div>
-      <a class="sidebar-link" href="/admin/stats">Overview</a>
+      <a class="sidebar-link" href="/admin/system/info">System</a>
     </div>
-    
-    <div class="sidebar-section collapsible">
-      <div class="sidebar-heading toggle">Services</div>
-      <div class="sidebar-content-section">
-        <a class="sidebar-link" href="/admin/services">All Services</a>
-        <a class="sidebar-link child" href="/admin/services/running">Running Services</a>
-        <a class="sidebar-link child" href="/admin/services/stopped">Stopped Services</a>
-      </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="/admin/system/processes">Processes</a>
     </div>
-    
-    <div class="sidebar-section collapsible">
-      <div class="sidebar-heading toggle">Package Manager</div>
-      <div class="sidebar-content-section">
-        <a class="sidebar-link" href="/admin/packages">All Packages</a>
-        <a class="sidebar-link child" href="/admin/packages/install">Install Packages</a>
-        <a class="sidebar-link child" href="/admin/packages/update">Update Packages</a>
-      </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="/admin/services">Services</a>
     </div>
-    
-    <div class="sidebar-section collapsible">
-      <div class="sidebar-heading toggle">System</div>
-      <div class="sidebar-content-section">
-        <a class="sidebar-link" href="/admin/system/info">System Info</a>
-        <a class="sidebar-link" href="/admin/system/processes">Processes</a>
-        <a class="sidebar-link" href="/admin/system/logs">Logs</a>
-        <a class="sidebar-link" href="/admin/system/settings">Settings</a>
-      </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="/jobs">Jobs</a>
     </div>
-    
-    <div class="sidebar-section collapsible">
-      <div class="sidebar-heading toggle">OpenRPC</div>
-      <div class="sidebar-content-section">
-        <a class="sidebar-link" href="/admin/openrpc">OpenRPC Manager</a>
-        <a class="sidebar-link child" href="/admin/openrpc/vfs">Virtual Filesystem</a>
-        <a class="sidebar-link child" href="/admin/openrpc/vfs/logs">VFS Logs</a>
-      </div>
-    </div>
-    
-    <div class="sidebar-section collapsible">
-      <div class="sidebar-heading toggle">API Reference</div>
-      <div class="sidebar-content-section">
-        <a class="sidebar-link" href="/admin/api/overview">Overview</a>
-        <a class="sidebar-link child" href="/admin/api/authentication">Authentication</a>
-        <a class="sidebar-link child" href="/admin/api/endpoints">Endpoints</a>
-      </div>
+    <div class="sidebar-section">
+      <a class="sidebar-link" href="/admin/system/logs">Logs</a>
     </div>
   </nav>
 </div>

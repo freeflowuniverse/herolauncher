@@ -7,9 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Setup UI toggles
   setupUIToggles();
   
-  // Setup logging functionality
-  setupLogging();
-  
   // Setup search functionality
   setupSearch();
 });
@@ -153,77 +150,66 @@ function refreshProcesses() {
     loadingIndicator.style.display = 'inline';
   }
   
-  // Disable auto-polling temporarily during manual refresh
+  // Get the processes content element
   const tableContent = document.querySelector('.processes-table-content');
-  const originalPollAttribute = tableContent ? tableContent.getAttribute('up-poll') : null;
-  if (tableContent && originalPollAttribute) {
-    tableContent.removeAttribute('up-poll');
-  }
   
-  // Fetch updated process data
-  fetch('/admin/system/processes-data', {
-    method: 'GET',
-    headers: {
-      'Accept': 'text/html',
-      'X-Requested-With': 'XMLHttpRequest'
-    },
-    cache: 'no-store'
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok: ' + response.status);
-    }
-    return response.text();
-  })
-  .then(html => {
-    // Update the processes table content
-    if (tableContent) {
-      // Replace the table content with the new HTML
-      tableContent.innerHTML = html;
-      console.log('Process data refreshed successfully');
-    } else {
-      console.error('Could not find processes table content element');
-    }
-  })
-  .catch(error => {
-    console.error('Error refreshing processes data:', error);
-  })
-  .finally(() => {
-    // Hide loading indicator
-    if (loadingIndicator) {
-      loadingIndicator.style.display = 'none';
-    }
-    
-    // Re-enable auto-polling after short delay
-    setTimeout(() => {
-      if (tableContent && originalPollAttribute) {
-        tableContent.setAttribute('up-poll', originalPollAttribute);
+  // Use Unpoly to refresh the content
+  if (tableContent && window.up) {
+    // Use Unpoly's API to reload the fragment
+    up.reload('.processes-table-content', {
+      url: '/admin/system/processes-data',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
       }
-    }, 1000);
-  });
+    }).then(() => {
+      console.log('Process data refreshed successfully via Unpoly');
+    }).catch(error => {
+      console.error('Error refreshing processes data:', error);
+    }).finally(() => {
+      // Hide loading indicator
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+    });
+  } else {
+    // Fallback to fetch if Unpoly is not available
+    fetch('/admin/system/processes-data', {
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      cache: 'no-store'
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok: ' + response.status);
+      }
+      return response.text();
+    })
+    .then(html => {
+      // Update the processes table content
+      if (tableContent) {
+        // Replace the table content with the new HTML
+        tableContent.innerHTML = html;
+        console.log('Process data refreshed successfully via fetch');
+      } else {
+        console.error('Could not find processes table content element');
+      }
+    })
+    .catch(error => {
+      console.error('Error refreshing processes data:', error);
+    })
+    .finally(() => {
+      // Hide loading indicator
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+    });
+  }
 }
 
-// Setup logging functionality
-function setupLogging() {
-  // Log panel functionality
-  function appendToLog(message, type = 'info') {
-    const logContent = document.querySelector('.log-content');
-    if (logContent) {
-      const timestamp = new Date().toISOString();
-      const logEntry = document.createElement('div');
-      logEntry.className = `log-entry log-${type}`;
-      logEntry.textContent = `[${timestamp}] ${message}`;
-      logContent.appendChild(logEntry);
-      logContent.scrollTop = logContent.scrollHeight;
-    }
-  }
-  
-  // Expose log function globally
-  window.adminLog = appendToLog;
-  
-  // Initialize with a log message
-  appendToLog('Admin dashboard initialized', 'info');
-}
+// Note: Logging functionality has been moved to Unpoly-based implementation
 
 // Setup search functionality
 function setupSearch() {

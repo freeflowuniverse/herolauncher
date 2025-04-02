@@ -11,7 +11,6 @@
     <div class="nav-links">
       <a class="nav-link" href="/admin">Home</a>
       <a class="nav-link" href="/admin/services">Services</a>
-      <a class="nav-link" href="/admin/packages">Packages</a>
       <a class="nav-link" href="/admin/system/info">System</a>
     </div>
     

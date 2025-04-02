@@ -1,6 +1,6 @@
-{{ extends "./layout" }}
+{{ extends "../../layout" }}
 
-{{ block "content" }}
+{{ block documentBody() }}
 <article>
   <header>
     <h2>System Settings</h2>

@@ -1,22 +1,24 @@
 package pages
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/interfaces/openrpc"
 	"github.com/gofiber/fiber/v2"
 )
 
 // ServiceHandler handles service-related page routes
 type ServiceHandler struct {
-	pm     *processmanager.ProcessManager
-	logger *log.Logger
+	client  *openrpc.Client
+	logger  *log.Logger
 }
 
-// NewServiceHandler creates a new service handler with the provided process manager
-func NewServiceHandler(pm *processmanager.ProcessManager, logger *log.Logger) *ServiceHandler {
+// NewServiceHandler creates a new service handler with the provided socket path and secret
+func NewServiceHandler(socketPath, secret string, logger *log.Logger) *ServiceHandler {
+	fmt.Printf("DEBUG: Creating new pages.ServiceHandler with socket path: %s and secret: %s\n", socketPath, secret)
 	return &ServiceHandler{
-		pm:     pm,
+		client: openrpc.NewClient(socketPath, secret),
 		logger: logger,
 	}
 }
@@ -35,10 +37,11 @@ func (h *ServiceHandler) getServicesPage(c *fiber.Ctx) error {
 	// Get processes to display on the initial page load
 	processes, _ := h.getProcessList()
 
-	// No need to check for socket existence since we're using the process manager directly
+	// Check if we can connect to the process manager
 	var warning string
-	if h.pm == nil {
-		warning = "Process manager is not properly initialized."
+	_, err := h.client.ListProcesses("json")
+	if err != nil {
+		warning = "Could not connect to process manager: " + err.Error()
 		h.logger.Printf("Warning: %s", warning)
 	}
 
@@ -64,14 +67,40 @@ func (h *ServiceHandler) getServicesData(c *fiber.Ctx) error {
 func (h *ServiceHandler) getProcessList() ([]ProcessDisplayInfo, error) {
 	// Debug: Log the function entry
 	h.logger.Printf("Entering getProcessList() function")
+	fmt.Printf("DEBUG: getProcessList called using client: %p\n", h.client)
 
-	// Get the list of processes directly from the process manager
-	processes := h.pm.ListProcesses()
+	// Get the list of processes via the client
+	result, err := h.client.ListProcesses("json")
+	if err != nil {
+		h.logger.Printf("Error listing processes: %v", err)
+		return nil, err
+	}
+
+	// Convert the result to a slice of ProcessStatus
+	listResult, ok := result.([]interface{})
+	if !ok {
+		h.logger.Printf("Error: unexpected result type from ListProcesses")
+		return nil, fmt.Errorf("unexpected result type from ListProcesses")
+	}
 
 	// Convert to display info format
-	displayInfoList := make([]ProcessDisplayInfo, 0, len(processes))
-	for _, procInfo := range processes {
-		displayInfo := ConvertToDisplayInfo(procInfo)
+	displayInfoList := make([]ProcessDisplayInfo, 0, len(listResult))
+	for _, item := range listResult {
+		procMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		
+		// Create a ProcessDisplayInfo from the map
+		displayInfo := ProcessDisplayInfo{
+			ID:        fmt.Sprintf("%v", procMap["pid"]),
+			Name:      fmt.Sprintf("%v", procMap["name"]),
+			Status:    fmt.Sprintf("%v", procMap["status"]),
+			Uptime:    fmt.Sprintf("%v", procMap["uptime"]),
+			StartTime: fmt.Sprintf("%v", procMap["start_time"]),
+			CPU:       fmt.Sprintf("%v%%", procMap["cpu"]),
+			Memory:    fmt.Sprintf("%v MB", procMap["memory"]),
+		}
 		displayInfoList = append(displayInfoList, displayInfo)
 	}
 

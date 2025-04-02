@@ -20,14 +20,12 @@
           </p>
         </header>
 
-        <div class="processes-table-content" up-poll="/admin/system/processes-data" up-interval="10000" style="display: block; width: 100%;" id="processes-content">
-          {{ if isset(.) "error" }}
-            {{ if .error }}
+        <div class="processes-table-content" up-poll="/admin/system/processes-data" up-hungry="true" up-interval="10000" style="display: block; width: 100%;" id="processes-content">
+          {{ if isset(., "error") }}
             <div class="alert alert-danger">{{ .error }}</div>
-            {{ end }}
           {{ end }}
 
-          <table class="processes-stats table table-striped">
+          <table class="table table-striped" id="processes-stats">
             <thead>
               <tr>
                 <th scope="col">PID</th>
@@ -39,14 +37,14 @@
               </tr>
             </thead>
             <tbody>
-              {{ if .processes }}
+              {{ if isset(., "processes") && len(.processes) > 0 }}
                 {{ range .processes }}
                 <tr class="{{ if .is_current }}table-primary{{ end }}">
                   <td>{{ .pid }}</td>
                   <td>{{ .name }}</td>
                   <td>{{ .status }}</td>
-                  <td>{{ printf("%.1f%%", .cpu_percent) }}</td>
-                  <td>{{ printf("%.1f MB", .memory_mb) }}</td>
+                  <td>{{ .cpu_percent_str }}</td>
+                  <td>{{ .memory_mb_str }}</td>
                   <td>{{ .create_time_str }}</td>
                 </tr>
                 {{ end }}
@@ -62,4 +60,18 @@
     </div>
   </div>
 </article>
+
+<script>
+  // Ensure processes data is loaded on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if the processes content is empty or shows 'No process data available'
+    const processesContent = document.getElementById('processes-content');
+    const tableBody = processesContent ? processesContent.querySelector('tbody') : null;
+    
+    if (tableBody && (tableBody.innerText.includes('No process data available') || tableBody.children.length <= 1)) {
+      console.log('Triggering initial process data load');
+      refreshProcesses();
+    }
+  });
+</script>
 {{ end }}

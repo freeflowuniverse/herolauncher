@@ -3,6 +3,7 @@ package herolauncher
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -13,14 +14,13 @@ import (
 
 	"github.com/freeflowuniverse/herolauncher/pkg/executor"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/api"
+	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/handlers"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/pages"
-	"github.com/freeflowuniverse/herolauncher/pkg/packagemanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/mock"
-	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/openrpc"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -37,8 +37,7 @@ type Config struct {
 	StaticFilesPath string
 	PMSocketPath    string // ProcessManager socket path
 	PMSecret        string // ProcessManager authentication secret
-	VFSSocketPath   string // VFS OpenRPC socket path
-	VFSSecret       string // VFS OpenRPC authentication secret
+	HJSocketPath    string // HeroJobs socket path
 }
 
 // DefaultConfig returns a default configuration for the HeroLauncher server
@@ -50,7 +49,7 @@ func DefaultConfig() Config {
 	// Check for PORT environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "9020" // Default port if not specified
+		port = "9021" // Default port if not specified
 	}
 
 	return Config{
@@ -59,8 +58,7 @@ func DefaultConfig() Config {
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		PMSocketPath:    "/tmp/processmanager.sock", // Default ProcessManager socket path
 		PMSecret:        "secret123",                // Default ProcessManager secret
-		VFSSocketPath:   "/tmp/vfs.sock",            // Default VFS socket path
-		VFSSecret:       "vfs_secret",               // Default VFS secret
+		HJSocketPath:    "/tmp/herojobs.sock",       // Default HeroJobs socket path
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
 		StaticFilesPath: filepath.Join(projectRoot, "pkg/herolauncher/web/static"),
 	}
@@ -71,12 +69,10 @@ type HeroLauncher struct {
 	app             *fiber.App
 	redisServer     *redisserver.Server
 	executorService *executor.Executor
-	packageManager  *packagemanager.PackageManager
 	pm              *processmanager.ProcessManager
 	pmProcess       *os.Process           // Process for the process manager
+	hjProcess       *os.Process           // Process for the HeroJobs server
 	vfsManager      interfaces.VFSManager // VFS manager implementation
-	vfsClient       *openrpc.Client       // VFS OpenRPC client
-	vfsServer       *openrpc.Server       // VFS OpenRPC server
 	config          Config
 	startTime       time.Time
 }
@@ -89,14 +85,16 @@ func New(config Config) *HeroLauncher {
 		UnixSocketPath: config.RedisSocketPath,
 	})
 	executorService := executor.NewExecutor()
-	packageManagerService := packagemanager.NewPackageManager()
 
 	// Initialize process manager directly
 	pm := processmanager.NewProcessManager(config.PMSecret)
 
+	// Set the shared logs path for process manager
+	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs")
+	pm.SetLogsBasePath(sharedLogsPath)
+
 	// Initialize VFS manager and client
 	vfsManager := mock.NewMockVFSManager() // Using mock implementation for now
-	vfsClient := openrpc.NewClient(config.VFSSocketPath, config.VFSSecret)
 
 	// Initialize template engine with debugging enabled
 	// Use absolute path for templates to avoid path resolution issues
@@ -135,23 +133,13 @@ func New(config Config) *HeroLauncher {
 	app.Static("/img", config.StaticFilesPath+"/img")
 	app.Static("/favicon.ico", config.StaticFilesPath+"/favicon.ico")
 
-	// Initialize VFS OpenRPC server
-	vfsServer, err := openrpc.NewServer(vfsManager, config.VFSSocketPath, config.VFSSecret)
-	if err != nil {
-		log.Printf("Warning: Failed to initialize VFS OpenRPC server: %v\n", err)
-		vfsServer = nil
-	}
-
 	// Create HeroLauncher instance
 	hl := &HeroLauncher{
 		app:             app,
 		redisServer:     redisServer,
 		executorService: executorService,
-		packageManager:  packageManagerService,
 		pm:              pm,
 		vfsManager:      vfsManager,
-		vfsClient:       vfsClient,
-		vfsServer:       vfsServer,
 		config:          config,
 		startTime:       time.Now(),
 	}
@@ -173,11 +161,26 @@ func (hl *HeroLauncher) setupRoutes() {
 
 	// Initialize API handlers
 	apiAdminHandler := api.NewAdminHandler(hl, statsManager)
-	apiServiceHandler := api.NewServiceHandler(hl.pm, log.Default())
+	apiServiceHandler := api.NewServiceHandler(hl.config.PMSocketPath, hl.config.PMSecret, log.Default())
 
 	// Initialize Page handlers
-	pageAdminHandler := pages.NewAdminHandler(hl, statsManager)
-	pageServiceHandler := pages.NewServiceHandler(hl.pm, log.Default())
+	pageAdminHandler := pages.NewAdminHandler(hl, statsManager, hl.config.PMSocketPath, hl.config.PMSecret)
+	pageServiceHandler := pages.NewServiceHandler(hl.config.PMSocketPath, hl.config.PMSecret, log.Default())
+	
+	// Initialize Jobs page handler
+	pageJobHandler, err := pages.NewJobHandler(hl.config.HJSocketPath, log.Default())
+	if err != nil {
+		log.Printf("Warning: Failed to initialize Jobs page handler: %v\n", err)
+	}
+
+	// Initialize JobHandler
+	jobHandler, err := handlers.NewJobHandler(hl.config.HJSocketPath, log.Default())
+	if err != nil {
+		log.Printf("Warning: Failed to initialize JobHandler: %v\n", err)
+	} else {
+		// Register Job routes
+		jobHandler.RegisterRoutes(hl.app)
+	}
 
 	// Register API routes
 	apiAdminHandler.RegisterRoutes(hl.app)
@@ -186,6 +189,11 @@ func (hl *HeroLauncher) setupRoutes() {
 	// Register Page routes
 	pageAdminHandler.RegisterRoutes(hl.app)
 	pageServiceHandler.RegisterRoutes(hl.app)
+	
+	// Register Jobs page routes if handler was initialized successfully
+	if pageJobHandler != nil {
+		pageJobHandler.RegisterRoutes(hl.app)
+	}
 
 	// TODO: Move these to appropriate API or pages packages
 	executorHandler := api.NewExecutorHandler(hl.executorService)
@@ -239,13 +247,34 @@ func (hl *HeroLauncher) startProcessManager() error {
 
 	// Check if processmanager is already running by testing the socket
 	if _, err := os.Stat(hl.config.PMSocketPath); err == nil {
-		// If socket exists but we can't verify it's running, assume it's stale
-		log.Printf("Found existing socket, but can't verify if process manager is running")
+		// Try to connect to the socket to verify it's working
+		conn, err := net.Dial("unix", hl.config.PMSocketPath)
+		if err == nil {
+			// Socket is valid and we can connect to it
+			conn.Close()
+			log.Printf("Found existing process manager socket, using it instead of starting a new one")
+			return nil
+		}
+		
+		// If socket exists but we can't connect, assume it's stale
+		log.Printf("Found existing socket, but can't connect to it: %v", err)
+		log.Printf("Removing stale socket and starting a new process manager")
 		_ = os.Remove(hl.config.PMSocketPath)
 	}
 
-	// Start the process manager
-	cmd := exec.Command("go", "run", processManagerPath, "-socket", hl.config.PMSocketPath, "-secret", hl.config.PMSecret)
+	// Define shared logs path
+	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs")
+	
+	// Ensure the logs directory exists
+	if err := os.MkdirAll(sharedLogsPath, 0755); err != nil {
+		log.Printf("Warning: Failed to create logs directory: %v", err)
+	}
+	
+	// Start the process manager with the shared logs path
+	cmd := exec.Command("go", "run", processManagerPath, 
+		"-socket", hl.config.PMSocketPath, 
+		"-secret", hl.config.PMSecret,
+		"-logs", sharedLogsPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -277,20 +306,88 @@ func (hl *HeroLauncher) startProcessManager() error {
 	}
 }
 
-// Start starts the HeroLauncher server
-func (hl *HeroLauncher) Start() error {
-	// Start VFS OpenRPC server if available
-	if hl.vfsServer != nil {
-		if err := hl.vfsServer.Start(); err != nil {
-			log.Printf("Warning: Failed to start VFS OpenRPC server: %v\n", err)
-		} else {
-			log.Printf("VFS OpenRPC server started on socket: %s\n", hl.config.VFSSocketPath)
+// startHeroJobs starts the HeroJobs server as a background process
+func (hl *HeroLauncher) startHeroJobs() error {
+	_, filename, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Join(filepath.Dir(filename), "../..")
+	heroJobsPath := filepath.Join(projectRoot, "cmd/herojobs/main.go")
+
+	log.Printf("Starting HeroJobs from: %s", heroJobsPath)
+
+	// Check if HeroJobs is already running by testing the socket
+	if _, err := os.Stat(hl.config.HJSocketPath); err == nil {
+		// Try to connect to the socket to verify it's working
+		conn, err := net.Dial("unix", hl.config.HJSocketPath)
+		if err == nil {
+			// Socket is valid and we can connect to it
+			conn.Close()
+			log.Printf("Found existing HeroJobs socket, using it instead of starting a new one")
+			return nil
+		}
+		
+		// If socket exists but we can't connect, assume it's stale
+		log.Printf("Found existing HeroJobs socket, but can't connect to it: %v", err)
+		log.Printf("Removing stale socket and starting a new HeroJobs server")
+		_ = os.Remove(hl.config.HJSocketPath)
+	}
+
+	// Define shared logs path
+	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs/jobs")
+	
+	// Ensure the logs directory exists
+	if err := os.MkdirAll(sharedLogsPath, 0755); err != nil {
+		log.Printf("Warning: Failed to create logs directory: %v", err)
+	}
+	
+	// Start HeroJobs with the shared logs path
+	cmd := exec.Command("go", "run", heroJobsPath, 
+		"-socket", hl.config.HJSocketPath,
+		"-logs", sharedLogsPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start HeroJobs: %v", err)
+	}
+
+	// Store the process reference for graceful shutdown
+	hl.hjProcess = cmd.Process
+	log.Printf("Started HeroJobs with PID: %d", cmd.Process.Pid)
+
+	// Wait for HeroJobs to start up
+	timeout := time.After(5 * time.Second)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Check if the socket exists
+			if _, err := os.Stat(hl.config.HJSocketPath); err == nil {
+				// If socket exists, assume HeroJobs is running
+				log.Printf("HeroJobs is up and running")
+				return nil
+			}
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for HeroJobs to start")
 		}
 	}
+}
+
+// Start starts the HeroLauncher server
+func (hl *HeroLauncher) Start() error {
 	// Start the process manager first
 	err := hl.startProcessManager()
 	if err != nil {
 		log.Printf("Warning: Failed to start process manager: %v", err)
+		// Continue anyway, we'll just show warnings in the UI
+	}
+	
+	// Start HeroJobs
+	err = hl.startHeroJobs()
+	if err != nil {
+		log.Printf("Warning: Failed to start HeroJobs: %v", err)
 		// Continue anyway, we'll just show warnings in the UI
 	}
 
@@ -306,6 +403,12 @@ func (hl *HeroLauncher) Start() error {
 		if hl.pmProcess != nil {
 			log.Println("Stopping process manager...")
 			_ = hl.pmProcess.Kill()
+		}
+
+		// Kill the HeroJobs server if we started it
+		if hl.hjProcess != nil {
+			log.Println("Stopping HeroJobs server...")
+			_ = hl.hjProcess.Kill()
 		}
 
 		_ = hl.app.Shutdown()

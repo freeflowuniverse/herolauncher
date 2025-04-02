@@ -32,42 +32,6 @@ type JobResponse struct {
 	Error     string    `json:"error"`
 }
 
-// Package Manager Models
-
-// InstallPackageRequest represents a request to install a package
-type InstallPackageRequest struct {
-	PackageName string `json:"package_name"`
-}
-
-// InstallPackageResponse represents the response from installing a package
-type InstallPackageResponse struct {
-	Success bool   `json:"success"`
-	Output  string `json:"output"`
-}
-
-// UninstallPackageRequest represents a request to uninstall a package
-type UninstallPackageRequest struct {
-	PackageName string `json:"package_name"`
-}
-
-// UninstallPackageResponse represents the response from uninstalling a package
-type UninstallPackageResponse struct {
-	Success bool   `json:"success"`
-	Output  string `json:"output"`
-}
-
-// ListPackagesResponse represents the response from listing packages
-type ListPackagesResponse struct {
-	Packages []string `json:"packages"`
-}
-
-// SearchPackagesResponse represents the response from searching packages
-type SearchPackagesResponse struct {
-	Packages []string `json:"packages"`
-}
-
-
-
 // Redis Models
 
 // SetKeyRequest represents a request to set a key

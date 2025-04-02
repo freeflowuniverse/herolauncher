@@ -1,0 +1,99 @@
+/* Styles for the logs page */
+
+.log-container {
+  margin-top: 1.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.log-table {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.log-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.log-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--card-background-color);
+  z-index: 10;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--card-border-color);
+}
+
+.log-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--card-border-color);
+  font-family: var(--font-family-monospace);
+  font-size: 0.9rem;
+}
+
+/* Log level styles */
+.log-info {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.log-warning {
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.log-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Filter controls */
+.filter-controls {
+  background-color: var(--card-background-color);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--card-border-color);
+}
+
+.filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-button {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-top: 1rem;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pagination-btn {
+  padding: 0.25rem 0.75rem;
+}
+
+/* Loading indicator */
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: var(--muted-color);
+}

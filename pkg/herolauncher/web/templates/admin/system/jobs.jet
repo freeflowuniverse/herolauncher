@@ -1,0 +1,58 @@
+{{ extends "../layout" }}
+
+<header>
+  <h2 class="title">System Jobs</h2>
+  <p class="description text-muted">Overview of scheduled jobs</p>
+</header>
+<article class="jobs-info">
+  <div class="grid" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+    <div>
+      <article class="jobs-table">
+        <header>
+          <h3 id="jobs-title">Scheduled Jobs</h3>
+          <p class="refresh-status">
+            <button class="btn btn-sm" onclick="refreshJobs()">
+              Refresh
+              <span class="loading-indicator" id="refresh-loading" style="display: none;">&nbsp;Loading...</span>
+            </button>
+          </p>
+        </header>
+
+        <div class="jobs-table-content" up-poll="/admin/system/jobs-data" up-hungry="true" up-interval="10000" style="display: block; width: 100%;" id="jobs-content">
+          {{ if isset(., "error") }}
+            <div class="alert alert-danger">{{ .error }}</div>
+          {{ end }}
+
+          <table class="table table-striped" id="jobs-stats">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Name</th>
+                <th scope="col">Status</th>
+                <th scope="col">Next Run</th>
+                <th scope="col">Last Run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{ if isset(., "jobs") && len(.jobs) > 0 }}
+                {{ range .jobs }}
+                <tr class="{{ if .is_current }}table-primary{{ end }}">
+                  <td>{{ .id }}</td>
+                  <td>{{ .name }}</td>
+                  <td>{{ .status }}</td>
+                  <td>{{ .next_run }}</td>
+                  <td>{{ .last_run }}</td>
+                </tr>
+                {{ end }}
+              {{ else }}
+                <tr>
+                  <td colspan="5">No job data available.</td>
+                </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </div>
+</article>
