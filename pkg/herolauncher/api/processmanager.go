@@ -1,12 +1,15 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
 	"time"
 
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/interfaces"
+	"github.com/freeflowuniverse/herolauncher/pkg/processmanager/interfaces/openrpc"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -39,17 +42,18 @@ func ConvertToDisplayInfo(info *processmanager.ProcessInfo) ProcessDisplayInfo {
 
 // ServiceHandler handles service-related API routes
 type ServiceHandler struct {
-	pm     *processmanager.ProcessManager
+	client *openrpc.Client
 	logger *log.Logger
 }
 
 // default number of log lines to retrieve - use a high value to essentially show all logs
 const DefaultLogLines = 10000
 
-// NewServiceHandler creates a new service handler with the provided process manager
-func NewServiceHandler(pm *processmanager.ProcessManager, logger *log.Logger) *ServiceHandler {
+// NewServiceHandler creates a new service handler with the provided socket path and secret
+func NewServiceHandler(socketPath, secret string, logger *log.Logger) *ServiceHandler {
+	fmt.Printf("DEBUG: Creating new api.ServiceHandler with socket path: %s and secret: %s\n", socketPath, secret)
 	return &ServiceHandler{
-		pm:     pm,
+		client: openrpc.NewClient(socketPath, secret),
 		logger: logger,
 	}
 }
@@ -81,14 +85,72 @@ func (h *ServiceHandler) RegisterRoutes(app *fiber.App) {
 func (h *ServiceHandler) getProcessList() ([]ProcessDisplayInfo, error) {
 	// Debug: Log the function entry
 	h.logger.Printf("Entering getProcessList() function")
+	fmt.Printf("DEBUG: API getProcessList called using client: %p\n", h.client)
 
-	// Get the list of processes directly from the process manager
-	processes := h.pm.ListProcesses()
+	// Get the list of processes via the client
+	result, err := h.client.ListProcesses("json")
+	if err != nil {
+		h.logger.Printf("Error listing processes: %v", err)
+		return nil, err
+	}
+
+	// Convert the result to a slice of ProcessStatus
+	processStatuses, ok := result.([]interfaces.ProcessStatus)
+	if !ok {
+		// Try to handle the result as a map or other structure
+		h.logger.Printf("Warning: unexpected result type from ListProcesses, trying alternative parsing")
+		
+		// Try to convert the result to JSON and then parse it
+		resultJSON, err := json.Marshal(result)
+		if err != nil {
+			h.logger.Printf("Error marshaling result to JSON: %v", err)
+			return nil, fmt.Errorf("failed to marshal result: %w", err)
+		}
+		
+		var processStatuses []interfaces.ProcessStatus
+		if err := json.Unmarshal(resultJSON, &processStatuses); err != nil {
+			h.logger.Printf("Error unmarshaling result to ProcessStatus: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal process list result: %w", err)
+		}
+		
+		// Convert to display info format
+		displayInfoList := make([]ProcessDisplayInfo, 0, len(processStatuses))
+		for _, proc := range processStatuses {
+			// Calculate uptime based on start time
+			uptime := formatUptime(time.Since(proc.StartTime))
+			
+			displayInfo := ProcessDisplayInfo{
+				ID:        fmt.Sprintf("%d", proc.PID),
+				Name:      proc.Name,
+				Status:    string(proc.Status),
+				Uptime:    uptime,
+				StartTime: proc.StartTime.Format("2006-01-02 15:04:05"),
+				CPU:       fmt.Sprintf("%.2f%%", proc.CPUPercent),
+				Memory:    fmt.Sprintf("%.2f MB", proc.MemoryMB),
+			}
+			displayInfoList = append(displayInfoList, displayInfo)
+		}
+		
+		// Debug: Log the number of processes
+		h.logger.Printf("Found %d processes", len(displayInfoList))
+		return displayInfoList, nil
+	}
 
 	// Convert to display info format
-	displayInfoList := make([]ProcessDisplayInfo, 0, len(processes))
-	for _, procInfo := range processes {
-		displayInfo := ConvertToDisplayInfo(procInfo)
+	displayInfoList := make([]ProcessDisplayInfo, 0, len(processStatuses))
+	for _, proc := range processStatuses {
+		// Calculate uptime based on start time
+		uptime := formatUptime(time.Since(proc.StartTime))
+		
+		displayInfo := ProcessDisplayInfo{
+			ID:        fmt.Sprintf("%d", proc.PID),
+			Name:      proc.Name,
+			Status:    string(proc.Status),
+			Uptime:    uptime,
+			StartTime: proc.StartTime.Format("2006-01-02 15:04:05"),
+			CPU:       fmt.Sprintf("%.2f%%", proc.CPUPercent),
+			Memory:    fmt.Sprintf("%.2f MB", proc.MemoryMB),
+		}
 		displayInfoList = append(displayInfoList, displayInfo)
 	}
 
@@ -144,7 +206,8 @@ func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 
 	// Start the process with default values
 	// logEnabled=true, deadline=0 (no deadline), no cron, no jobID
-	err := h.pm.StartProcess(name, command, true, 0, "", "")
+	fmt.Printf("DEBUG: API startService called for '%s' using client: %p\n", name, h.client)
+	result, err := h.client.StartProcess(name, command, true, 0, "", "")
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
@@ -152,15 +215,16 @@ func (h *ServiceHandler) startService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get the process info to return the PID
-	processes := h.pm.ListProcesses()
-	var pid int
-	for _, proc := range processes {
-		if proc.Name == name {
-			pid = int(proc.PID) // Convert int32 to int
-			break
-		}
+	// Check if the result indicates success
+	if !result.Success {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   result.Message,
+		})
 	}
+
+	// Get the PID from the result
+	pid := result.PID
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -200,12 +264,21 @@ func (h *ServiceHandler) stopService(c *fiber.Ctx) error {
 	h.logger.Printf("Stopping process with name: %s", name)
 
 	// Stop the process
-	err := h.pm.StopProcess(name)
+	fmt.Printf("DEBUG: API stopService called for '%s' using client: %p\n", name, h.client)
+	result, err := h.client.StopProcess(name)
 	if err != nil {
 		h.logger.Printf("Error stopping process: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
 			"error":   fmt.Sprintf("Failed to stop service: %v", err),
+		})
+	}
+	
+	// Check if the result indicates success
+	if !result.Success {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   result.Message,
 		})
 	}
 
@@ -246,12 +319,21 @@ func (h *ServiceHandler) restartService(c *fiber.Ctx) error {
 	h.logger.Printf("Restarting process with name: %s", name)
 
 	// Restart the process
-	err := h.pm.RestartProcess(name)
+	fmt.Printf("DEBUG: API restartService called for '%s' using client: %p\n", name, h.client)
+	result, err := h.client.RestartProcess(name)
 	if err != nil {
 		h.logger.Printf("Error restarting process: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
 			"error":   fmt.Sprintf("Failed to restart service: %v", err),
+		})
+	}
+	
+	// Check if the result indicates success
+	if !result.Success {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   result.Message,
 		})
 	}
 
@@ -289,11 +371,20 @@ func (h *ServiceHandler) deleteService(c *fiber.Ctx) error {
 	h.logger.Printf("Deleting process with name: %s", name)
 
 	// Delete the process
-	err := h.pm.DeleteProcess(name)
+	fmt.Printf("DEBUG: API deleteService called for '%s' using client: %p\n", name, h.client)
+	result, err := h.client.DeleteProcess(name)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
 			"error":   fmt.Sprintf("Failed to delete service: %v", err),
+		})
+	}
+	
+	// Check if the result indicates success
+	if !result.Success {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   result.Message,
 		})
 	}
 
@@ -380,7 +471,8 @@ func (h *ServiceHandler) getProcessLogs(c *fiber.Ctx) error {
 	h.logger.Printf("Getting logs for process: %s (lines: %d)", name, lines)
 
 	// Get logs
-	logs, err := h.pm.GetProcessLogs(name, lines)
+	fmt.Printf("DEBUG: API getProcessLogs called for '%s' using client: %p\n", name, h.client)
+	logs, err := h.client.GetProcessLogs(name, lines)
 	if err != nil {
 		h.logger.Printf("Error getting process logs: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -407,10 +499,10 @@ func (h *ServiceHandler) getServicesPage(c *fiber.Ctx) error {
 	// Get processes to display on the initial page load
 	processes, _ := h.getProcessList()
 
-	// No need to check for socket existence since we're using the process manager directly
+	// Check if client is properly initialized
 	var warning string
-	if h.pm == nil {
-		warning = "Process manager is not properly initialized."
+	if h.client == nil {
+		warning = "Process manager client is not properly initialized."
 		h.logger.Printf("Warning: %s", warning)
 	}
 
@@ -433,10 +525,10 @@ func (h *ServiceHandler) getServicesData(c *fiber.Ctx) error {
 	// Get processes
 	processes, _ := h.getProcessList()
 
-	// No need to check for socket existence since we're using the process manager directly
+	// Check if client is properly initialized
 	var warning string
-	if h.pm == nil {
-		warning = "Process manager is not properly initialized."
+	if h.client == nil {
+		warning = "Process manager client is not properly initialized."
 		h.logger.Printf("Warning: %s", warning)
 	}
 
