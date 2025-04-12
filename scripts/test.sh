@@ -44,7 +44,7 @@ EXCLUDED_MODULES=(
     # "pkg/tools"
     # "pkg/ui"
     # "pkg/vfs"
-    # "pkg/vlang"
+    # "pkg/lang"
     # "pkg/vm"
     # "pkg/webdavserver"
     # "pkg/wire"

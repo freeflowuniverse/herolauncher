@@ -30,6 +30,7 @@ type Job struct {
 	Topic         string    `json:"topic"`
 	HeroScript    string    `json:"heroscript"`
 	RhaiScript    string    `json:"rhaiscript"`
+	OpenRPC       string    `json:"openrpc"`
 	Timeout       int64     `json:"timeout"`
 	Status        JobStatus `json:"status"`
 	TimeScheduled int64     `json:"time_scheduled"`

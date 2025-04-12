@@ -14,7 +14,7 @@ VlangSpecs is a Go package (in the `vlang` package) that extracts public structs
 ## Installation
 
 ```bash
-go get github.com/freeflowuniverse/herolauncher/pkg/vlang
+go get github.com/freeflowuniverse/herolauncher/pkg/lang
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/vlang"
+	"github.com/freeflowuniverse/herolauncher/pkg/lang"
 )
 
 func main() {

@@ -89,7 +89,7 @@ We provide several methods to test the MCP server:
 This server is built using:
 
 - [mcp-golang](https://github.com/metoro-io/mcp-golang) - Go implementation of the Model Context Protocol
-- [vlangspecs](https://github.com/freeflowuniverse/herolauncher/pkg/vlang/vlangspecs) - V language specification extraction library
+- [vlangspecs](https://github.com/freeflowuniverse/herolauncher/pkg/lang/vlangspecs) - V language specification extraction library
 
 ## MCP Specification Compliance
 

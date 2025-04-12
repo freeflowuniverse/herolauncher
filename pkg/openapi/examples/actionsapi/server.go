@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -82,7 +82,6 @@ func main() {
 		return c.SendStatus(fiber.StatusOK)
 
 	})
-
 
 	log.Println("Server started on :8080")
 	log.Fatal(app.Listen(":8080"))

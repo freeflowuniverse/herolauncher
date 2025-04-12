@@ -1,4 +1,4 @@
-in @pkg/vlang
+in @pkg/lang
 
 create a vlangprocessor struct which will have some functions
 

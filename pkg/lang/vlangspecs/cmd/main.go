@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/vlang/vlangspecs"
+	"github.com/freeflowuniverse/herolauncher/pkg/lang/vlangspecs"
 )
 
 func main() {
