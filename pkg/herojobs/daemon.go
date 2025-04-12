@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/herohandler"
+	"github.com/freeflowuniverse/herolauncher/pkg/api/handlerfactory/herohandler"
 )
 
 // JobProcessor is a function type that processes a job

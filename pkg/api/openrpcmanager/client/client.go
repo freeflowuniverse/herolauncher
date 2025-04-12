@@ -6,35 +6,35 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
 )
 
 // Common errors
 var (
-	ErrConnectionFailed   = errors.New("failed to connect to OpenRPC server")
-	ErrRequestFailed      = errors.New("failed to send request to OpenRPC server")
-	ErrResponseFailed     = errors.New("failed to read response from OpenRPC server")
-	ErrUnmarshalFailed    = errors.New("failed to unmarshal response")
-	ErrUnexpectedResponse = errors.New("unexpected response format")
-	ErrRPCError           = errors.New("RPC error")
+	ErrConnectionFailed     = errors.New("failed to connect to OpenRPC server")
+	ErrRequestFailed        = errors.New("failed to send request to OpenRPC server")
+	ErrResponseFailed       = errors.New("failed to read response from OpenRPC server")
+	ErrUnmarshalFailed      = errors.New("failed to unmarshal response")
+	ErrUnexpectedResponse   = errors.New("unexpected response format")
+	ErrRPCError             = errors.New("RPC error")
 	ErrAuthenticationFailed = errors.New("authentication failed")
 )
 
 // RPCRequest represents an outgoing RPC request
 type RPCRequest struct {
-	Method     string          `json:"method"`
-	Params     json.RawMessage `json:"params"`
-	ID         int             `json:"id"`
-	Secret     string          `json:"secret,omitempty"`
-	JSONRPC    string          `json:"jsonrpc"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params"`
+	ID      int             `json:"id"`
+	Secret  string          `json:"secret,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
 }
 
 // RPCResponse represents an incoming RPC response
 type RPCResponse struct {
-	Result  interface{}     `json:"result,omitempty"`
-	Error   *RPCError       `json:"error,omitempty"`
-	ID      interface{}     `json:"id,omitempty"`
-	JSONRPC string          `json:"jsonrpc"`
+	Result  interface{} `json:"result,omitempty"`
+	Error   *RPCError   `json:"error,omitempty"`
+	ID      interface{} `json:"id,omitempty"`
+	JSONRPC string      `json:"jsonrpc"`
 }
 
 // RPCError represents an RPC error
@@ -63,13 +63,13 @@ type IntrospectionResponse struct {
 type Client interface {
 	// Discover returns the OpenRPC schema
 	Discover() (openrpcmanager.OpenRPCSchema, error)
-	
+
 	// Introspect returns information about recent RPC calls
 	Introspect(limit int, method string, status string) (IntrospectionResponse, error)
-	
+
 	// Request sends a request to the OpenRPC server and returns the result
 	Request(method string, params json.RawMessage, secret string) (interface{}, error)
-	
+
 	// Close closes the client connection
 	Close() error
 }
@@ -123,30 +123,30 @@ func (c *BaseClient) Introspect(limit int, method string, status string) (Intros
 		Method: method,
 		Status: status,
 	}
-	
+
 	// Marshal the params
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {
 		return IntrospectionResponse{}, fmt.Errorf("failed to marshal introspection params: %v", err)
 	}
-	
+
 	// Make the request
 	result, err := c.Request("rpc.introspect", paramsJSON, c.secret)
 	if err != nil {
 		return IntrospectionResponse{}, err
 	}
-	
+
 	// Convert result to introspection response
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
 		return IntrospectionResponse{}, fmt.Errorf("%w: %v", ErrUnmarshalFailed, err)
 	}
-	
+
 	var response IntrospectionResponse
 	if err := json.Unmarshal(resultJSON, &response); err != nil {
 		return IntrospectionResponse{}, fmt.Errorf("%w: %v", ErrUnmarshalFailed, err)
 	}
-	
+
 	return response, nil
 }
 

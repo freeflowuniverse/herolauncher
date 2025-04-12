@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
 )
 
 // MockClient implements the Client interface for testing
@@ -86,7 +86,7 @@ func TestClient(t *testing.T) {
 				},
 			},
 			{
-				Name: "secure.method",
+				Name:   "secure.method",
 				Params: []openrpcmanager.ContentDescriptorObject{},
 				Result: &openrpcmanager.ContentDescriptorObject{
 					Name:   "result",
@@ -196,42 +196,42 @@ func TestClient(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TestMethod failed: %v", err)
 		}
-		
+
 		_, err = client.SecureMethod()
 		if err != nil {
 			t.Fatalf("SecureMethod failed: %v", err)
 		}
-		
+
 		// Test introspection
 		response, err := client.Introspect(10, "", "")
 		if err != nil {
 			t.Fatalf("Introspect failed: %v", err)
 		}
-		
+
 		// Verify we have logs
 		if response.Total < 2 {
 			t.Errorf("Expected at least 2 logs, got: %d", response.Total)
 		}
-		
+
 		// Test filtering by method
 		response, err = client.Introspect(10, "test.method", "")
 		if err != nil {
 			t.Fatalf("Introspect with method filter failed: %v", err)
 		}
-		
+
 		// Verify filtering works
 		for _, log := range response.Logs {
 			if log.Method != "test.method" {
 				t.Errorf("Expected only test.method logs, got: %s", log.Method)
 			}
 		}
-		
+
 		// Test filtering by status
 		response, err = client.Introspect(10, "", "success")
 		if err != nil {
 			t.Fatalf("Introspect with status filter failed: %v", err)
 		}
-		
+
 		// Verify status filtering works
 		for _, log := range response.Logs {
 			if log.Status != "success" {

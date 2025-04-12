@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 				},
 			},
 			{
-				Name: "ping",
+				Name:   "ping",
 				Params: []openrpcmanager.ContentDescriptorObject{},
 				Result: &openrpcmanager.ContentDescriptorObject{
 					Name:   "result",
@@ -48,7 +48,7 @@ func main() {
 				},
 			},
 			{
-				Name: "secure.info",
+				Name:   "secure.info",
 				Params: []openrpcmanager.ContentDescriptorObject{},
 				Result: &openrpcmanager.ContentDescriptorObject{
 					Name:   "result",

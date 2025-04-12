@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/srtrecorder"
+	"github.com/freeflowuniverse/herolauncher/pkg/servers/srtrecorder"
 )
 
 func main() {

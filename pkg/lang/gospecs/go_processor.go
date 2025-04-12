@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/core"
+	"github.com/freeflowuniverse/herolauncher/pkg/api/handlerfactory/core"
 )
 
 // GoProcessor processes Go language files to extract public structs, interfaces, and methods

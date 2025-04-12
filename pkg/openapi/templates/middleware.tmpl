@@ -1,9 +1,0 @@
-// Middleware for {{.Name}}
-func {{.Name}}Middleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		// Implementation for {{.Name}} middleware
-		{{.Implementation}}
-		
-		return c.Next()
-	}
-}
