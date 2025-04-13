@@ -1,4 +1,4 @@
-package herojobs
+package jobsmanager
 
 import (
 	"context"
@@ -69,7 +69,7 @@ func (r *RedisClient) StoreJob(job *Job) error {
 
 // GetJob retrieves a job from Redis by ID
 func (r *RedisClient) GetJob(jobID string) (*Job, error) {
-	storageKey := fmt.Sprintf("herojobs:%s", jobID)
+	storageKey := fmt.Sprintf("jobsmanager:%s", jobID)
 
 	// Get job from Redis
 	jobJSON, err := r.client.HGet(r.ctx, storageKey, "job").Result()
@@ -91,7 +91,7 @@ func (r *RedisClient) GetJob(jobID string) (*Job, error) {
 
 // DeleteJob deletes a job from Redis
 func (r *RedisClient) DeleteJob(jobID string) error {
-	storageKey := fmt.Sprintf("herojobs:%s", jobID)
+	storageKey := fmt.Sprintf("jobsmanager:%s", jobID)
 
 	// Delete job from Redis
 	err := r.client.Del(r.ctx, storageKey).Err()
@@ -144,7 +144,7 @@ func (r *RedisClient) QueueEmpty(circleID, topic string) error {
 
 	// Delete all jobs
 	for _, jobID := range jobIDs {
-		storageKey := fmt.Sprintf("herojobs:%s", jobID)
+		storageKey := fmt.Sprintf("jobsmanager:%s", jobID)
 		err := r.client.Del(r.ctx, storageKey).Err()
 		if err != nil {
 			return fmt.Errorf("failed to delete job %s: %w", jobID, err)

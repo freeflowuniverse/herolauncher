@@ -1,4 +1,4 @@
-package herojobs
+package jobsmanager
 
 import (
 	"encoding/json"
@@ -22,22 +22,35 @@ const (
 	JobStatusDone JobStatus = "done"
 )
 
+// ParamsType represents the type of parameters for a job
+type ParamsType string
+
+const (
+	// ParamsTypeHeroScript indicates parameters in HeroScript format
+	ParamsTypeHeroScript ParamsType = "heroscript"
+	// ParamsTypeRhaiScript indicates parameters in RhaiScript format
+	ParamsTypeRhaiScript ParamsType = "rhaiscript"
+	// ParamsTypeOpenRPC indicates parameters in OpenRPC format
+	ParamsTypeOpenRPC ParamsType = "openrpc"
+	ParamsTypeAI      ParamsType = "ai"
+)
+
 // Job represents a job to be processed
 type Job struct {
-	JobID         string    `json:"jobid"`
-	SessionKey    string    `json:"sessionkey"`
-	CircleID      string    `json:"circleid"`
-	Topic         string    `json:"topic"`
-	HeroScript    string    `json:"heroscript"`
-	RhaiScript    string    `json:"rhaiscript"`
-	OpenRPC       string    `json:"openrpc"`
-	Timeout       int64     `json:"timeout"`
-	Status        JobStatus `json:"status"`
-	TimeScheduled int64     `json:"time_scheduled"`
-	TimeStart     int64     `json:"time_start"`
-	TimeEnd       int64     `json:"time_end"`
-	Error         string    `json:"error"`
-	Result        string    `json:"result"`
+	JobID         string     `json:"jobid"`
+	SessionKey    string     `json:"sessionkey"`
+	CircleID      string     `json:"circleid"`
+	Topic         string     `json:"topic"`
+	Params        string     `json:"params"`      //can be a script, rpc, etc.
+	ParamsType    ParamsType `json:"params_type"` // Type of params: heroscript, rhaiscript, openrpc
+	Timeout       int64      `json:"timeout"`
+	Status        JobStatus  `json:"status"`
+	TimeScheduled int64      `json:"time_scheduled"`
+	TimeStart     int64      `json:"time_start"`
+	TimeEnd       int64      `json:"time_end"`
+	Error         string     `json:"error"`
+	Result        string     `json:"result"`
+	Log           bool       `json:"log"` // Whether to enable logging for this job
 }
 
 // NewJob creates a new job with default values
@@ -47,6 +60,7 @@ func NewJob() *Job {
 		JobID:         uuid.New().String(),
 		Topic:         "default",
 		Status:        JobStatusNew,
+		ParamsType:    ParamsTypeHeroScript, // Default to HeroScript
 		TimeScheduled: now,
 	}
 }
@@ -68,6 +82,9 @@ func NewJobFromJSON(jsonStr string) (*Job, error) {
 	}
 	if job.Status == "" {
 		job.Status = JobStatusNew
+	}
+	if job.ParamsType == "" {
+		job.ParamsType = ParamsTypeOpenRPC
 	}
 	if job.TimeScheduled == 0 {
 		job.TimeScheduled = time.Now().Unix()

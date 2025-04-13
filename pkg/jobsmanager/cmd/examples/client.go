@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/herojobs"
+	"github.com/freeflowuniverse/herolauncher/pkg/jobsmanager"
 )
 
 func main() {
 	// Parse command line flags
-	socketPath := flag.String("socket", "/tmp/herojobs.sock", "Path to the Unix domain socket")
+	socketPath := flag.String("socket", "/tmp/jobsmanager.sock", "Path to the Unix domain socket")
 	command := flag.String("cmd", "submit", "Command to execute (submit, list, get, delete, queuesize, queueempty, queueget, queuefetch)")
 	circleID := flag.String("circle", "testcircle", "Circle ID")
 	topic := flag.String("topic", "default", "Topic")
@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	// Create client
-	client, err := herojobs.NewClient(*socketPath)
+	client, err := jobsmanager.NewClient(*socketPath)
 	if err != nil {
 		fmt.Printf("Failed to create client: %v\n", err)
 		os.Exit(1)

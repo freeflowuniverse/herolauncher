@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/herojobs"
+	"github.com/freeflowuniverse/herolauncher/pkg/jobsmanager"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize Redis client
-	redisClient, err := herojobs.NewRedisClient(*redisAddr, *isUnixSocket)
+	redisClient, err := jobsmanager.NewRedisClient(*redisAddr, *isUnixSocket)
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
@@ -28,19 +28,19 @@ func main() {
 	log.Println("Connected to Redis successfully")
 
 	// Test with fake handler
-	log.Println("Testing daemon with fake handler...")
-	if err := herojobs.TestWithFakeHandler(redisClient); err != nil {
+	log.Println("Testing watchdog with fake handler...")
+	if err := jobsmanager.TestWithFakeHandler(redisClient); err != nil {
 		log.Fatalf("Test failed: %v", err)
 	}
 	log.Println("Test with fake handler completed successfully")
 
-	// Create and start daemon
-	log.Println("Starting daemon...")
-	daemon := herojobs.NewDaemon(redisClient)
-	daemon.Start()
+	// Create and start watchdog
+	log.Println("Starting watchdog...")
+	watchdog := jobsmanager.NewWatchDog(redisClient)
+	watchdog.Start()
 
 	// Create a test job
-	job := herojobs.NewJob()
+	job := jobsmanager.NewJob()
 	job.CircleID = "test"
 	job.Topic = "test"
 	job.HeroScript = `
@@ -67,9 +67,9 @@ func main() {
 		log.Println("Test timeout reached")
 	}
 
-	// Stop the daemon
-	log.Println("Stopping daemon...")
-	daemon.Stop()
+	// Stop the watchdog
+	log.Println("Stopping watchdog...")
+	watchdog.Stop()
 
 	// Check the job status
 	processedJob, err := redisClient.GetJob(job.JobID)
@@ -78,11 +78,11 @@ func main() {
 	}
 
 	log.Printf("Job status: %s", processedJob.Status)
-	if processedJob.Status == herojobs.JobStatusDone {
+	if processedJob.Status == jobsmanager.JobStatusDone {
 		log.Printf("Job result: %s", processedJob.Result)
-	} else if processedJob.Status == herojobs.JobStatusError {
+	} else if processedJob.Status == jobsmanager.JobStatusError {
 		log.Printf("Job error: %s", processedJob.Error)
 	}
 
-	fmt.Println("Daemon test completed")
+	fmt.Println("WatchDog test completed")
 }

@@ -7,18 +7,18 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/herojobs"
+	"github.com/freeflowuniverse/herolauncher/pkg/jobsmanager"
 )
 
 func main() {
 	// Parse command line flags
-	socketPath := flag.String("socket", "/tmp/herojobs.sock", "Path to the Unix domain socket")
+	socketPath := flag.String("socket", "/tmp/jobsmanager.sock", "Path to the Unix domain socket")
 	redisAddr := flag.String("redis", "localhost:6379", "Redis server address")
 	redisUnixSocket := flag.Bool("redis-unix", false, "Use Unix domain socket for Redis connection")
 	flag.Parse()
 
 	// Create and start the server
-	server, err := herojobs.NewServer(*socketPath, *redisAddr, *redisUnixSocket)
+	server, err := jobsmanager.NewServer(*socketPath, *redisAddr, *redisUnixSocket)
 	if err != nil {
 		fmt.Printf("Failed to create server: %v\n", err)
 		os.Exit(1)

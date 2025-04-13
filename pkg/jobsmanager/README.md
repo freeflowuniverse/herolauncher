@@ -4,7 +4,7 @@ The HeroJobs package provides a robust job queue and processing system for the H
 
 ## Overview
 
-HeroJobs uses Redis as a backend for storing jobs and managing queues. Jobs can be submitted to topic-specific queues within a circle, processed by a daemon, and their results can be retrieved asynchronously.
+HeroJobs uses Redis as a backend for storing jobs and managing queues. Jobs can be submitted to topic-specific queues within a circle, processed by a watchdog, and their results can be retrieved asynchronously.
 
 ## Components
 
@@ -33,9 +33,9 @@ The `RedisClient` handles all Redis operations for job storage and queue managem
 - **QueueFetch**: Gets and removes the first job from a queue
 - **UpdateJobStatus/Result/Error**: Updates job properties
 
-### Daemon
+### WatchDog
 
-The `Daemon` processes jobs from queues in the background:
+The `WatchDog` processes jobs from queues in the background:
 
 - Runs as a goroutine that continuously checks all queues
 - When a job is found, it's processed in a separate goroutine
@@ -47,7 +47,7 @@ The `Daemon` processes jobs from queues in the background:
 
 Jobs are organized in Redis using the following key patterns:
 
-- **Job Storage**: `herojobs:<jobID>`
+- **Job Storage**: `jobsmanager:<jobID>`
 - **Queue**: `heroqueue:<circleID>:<topic>`
 
 This allows for efficient retrieval of jobs by ID and processing of jobs by circle and topic.
@@ -56,13 +56,13 @@ This allows for efficient retrieval of jobs by ID and processing of jobs by circ
 
 1. **Job Creation**: A job is created with a unique ID and script
 2. **Enqueuing**: The job is stored in Redis and added to its queue
-3. **Processing**: The daemon fetches the job from the queue and processes it
+3. **Processing**: The watchdog fetches the job from the queue and processes it
 4. **Execution**: The script is executed by the appropriate handler
 5. **Completion**: The job status and result are updated in Redis
 
 ## Timeout Handling
 
-The daemon implements timeout handling to prevent jobs from running indefinitely:
+The watchdog implements timeout handling to prevent jobs from running indefinitely:
 
 - Each job has a configurable timeout (default: 60 seconds)
 - If a job exceeds its timeout, it's terminated and marked as error
@@ -70,7 +70,7 @@ The daemon implements timeout handling to prevent jobs from running indefinitely
 
 ## Concurrency Management
 
-The daemon uses Go's concurrency primitives to safely manage multiple jobs:
+The watchdog uses Go's concurrency primitives to safely manage multiple jobs:
 
 - Each job is processed in a separate goroutine
 - A wait group tracks all running goroutines
@@ -81,34 +81,34 @@ The daemon uses Go's concurrency primitives to safely manage multiple jobs:
 
 The package includes a test utility that demonstrates the functionality:
 
-- **TestWithFakeHandler**: Tests the daemon with a fake handler
-- **cmd/daemontest**: Command-line tool for testing the daemon
+- **TestWithFakeHandler**: Tests the watchdog with a fake handler
+- **cmd/watchdogtest**: Command-line tool for testing the watchdog
 
 ## Usage Examples
 
-### Starting the Daemon
+### Starting the WatchDog
 
 ```go
 // Initialize Redis client
-redisClient, err := herojobs.NewRedisClient("localhost:6379", false)
+redisClient, err := jobsmanager.NewRedisClient("localhost:6379", false)
 if err != nil {
     log.Fatalf("Failed to connect to Redis: %v", err)
 }
 defer redisClient.Close()
 
-// Create and start daemon
-daemon := herojobs.NewDaemon(redisClient)
-daemon.Start()
+// Create and start watchdog
+watchdog := jobsmanager.NewWatchDog(redisClient)
+watchdog.Start()
 
 // Handle shutdown
-defer daemon.Stop()
+defer watchdog.Stop()
 ```
 
 ### Submitting a Job
 
 ```go
 // Create a new job
-job := herojobs.NewJob()
+job := jobsmanager.NewJob()
 job.CircleID = "myCircle"
 job.Topic = "myTopic"
 job.HeroScript = `
@@ -139,20 +139,20 @@ if err != nil {
 
 // Check job status
 switch job.Status {
-case herojobs.JobStatusNew:
+case jobsmanager.JobStatusNew:
     fmt.Println("Job is waiting to be processed")
-case herojobs.JobStatusActive:
+case jobsmanager.JobStatusActive:
     fmt.Println("Job is currently being processed")
-case herojobs.JobStatusDone:
+case jobsmanager.JobStatusDone:
     fmt.Printf("Job completed successfully: %s\n", job.Result)
-case herojobs.JobStatusError:
+case jobsmanager.JobStatusError:
     fmt.Printf("Job failed: %s\n", job.Error)
 }
 ```
 
 ## Integration with HeroHandler
 
-The daemon integrates with the HeroHandler to process HeroScripts:
+The watchdog integrates with the HeroHandler to process HeroScripts:
 
 1. The HeroHandler is initialized
 2. The script is passed to the handler factory
