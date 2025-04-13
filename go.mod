@@ -71,6 +71,7 @@ require (
 	github.com/metoro-io/mcp-golang v0.8.0 // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
+	github.com/openai/openai-go v0.1.0-beta.9 // indirect
 	github.com/pb33f/libopenapi v0.21.8 // indirect
 	github.com/pierrec/lz4/v4 v4.1.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
