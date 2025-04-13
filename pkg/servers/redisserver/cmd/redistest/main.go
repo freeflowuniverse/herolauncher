@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
+	"github.com/freeflowuniverse/herolauncher/pkg/servers/redisserver"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -293,17 +293,17 @@ func runHashTests(ctx context.Context, client *redis.Client, suite *TestSuite) {
 
 	// Test HGETALL
 	fields, err := client.HGetAll(ctx, "test:hash:user1").Result()
-	suite.AddResult("HGetAll", err == nil && len(fields) == 3, 
+	suite.AddResult("HGetAll", err == nil && len(fields) == 3,
 		fmt.Sprintf("Get all hash fields (found %d fields)", len(fields)), err)
 
 	// Test HKEYS
 	keys, err := client.HKeys(ctx, "test:hash:user1").Result()
-	suite.AddResult("HKeys", err == nil && len(keys) == 3, 
+	suite.AddResult("HKeys", err == nil && len(keys) == 3,
 		fmt.Sprintf("Get all hash keys (found %d keys)", len(keys)), err)
 
 	// Test HLEN
 	length, err := client.HLen(ctx, "test:hash:user1").Result()
-	suite.AddResult("HLen", err == nil && length == 3, 
+	suite.AddResult("HLen", err == nil && length == 3,
 		fmt.Sprintf("Get hash length (length: %d)", length), err)
 
 	// Test HDEL
@@ -321,32 +321,32 @@ func runListTests(ctx context.Context, client *redis.Client, suite *TestSuite) {
 
 	// Test LPUSH
 	count, err := client.LPush(ctx, "test:list:items", "item1", "item2").Result()
-	suite.AddResult("LPush", err == nil && count == 2, 
+	suite.AddResult("LPush", err == nil && count == 2,
 		fmt.Sprintf("Push items to the head of a list (count: %d)", count), err)
 
 	// Test RPUSH
 	count, err = client.RPush(ctx, "test:list:items", "item3", "item4").Result()
-	suite.AddResult("RPush", err == nil && count == 4, 
+	suite.AddResult("RPush", err == nil && count == 4,
 		fmt.Sprintf("Push items to the tail of a list (count: %d)", count), err)
 
 	// Test LLEN
 	length, err := client.LLen(ctx, "test:list:items").Result()
-	suite.AddResult("LLen", err == nil && length == 4, 
+	suite.AddResult("LLen", err == nil && length == 4,
 		fmt.Sprintf("Get list length (length: %d)", length), err)
 
 	// Test LRANGE
 	items, err := client.LRange(ctx, "test:list:items", 0, -1).Result()
-	suite.AddResult("LRange", err == nil && len(items) == 4, 
+	suite.AddResult("LRange", err == nil && len(items) == 4,
 		fmt.Sprintf("Get range of list items (found %d items)", len(items)), err)
 
 	// Test LPOP
 	item, err := client.LPop(ctx, "test:list:items").Result()
-	suite.AddResult("LPop", err == nil && item == "item2", 
+	suite.AddResult("LPop", err == nil && item == "item2",
 		fmt.Sprintf("Pop item from the head of a list (item: %s)", item), err)
 
 	// Test RPOP
 	item, err = client.RPop(ctx, "test:list:items").Result()
-	suite.AddResult("RPop", err == nil && item == "item4", 
+	suite.AddResult("RPop", err == nil && item == "item4",
 		fmt.Sprintf("Pop item from the tail of a list (item: %s)", item), err)
 
 	// Test TYPE for list
@@ -366,11 +366,11 @@ func runPatternTests(ctx context.Context, client *redis.Client, suite *TestSuite
 
 	// Test KEYS with pattern
 	keys, err := client.Keys(ctx, "user:*").Result()
-	suite.AddResult("KeysPattern", err == nil && len(keys) == 4, 
+	suite.AddResult("KeysPattern", err == nil && len(keys) == 4,
 		fmt.Sprintf("Get keys matching pattern 'user:*' (found %d keys)", len(keys)), err)
 
 	keys, err = client.Keys(ctx, "user:1:*").Result()
-	suite.AddResult("KeysSpecificPattern", err == nil && len(keys) == 2, 
+	suite.AddResult("KeysSpecificPattern", err == nil && len(keys) == 2,
 		fmt.Sprintf("Get keys matching pattern 'user:1:*' (found %d keys)", len(keys)), err)
 
 	// Test SCAN with pattern
@@ -391,7 +391,7 @@ func runPatternTests(ctx context.Context, client *redis.Client, suite *TestSuite
 		cursor = nextCursor
 	}
 
-	suite.AddResult("ScanPattern", len(allKeys) == 2, 
+	suite.AddResult("ScanPattern", len(allKeys) == 2,
 		fmt.Sprintf("Scan keys matching pattern 'product:*' (found %d keys)", len(allKeys)), nil)
 
 	// Test wildcard patterns
@@ -400,7 +400,7 @@ func runPatternTests(ctx context.Context, client *redis.Client, suite *TestSuite
 	}
 
 	keys, err = client.Keys(ctx, "test:wildcard:?").Result()
-	suite.AddResult("SingleCharWildcard", err == nil && len(keys) == 5, 
+	suite.AddResult("SingleCharWildcard", err == nil && len(keys) == 5,
 		fmt.Sprintf("Get keys matching single character wildcard (found %d keys)", len(keys)), err)
 }
 
@@ -411,17 +411,17 @@ func runMiscTests(ctx context.Context, client *redis.Client, suite *TestSuite) {
 
 	// Test key count after flush
 	keys, err := client.Keys(ctx, "*").Result()
-	suite.AddResult("KeysAfterFlush", err == nil && len(keys) == 0, 
+	suite.AddResult("KeysAfterFlush", err == nil && len(keys) == 0,
 		fmt.Sprintf("Verify no keys after flush (found %d keys)", len(keys)), err)
 
 	// Test multiple operations in sequence
 	client.Set(ctx, "test:multi:1", "value1", 0)
 	client.Set(ctx, "test:multi:2", "value2", 0)
-	
+
 	val1, err1 := client.Get(ctx, "test:multi:1").Result()
 	val2, err2 := client.Get(ctx, "test:multi:2").Result()
-	
-	suite.AddResult("MultipleOperations", err1 == nil && err2 == nil && val1 == "value1" && val2 == "value2", 
+
+	suite.AddResult("MultipleOperations", err1 == nil && err2 == nil && val1 == "value1" && val2 == "value2",
 		"Perform multiple operations in sequence", nil)
 
 	// Test non-existent key

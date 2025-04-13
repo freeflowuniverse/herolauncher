@@ -2,22 +2,23 @@ package vfsdb
 
 import (
 	"errors"
-	"github.com/freeflowuniverse/herolauncher/pkg/ourdb"
-	"github.com/freeflowuniverse/herolauncher/pkg/vfs"
 	"sync"
+
+	"github.com/freeflowuniverse/herolauncher/pkg/data/ourdb"
+	"github.com/freeflowuniverse/herolauncher/pkg/vfs"
 )
 
 // Database defines the interface for database operations
 type Database interface {
 	// Get retrieves data by ID
 	Get(id uint32) ([]byte, error)
-	
+
 	// Set stores data and returns an ID
 	Set(data []byte) (uint32, error)
-	
+
 	// Update updates data at an existing ID
 	Update(id uint32, data []byte) error
-	
+
 	// Delete removes data by ID
 	Delete(id uint32) error
 }
@@ -75,7 +76,7 @@ func New(dataDB, metadataDB Database) (*DatabaseVFS, error) {
 		nextID:     1,
 		idTable:    make(map[uint32]uint32),
 	}
-	
+
 	return fs, nil
 }
 
@@ -83,7 +84,7 @@ func New(dataDB, metadataDB Database) (*DatabaseVFS, error) {
 func (fs *DatabaseVFS) GetNextID() uint32 {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
-	
+
 	id := fs.nextID
 	fs.nextID++
 	return id
@@ -93,18 +94,18 @@ func (fs *DatabaseVFS) GetNextID() uint32 {
 func (fs *DatabaseVFS) SaveEntry(entry FSEntry) error {
 	var data []byte
 	var err error
-	
+
 	data, err = entry.encode()
 	if err != nil {
 		return err
 	}
-	
+
 	id := entry.GetMetadata().ID
-	
+
 	fs.mu.RLock()
 	dbID, exists := fs.idTable[id]
 	fs.mu.RUnlock()
-	
+
 	if exists {
 		// Update existing entry
 		if err := fs.dbMetadata.Update(dbID, data); err != nil {
@@ -116,12 +117,12 @@ func (fs *DatabaseVFS) SaveEntry(entry FSEntry) error {
 		if err != nil {
 			return err
 		}
-		
+
 		fs.mu.Lock()
 		fs.idTable[id] = dbID
 		fs.mu.Unlock()
 	}
-	
+
 	return nil
 }
 
@@ -130,21 +131,21 @@ func (fs *DatabaseVFS) LoadEntry(vfsID uint32) (FSEntry, error) {
 	fs.mu.RLock()
 	dbID, ok := fs.idTable[vfsID]
 	fs.mu.RUnlock()
-	
+
 	if !ok {
 		return nil, vfs.ErrNotFound
 	}
-	
+
 	metadata, err := fs.dbMetadata.Get(dbID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	entryType, err := decodeEntryType(metadata)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch entryType {
 	case vfs.FileTypeDirectory:
 		return decodeDirectory(metadata, fs)

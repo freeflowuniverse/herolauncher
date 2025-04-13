@@ -21,11 +21,8 @@ func TestProcessManagerRPC(t *testing.T) {
 	// Create a socket path
 	socketPath := filepath.Join(tempDir, "process-manager.sock")
 
-	// Create a test secret
-	secret := "test-secret"
-
 	// Create a process manager
-	pm := processmanager.NewProcessManager(secret)
+	pm := processmanager.NewProcessManager()
 	pm.SetLogsBasePath(filepath.Join(tempDir, "logs"))
 
 	// Create and start the server
@@ -44,7 +41,7 @@ func TestProcessManagerRPC(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Create a client
-	client := NewClient(socketPath, secret)
+	client := NewClient(socketPath, "")
 
 	// Test process start
 	t.Run("StartProcess", func(t *testing.T) {
@@ -59,7 +56,7 @@ func TestProcessManagerRPC(t *testing.T) {
 	t.Run("GetProcessStatus", func(t *testing.T) {
 		status, err := client.GetProcessStatus("test-process", "json")
 		require.NoError(t, err)
-		
+
 		processStatus, ok := status.(interfaces.ProcessStatus)
 		require.True(t, ok)
 		assert.Equal(t, "test-process", processStatus.Name)
@@ -70,11 +67,11 @@ func TestProcessManagerRPC(t *testing.T) {
 	t.Run("ListProcesses", func(t *testing.T) {
 		processList, err := client.ListProcesses("json")
 		require.NoError(t, err)
-		
+
 		processes, ok := processList.([]interfaces.ProcessStatus)
 		require.True(t, ok)
 		assert.NotEmpty(t, processes)
-		
+
 		// Find our test process
 		found := false
 		for _, proc := range processes {
@@ -90,7 +87,7 @@ func TestProcessManagerRPC(t *testing.T) {
 	t.Run("GetProcessLogs", func(t *testing.T) {
 		// Wait a bit for logs to be generated
 		time.Sleep(100 * time.Millisecond)
-		
+
 		logs, err := client.GetProcessLogs("test-process", 10)
 		require.NoError(t, err)
 		assert.True(t, logs.Success)

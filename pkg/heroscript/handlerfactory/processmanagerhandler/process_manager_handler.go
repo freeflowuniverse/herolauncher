@@ -3,7 +3,7 @@ package processmanagerhandler
 import (
 	"fmt"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/core"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
 )
 
@@ -19,7 +19,7 @@ func NewProcessManagerHandler() *ProcessManagerHandler {
 		BaseHandler: core.BaseHandler{
 			ActorName: "process",
 		},
-		pm: processmanager.NewProcessManager(""), // Empty string as secret was removed from ProcessManager
+		pm: processmanager.NewProcessManager(), // Empty string as secret was removed from ProcessManager
 	}
 }
 

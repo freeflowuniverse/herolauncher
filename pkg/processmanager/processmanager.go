@@ -62,7 +62,7 @@ type ProcessManager struct {
 }
 
 // NewProcessManager creates a new process manager
-func NewProcessManager(secret string) *ProcessManager {
+func NewProcessManager() *ProcessManager {
 	// Default logs path
 	logsPath := filepath.Join(os.TempDir(), "herolauncher", "process_logs")
 

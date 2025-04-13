@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
 )
 
 func main() {

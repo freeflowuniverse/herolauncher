@@ -4,7 +4,7 @@ package radixtree
 import (
 	"errors"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/ourdb"
+	"github.com/freeflowuniverse/herolauncher/pkg/data/ourdb"
 )
 
 // Node represents a node in the radix tree

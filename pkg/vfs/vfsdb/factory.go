@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/ourdb"
+	"github.com/freeflowuniverse/herolauncher/pkg/data/ourdb"
 )
 
 // NewFromPath creates a new DatabaseVFS instance from a path

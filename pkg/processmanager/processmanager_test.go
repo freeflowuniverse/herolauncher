@@ -30,7 +30,7 @@ func TestNewProcessManager(t *testing.T) {
 
 // TestSetLogsBasePath tests setting a custom base path for logs
 func TestSetLogsBasePath(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 	customPath := filepath.Join(os.TempDir(), "custom_path")
 
 	pm.SetLogsBasePath(customPath)
@@ -42,7 +42,7 @@ func TestSetLogsBasePath(t *testing.T) {
 
 // TestStartProcess tests starting a process
 func TestStartProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 	testPath := filepath.Join(os.TempDir(), "herolauncher_test_logs")
 	pm.SetLogsBasePath(testPath)
 
@@ -83,7 +83,7 @@ func TestStartProcess(t *testing.T) {
 
 // TestStartLongRunningProcess tests starting a process that runs for a while
 func TestStartLongRunningProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	// Test with a sleep command that will run for a while
 	processName := "test-sleep"
@@ -114,7 +114,7 @@ func TestStartLongRunningProcess(t *testing.T) {
 
 // TestStartProcessWithDeadline tests starting a process with a deadline
 func TestStartProcessWithDeadline(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	processName := "test-deadline"
 	command := "sleep 10"
@@ -147,7 +147,7 @@ func TestStartProcessWithDeadline(t *testing.T) {
 
 // TestStartDuplicateProcess tests that starting a duplicate process returns an error
 func TestStartDuplicateProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	processName := "test-duplicate"
 	command := "echo 'test'"
@@ -170,7 +170,7 @@ func TestStartDuplicateProcess(t *testing.T) {
 
 // TestStopProcess tests stopping a running process
 func TestStopProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	processName := "test-stop"
 	command := "sleep 30"
@@ -206,7 +206,7 @@ func TestStopProcess(t *testing.T) {
 
 // TestRestartProcess tests restarting a process
 func TestRestartProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	processName := "test-restart"
 	command := "sleep 30"
@@ -261,7 +261,7 @@ func TestRestartProcess(t *testing.T) {
 
 // TestDeleteProcess tests deleting a process
 func TestDeleteProcess(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	processName := "test-delete"
 	command := "echo 'test'"
@@ -290,7 +290,7 @@ func TestDeleteProcess(t *testing.T) {
 
 // TestListProcesses tests listing all processes
 func TestListProcesses(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 
 	// Start multiple processes
 	processes := []struct {
@@ -343,7 +343,7 @@ func TestListProcesses(t *testing.T) {
 
 // TestGetProcessLogs tests retrieving process logs
 func TestGetProcessLogs(t *testing.T) {
-	pm := NewProcessManager("test-secret")
+	pm := NewProcessManager()
 	testPath := filepath.Join(os.TempDir(), "herolauncher_test_logs")
 	pm.SetLogsBasePath(testPath)
 
@@ -419,7 +419,7 @@ func TestFormatProcessInfo(t *testing.T) {
 // TestIntegrationFlow tests a complete flow of the process manager
 func TestIntegrationFlow(t *testing.T) {
 	// Create the process manager
-	pm := NewProcessManager("test-integration")
+	pm := NewProcessManager()
 
 	// Set a custom logs path
 	testPath := filepath.Join(os.TempDir(), fmt.Sprintf("herolauncher_test_%d", time.Now().Unix()))

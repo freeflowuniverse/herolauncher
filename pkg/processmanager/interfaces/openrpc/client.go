@@ -18,13 +18,7 @@ type Client struct {
 func NewClient(socketPath, secret string) *Client {
 	return &Client{
 		BaseClient: *client.NewClient(socketPath, secret),
-		secret:     secret,
 	}
-}
-
-// Secret returns the client's secret
-func (c *Client) Secret() string {
-	return c.secret
 }
 
 // StartProcess starts a new process with the given name and command

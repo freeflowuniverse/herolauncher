@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
 )
 
 // MockClient implements the Client interface for testing

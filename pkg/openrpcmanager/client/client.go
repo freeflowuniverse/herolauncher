@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/api/openrpcmanager"
+	"github.com/freeflowuniverse/herolauncher/pkg/openrpcmanager"
 )
 
 // Common errors

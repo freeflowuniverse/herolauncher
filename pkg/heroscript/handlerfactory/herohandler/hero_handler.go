@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/core"
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/fakehandler"
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/processmanagerhandler"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
+
+	// "github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/heroscript/handlerfactory/fakehandler"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/processmanagerhandler"
 )
 
 // HeroHandler is the main handler factory that manages all registered handlers
@@ -40,19 +41,6 @@ func Init() error {
 	if err := DefaultInstance.factory.RegisterHandler(handler); err != nil {
 		log.Fatalf("Failed to register process manager handler: %v", err)
 	}
-
-	log.Println("Process manager handler registered successfully")
-
-	handlerfake := fakehandler.NewFakeHandler()
-	if handlerfake == nil {
-		log.Fatalf("Failed to create fake handler")
-	}
-
-	if err := DefaultInstance.factory.RegisterHandler(handlerfake); err != nil {
-		log.Fatalf("Failed to register fake handler: %v", err)
-	}
-
-	log.Println("Fake handler registered successfully")
 
 	return nil
 }

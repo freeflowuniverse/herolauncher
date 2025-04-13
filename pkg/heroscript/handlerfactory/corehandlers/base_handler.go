@@ -5,14 +5,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/paramsparser"
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 // BaseHandler provides common functionality for all handlers
 type BaseHandler struct {
-	handlerfactory.BaseHandler
+	core.BaseHandler
 }
 
 // Play processes all actions for this handler's actor

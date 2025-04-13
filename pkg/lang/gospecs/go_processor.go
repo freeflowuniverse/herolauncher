@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/freeflowuniverse/herolauncher/pkg/api/handlerfactory/core"
 )
 
 // GoProcessor processes Go language files to extract public structs, interfaces, and methods
@@ -319,10 +317,4 @@ func isPublicFieldLine(line string) bool {
 	}
 
 	return false
-}
-
-// HeroHandler is the main handler factory that manages all registered handlers
-type HeroHandler struct {
-	factory      *core.HandlerFactory
-	telnetServer *core.TelnetServer
 }

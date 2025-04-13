@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
+	"github.com/freeflowuniverse/herolauncher/pkg/servers/redisserver"
 	"github.com/redis/go-redis/v9"
 )
 

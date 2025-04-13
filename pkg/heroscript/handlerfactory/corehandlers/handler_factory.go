@@ -4,24 +4,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
 	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/playbook"
 )
 
 // HandlerFactory manages a collection of handlers for processing HeroScript commands
 type HandlerFactory struct {
-	handlers map[string]handlerfactory.Handler
+	handlers map[string]core.Handler
 }
 
 // NewHandlerFactory creates a new handler factory
 func NewHandlerFactory() *HandlerFactory {
 	return &HandlerFactory{
-		handlers: make(map[string]handlerfactory.Handler),
+		handlers: make(map[string]core.Handler),
 	}
 }
 
 // RegisterHandler registers a handler with the factory
-func (f *HandlerFactory) RegisterHandler(handler handlerfactory.Handler) error {
+func (f *HandlerFactory) RegisterHandler(handler core.Handler) error {
 	actorName := handler.GetActorName()
 	if actorName == "" {
 		return fmt.Errorf("handler has no actor name")
@@ -36,7 +36,7 @@ func (f *HandlerFactory) RegisterHandler(handler handlerfactory.Handler) error {
 }
 
 // GetHandler returns a handler for the specified actor
-func (f *HandlerFactory) GetHandler(actorName string) (handlerfactory.Handler, error) {
+func (f *HandlerFactory) GetHandler(actorName string) (core.Handler, error) {
 	handler, exists := f.handlers[actorName]
 	if !exists {
 		return nil, fmt.Errorf("no handler registered for actor: %s", actorName)
@@ -105,7 +105,7 @@ func (f *HandlerFactory) GetSupportedActions() map[string][]string {
 }
 
 // getSupportedActions returns a list of supported actions for a handler
-func getSupportedActions(handler handlerfactory.Handler) ([]string, error) {
+func getSupportedActions(handler core.Handler) ([]string, error) {
 	// This is a simplified implementation
 	// In a real implementation, you would use reflection to get all methods
 	// that match the pattern for action handlers

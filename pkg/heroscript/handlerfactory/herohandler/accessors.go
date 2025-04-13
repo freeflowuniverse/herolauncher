@@ -1,7 +1,7 @@
 package herohandler
 
 import (
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory/core"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
 )
 
 // GetFactory returns the handler factory

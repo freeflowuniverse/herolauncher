@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/handlerfactory"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/core"
 )
 
 // AuthHandler handles authentication actions
@@ -16,7 +16,7 @@ type AuthHandler struct {
 func NewAuthHandler(secrets ...string) *AuthHandler {
 	return &AuthHandler{
 		BaseHandler: BaseHandler{
-			BaseHandler: handlerfactory.BaseHandler{
+			BaseHandler: core.BaseHandler{
 				ActorName: "auth",
 			},
 		},

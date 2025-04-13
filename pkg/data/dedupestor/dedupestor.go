@@ -7,8 +7,8 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/ourdb"
-	"github.com/freeflowuniverse/herolauncher/pkg/radixtree"
+	"github.com/freeflowuniverse/herolauncher/pkg/data/ourdb"
+	"github.com/freeflowuniverse/herolauncher/pkg/data/radixtree"
 )
 
 // MaxValueSize is the maximum allowed size for values (1MB)

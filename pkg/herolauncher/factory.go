@@ -17,7 +17,7 @@ import (
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/handlers"
 	"github.com/freeflowuniverse/herolauncher/pkg/herolauncher/pages"
 	"github.com/freeflowuniverse/herolauncher/pkg/processmanager"
-	"github.com/freeflowuniverse/herolauncher/pkg/redisserver"
+	"github.com/freeflowuniverse/herolauncher/pkg/servers/redisserver"
 	"github.com/freeflowuniverse/herolauncher/pkg/system/stats"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces"
 	"github.com/freeflowuniverse/herolauncher/pkg/vfs/interfaces/mock"
@@ -57,7 +57,7 @@ func DefaultConfig() Config {
 		RedisTCPPort:    "6379",
 		RedisSocketPath: "/tmp/herolauncher_new.sock",
 		PMSocketPath:    "/tmp/processmanager.sock", // Default ProcessManager socket path
-		PMSecret:        "secret123",                // Default ProcessManager secret
+		PMSecret:        "1234",                     // Default ProcessManager secret
 		HJSocketPath:    "/tmp/herojobs.sock",       // Default HeroJobs socket path
 		TemplatesPath:   filepath.Join(projectRoot, "pkg/herolauncher/web/templates"),
 		StaticFilesPath: filepath.Join(projectRoot, "pkg/herolauncher/web/static"),
@@ -87,7 +87,7 @@ func New(config Config) *HeroLauncher {
 	executorService := executor.NewExecutor()
 
 	// Initialize process manager directly
-	pm := processmanager.NewProcessManager(config.PMSecret)
+	pm := processmanager.NewProcessManager()
 
 	// Set the shared logs path for process manager
 	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs")
@@ -122,9 +122,6 @@ func New(config Config) *HeroLauncher {
 	app.Use(logger.New())
 	app.Use(recover.New())
 	app.Use(cors.New())
-
-	// Swagger documentation
-	SetupSwagger(app)
 
 	// Static files - serve all directories with proper paths
 	app.Static("/", config.StaticFilesPath)
@@ -166,7 +163,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	// Initialize Page handlers
 	pageAdminHandler := pages.NewAdminHandler(hl, statsManager, hl.config.PMSocketPath, hl.config.PMSecret)
 	pageServiceHandler := pages.NewServiceHandler(hl.config.PMSocketPath, hl.config.PMSecret, log.Default())
-	
+
 	// Initialize Jobs page handler
 	pageJobHandler, err := pages.NewJobHandler(hl.config.HJSocketPath, log.Default())
 	if err != nil {
@@ -189,7 +186,7 @@ func (hl *HeroLauncher) setupRoutes() {
 	// Register Page routes
 	pageAdminHandler.RegisterRoutes(hl.app)
 	pageServiceHandler.RegisterRoutes(hl.app)
-	
+
 	// Register Jobs page routes if handler was initialized successfully
 	if pageJobHandler != nil {
 		pageJobHandler.RegisterRoutes(hl.app)
@@ -255,7 +252,7 @@ func (hl *HeroLauncher) startProcessManager() error {
 			log.Printf("Found existing process manager socket, using it instead of starting a new one")
 			return nil
 		}
-		
+
 		// If socket exists but we can't connect, assume it's stale
 		log.Printf("Found existing socket, but can't connect to it: %v", err)
 		log.Printf("Removing stale socket and starting a new process manager")
@@ -264,15 +261,15 @@ func (hl *HeroLauncher) startProcessManager() error {
 
 	// Define shared logs path
 	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs")
-	
+
 	// Ensure the logs directory exists
 	if err := os.MkdirAll(sharedLogsPath, 0755); err != nil {
 		log.Printf("Warning: Failed to create logs directory: %v", err)
 	}
-	
+
 	// Start the process manager with the shared logs path
-	cmd := exec.Command("go", "run", processManagerPath, 
-		"-socket", hl.config.PMSocketPath, 
+	cmd := exec.Command("go", "run", processManagerPath,
+		"-socket", hl.config.PMSocketPath,
 		"-secret", hl.config.PMSecret,
 		"-logs", sharedLogsPath)
 	cmd.Stdout = os.Stdout
@@ -324,7 +321,7 @@ func (hl *HeroLauncher) startHeroJobs() error {
 			log.Printf("Found existing HeroJobs socket, using it instead of starting a new one")
 			return nil
 		}
-		
+
 		// If socket exists but we can't connect, assume it's stale
 		log.Printf("Found existing HeroJobs socket, but can't connect to it: %v", err)
 		log.Printf("Removing stale socket and starting a new HeroJobs server")
@@ -333,14 +330,14 @@ func (hl *HeroLauncher) startHeroJobs() error {
 
 	// Define shared logs path
 	sharedLogsPath := filepath.Join(os.TempDir(), "herolauncher_logs/jobs")
-	
+
 	// Ensure the logs directory exists
 	if err := os.MkdirAll(sharedLogsPath, 0755); err != nil {
 		log.Printf("Warning: Failed to create logs directory: %v", err)
 	}
-	
+
 	// Start HeroJobs with the shared logs path
-	cmd := exec.Command("go", "run", heroJobsPath, 
+	cmd := exec.Command("go", "run", heroJobsPath,
 		"-socket", hl.config.HJSocketPath,
 		"-logs", sharedLogsPath)
 	cmd.Stdout = os.Stdout
@@ -383,7 +380,7 @@ func (hl *HeroLauncher) Start() error {
 		log.Printf("Warning: Failed to start process manager: %v", err)
 		// Continue anyway, we'll just show warnings in the UI
 	}
-	
+
 	// Start HeroJobs
 	err = hl.startHeroJobs()
 	if err != nil {

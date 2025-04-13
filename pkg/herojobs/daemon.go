@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/api/handlerfactory/herohandler"
+	"github.com/freeflowuniverse/herolauncher/pkg/heroscript/handlerfactory/herohandler"
 )
 
 // JobProcessor is a function type that processes a job
@@ -136,7 +136,11 @@ func (d *Daemon) processJob(job *Job) {
 		if timeout == 0 {
 			timeout = 60 * time.Second // Default timeout: 60 seconds
 		}
-		ctx, cancel := context.WithTimeout(d.ctx, timeout)
+		_, cancel := context.WithTimeout(d.ctx, timeout)
+
+		if err := d.redisClient.UpdateJobError(job.JobID, "Heroscript processing not implemented"); err != nil {
+			log.Printf("Error updating job error: %v", err)
+		}
 
 		// Start a goroutine to process the job
 		d.wg.Add(1)
@@ -144,35 +148,35 @@ func (d *Daemon) processJob(job *Job) {
 			defer d.wg.Done()
 			defer cancel()
 
-			// Register the job processor
-			d.registerJobProcessor(job.JobID, job.CircleID, job.Topic, func(j *Job) (string, error) {
-				// Initialize hero handler
-				if err := herohandler.Init(); err != nil {
-					return "", fmt.Errorf("failed to initialize hero handler: %w", err)
-				}
+			// // Register the job processor
+			// d.registerJobProcessor(job.JobID, job.CircleID, job.Topic, func(j *Job) (string, error) {
+			// 	// Initialize hero handler
+			// 	if err := herohandler.Init(); err != nil {
+			// 		return "", fmt.Errorf("failed to initialize hero handler: %w", err)
+			// 	}
 
-				// Process the HeroScript
-				result, err := herohandler.DefaultInstance.GetFactory().ProcessHeroscript(job.HeroScript)
-				if err != nil {
-					return "", err
-				}
-				return result, nil
-			})
+			// 	// Process the HeroScript
+			// 	result, err := herohandler.DefaultInstance.GetFactory().ProcessHeroscript(job.HeroScript)
+			// 	if err != nil {
+			// 		return "", err
+			// 	}
+			// 	return result, nil
+			// })
 
-			// Process the job
-			result, err := d.executeJobWithTimeout(ctx, job)
+			// // Process the job
+			// result, err := d.executeJobWithTimeout(ctx, job)
 
-			// Update job status based on result
-			if err != nil {
-				log.Printf("Error processing job %s: %v", job.JobID, err)
-				if err := d.redisClient.UpdateJobError(job.JobID, err.Error()); err != nil {
-					log.Printf("Error updating job error: %v", err)
-				}
-			} else {
-				if err := d.redisClient.UpdateJobResult(job.JobID, result); err != nil {
-					log.Printf("Error updating job result: %v", err)
-				}
-			}
+			// // Update job status based on result
+			// if err != nil {
+			// 	log.Printf("Error processing job %s: %v", job.JobID, err)
+			// 	if err := d.redisClient.UpdateJobError(job.JobID, err.Error()); err != nil {
+			// 		log.Printf("Error updating job error: %v", err)
+			// 	}
+			// } else {
+			// 	if err := d.redisClient.UpdateJobResult(job.JobID, result); err != nil {
+			// 		log.Printf("Error updating job result: %v", err)
+			// 	}
+			// }
 
 			// Unregister the job processor
 			d.unregisterJobProcessor(job.JobID, job.CircleID, job.Topic)
