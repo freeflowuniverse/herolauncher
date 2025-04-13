@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/freeflowuniverse/herolauncher/pkg/ai/proxy"
+	proxy "github.com/freeflowuniverse/herolauncher/pkg/proxies/openai"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 )
