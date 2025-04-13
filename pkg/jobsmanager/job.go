@@ -3,9 +3,12 @@ package jobsmanager
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/freeflowuniverse/herolauncher/pkg/data/ourdb"
+	"github.com/freeflowuniverse/herolauncher/pkg/tools"
 )
 
 // JobStatus represents the status of a job
@@ -37,7 +40,7 @@ const (
 
 // Job represents a job to be processed
 type Job struct {
-	JobID         string     `json:"jobid"`
+	JobID         uint32     `json:"jobid"`
 	SessionKey    string     `json:"sessionkey"`
 	CircleID      string     `json:"circleid"`
 	Topic         string     `json:"topic"`
@@ -51,13 +54,16 @@ type Job struct {
 	Error         string     `json:"error"`
 	Result        string     `json:"result"`
 	Log           bool       `json:"log"` // Whether to enable logging for this job
+
+	// OurDB client for job storage
+	dbClient *ourdb.Client
 }
 
 // NewJob creates a new job with default values
 func NewJob() *Job {
 	now := time.Now().Unix()
 	return &Job{
-		JobID:         uuid.New().String(),
+		JobID:         0, // Default to 0, will be auto-incremented by OurDB
 		Topic:         "default",
 		Status:        JobStatusNew,
 		ParamsType:    ParamsTypeHeroScript, // Default to HeroScript
@@ -74,8 +80,8 @@ func NewJobFromJSON(jsonStr string) (*Job, error) {
 	}
 
 	// Set default values if not provided
-	if job.JobID == "" {
-		job.JobID = uuid.New().String()
+	if job.JobID == 0 {
+		job.JobID = 0 // Default to 0, will be auto-incremented by OurDB
 	}
 	if job.Topic == "" {
 		job.Topic = "default"
@@ -104,10 +110,133 @@ func (j *Job) ToJSON() (string, error) {
 
 // QueueKey returns the Redis queue key for this job
 func (j *Job) QueueKey() string {
-	return fmt.Sprintf("heroqueue:%s:%s", j.CircleID, j.Topic)
+	// Apply name fixing to CircleID and Topic
+	fixedCircleID := tools.NameFix(j.CircleID)
+	fixedTopic := tools.NameFix(j.Topic)
+	return fmt.Sprintf("heroqueue:%s:%s", fixedCircleID, fixedTopic)
 }
 
 // StorageKey returns the Redis storage key for this job
 func (j *Job) StorageKey() string {
-	return fmt.Sprintf("herojobs:%s", j.JobID)
+	// Apply name fixing to CircleID and Topic
+	fixedCircleID := tools.NameFix(j.CircleID)
+	fixedTopic := tools.NameFix(j.Topic)
+	return fmt.Sprintf("herojobs:%s:%s:%d", fixedCircleID, fixedTopic, j.JobID)
+}
+
+// initOurDbClient initializes the OurDB client connection for the job
+func (j *Job) initOurDbClient() error {
+	if j.dbClient != nil {
+		return nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	// Create path as ~/hero/var/circles/$circleid/$topic/jobsdb
+	dbPath := filepath.Join(homeDir, "hero", "var", "circles", j.CircleID, j.Topic, "jobsdb")
+
+	// Ensure directory exists
+	if err := os.MkdirAll(dbPath, 0755); err != nil {
+		return fmt.Errorf("failed to create database directory: %w", err)
+	}
+
+	// Initialize OurDB client
+	client, err := ourdb.NewClient(dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to create OurDB client: %w", err)
+	}
+
+	j.dbClient = client
+	return nil
+}
+
+// Save stores the job in OurDB using auto-incrementing JobID
+func (j *Job) Save() error {
+	// Ensure OurDB client is initialized
+	if err := j.initOurDbClient(); err != nil {
+		return err
+	}
+
+	// Convert job to JSON
+	jobData, err := json.Marshal(j)
+	if err != nil {
+		return fmt.Errorf("failed to marshal job to JSON: %w", err)
+	}
+
+	// If JobID is 0, let OurDB assign an auto-incremented ID
+	if j.JobID == 0 {
+		// Use OurDB Add method to auto-generate ID
+		id, err := j.dbClient.Add(jobData)
+		if err != nil {
+			return fmt.Errorf("failed to add job to OurDB: %w", err)
+		}
+		j.JobID = id
+	} else {
+		// Save to OurDB with specified ID
+		if err := j.dbClient.Set(j.JobID, jobData); err != nil {
+			return fmt.Errorf("failed to save job to OurDB: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// Load retrieves the job from OurDB using the JobID as the key
+func (j *Job) Load() error {
+	// Ensure OurDB client is initialized
+	if err := j.initOurDbClient(); err != nil {
+		return err
+	}
+
+	// Validate that JobID is not zero
+	if j.JobID == 0 {
+		return fmt.Errorf("cannot load job with ID 0: no ID specified")
+	}
+
+	// Get from OurDB using the numeric JobID directly
+	jobData, err := j.dbClient.Get(j.JobID)
+	if err != nil {
+		return fmt.Errorf("failed to load job from OurDB: %w", err)
+	}
+
+	// Parse job data
+	tempJob := &Job{}
+	if err := json.Unmarshal(jobData, tempJob); err != nil {
+		return fmt.Errorf("failed to unmarshal job data: %w", err)
+	}
+
+	// Copy values to current job (except the dbClient)
+	dbClient := j.dbClient
+	*j = *tempJob
+	j.dbClient = dbClient
+
+	return nil
+}
+
+// Finish completes the job, updating all properties and saving to OurDB
+func (j *Job) Finish(status JobStatus, result string, err error) error {
+	// Update job properties
+	j.Status = status
+	j.TimeEnd = time.Now().Unix()
+	j.Result = result
+
+	if err != nil {
+		j.Error = err.Error()
+	}
+
+	// Save updated job to OurDB
+	return j.Save()
+}
+
+// Close closes the OurDB client connection
+func (j *Job) Close() error {
+	if j.dbClient != nil {
+		err := j.dbClient.Close()
+		j.dbClient = nil
+		return err
+	}
+	return nil
 }
